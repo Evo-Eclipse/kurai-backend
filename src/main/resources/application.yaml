@@ -1,0 +1,10 @@
+ktor:
+  deployment:
+    port: 8080
+  application:
+    modules:
+      - com.example.HttpKt.configureHttp
+      - com.example.SerializationKt.configureSerialization
+      - com.example.ExposedKt.configureExposed
+      - com.example.DIKt.configureDependencyInjection
+      - com.example.RoutingKt.configureRouting
