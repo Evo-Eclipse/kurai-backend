@@ -2,6 +2,7 @@
 exposed = "1.2.0"
 h2 = "2.4.240"
 kotlin = "2.3.21"
+ktlint = "14.2.0"
 logback = "1.5.21"
 
 [libraries]
@@ -15,3 +16,4 @@ logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "lo
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint" }
