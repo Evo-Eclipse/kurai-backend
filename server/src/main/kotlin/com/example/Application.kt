@@ -10,6 +10,8 @@ import io.ktor.server.plugins.statuspages.StatusPages
 
 // Entry point loaded by Ktor EngineMain via application.yaml.
 fun Application.configure() {
+    // Fail-fast validation: ensure required env vars are present before serving.
+    // The loaded config will be wired into routes once auth-jwt consumes it.
     AppConfig.load()
     val gate = ReadinessGate()
     configure(gate)
