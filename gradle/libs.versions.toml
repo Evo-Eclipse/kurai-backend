@@ -1,4 +1,5 @@
 [versions]
+archunit = "1.4.2"
 exposed = "1.2.0"
 h2 = "2.4.240"
 kotlin = "2.3.21"
@@ -6,6 +7,7 @@ ktlint = "14.2.0"
 logback = "1.5.21"
 
 [libraries]
+archunit-junit5 = { module = "com.tngtech.archunit:archunit-junit5", version.ref = "archunit" }
 exposed-core = { module = "org.jetbrains.exposed:exposed-core", version.ref = "exposed" }
 exposed-r2dbc = { module = "org.jetbrains.exposed:exposed-r2dbc", version.ref = "exposed" }
 h2database-h2 = { module = "com.h2database:h2", version.ref = "h2" }

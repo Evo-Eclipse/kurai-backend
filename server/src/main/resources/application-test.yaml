@@ -1,0 +1,6 @@
+ktor:
+  deployment:
+    port: 8181
+  application:
+    modules:
+      - com.example.ApplicationKt.configure
