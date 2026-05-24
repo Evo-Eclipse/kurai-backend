@@ -11,16 +11,18 @@ class ItemRepository(
 ) {
     fun insertIdempotent(
         md5: String,
-        source: String,
-        sourceId: String,
+        url: String,
+        origin: String,
+        rating: String?,
         embeddingVersion: String,
-        indexedAt: String,
+        indexedAt: Long,
     ): Long =
         transaction(db) {
             Items.insertIgnore {
                 it[Items.md5] = md5
-                it[Items.sourceTag] = source
-                it[Items.sourceId] = sourceId
+                it[Items.url] = url
+                it[Items.origin] = origin
+                it[Items.rating] = rating
                 it[Items.embeddingVersion] = embeddingVersion
                 it[Items.indexedAt] = indexedAt
             }

@@ -12,7 +12,6 @@ class RepositoryCrudTest {
 
     @BeforeTest
     fun setUp() {
-        // Unique DB name per test run to avoid state leakage between test classes.
         db =
             Database.connect(
                 "jdbc:h2:mem:${System.nanoTime()};MODE=MySQL;DB_CLOSE_DELAY=-1",
@@ -24,16 +23,48 @@ class RepositoryCrudTest {
     @Test
     fun `ItemRepository insertIdempotent returns same id on re-insert`() {
         val repo = ItemRepository(db)
-        val id1 = repo.insertIdempotent("abc123", "kurai", "12345", "v1", "2025-01-01T00:00:00Z")
-        val id2 = repo.insertIdempotent("abc123", "kurai", "12345", "v1", "2025-01-01T00:00:00Z")
+        val id1 =
+            repo.insertIdempotent(
+                md5 = "948fa4499b4ba297484b540c7c263273",
+                url = "https://cdn.example.com/1.jpg",
+                origin = "https://example.com/posts/1",
+                rating = null,
+                embeddingVersion = "v1",
+                indexedAt = 1_700_000_000L,
+            )
+        val id2 =
+            repo.insertIdempotent(
+                md5 = "948fa4499b4ba297484b540c7c263273",
+                url = "https://cdn.example.com/1.jpg",
+                origin = "https://example.com/posts/1",
+                rating = null,
+                embeddingVersion = "v1",
+                indexedAt = 1_700_000_000L,
+            )
         assertEquals(id1, id2)
     }
 
     @Test
     fun `ItemRepository insertIdempotent assigns distinct ids for different md5`() {
         val repo = ItemRepository(db)
-        val id1 = repo.insertIdempotent("aaa", "kurai", "1", "v1", "2025-01-01T00:00:00Z")
-        val id2 = repo.insertIdempotent("bbb", "kurai", "2", "v1", "2025-01-01T00:00:00Z")
+        val id1 =
+            repo.insertIdempotent(
+                md5 = "948fa4499b4ba297484b540c7c263273",
+                url = "https://cdn.example.com/a.jpg",
+                origin = "https://example.com/posts/1",
+                rating = "s",
+                embeddingVersion = "v1",
+                indexedAt = 1_700_000_000L,
+            )
+        val id2 =
+            repo.insertIdempotent(
+                md5 = "85eaa59d6ed4d2db104a478cc2f160b6",
+                url = "https://cdn.example.com/b.jpg",
+                origin = "https://example.com/posts/2",
+                rating = null,
+                embeddingVersion = "v1",
+                indexedAt = 1_700_000_001L,
+            )
         assert(id1 != id2)
     }
 
@@ -42,7 +73,7 @@ class RepositoryCrudTest {
         val repo = EventRepository(db)
         val events =
             (1..10_000).map { i ->
-                EventData(userId = 1L, itemId = i.toLong(), eventType = "view", embeddingVersion = "v1")
+                EventData(userId = 1L, itemId = i.toLong(), eventType = "prolong_view", embeddingVersion = "v1")
             }
         val ids = repo.appendBatch(events)
         assertEquals(10_000, ids.size)
@@ -75,12 +106,30 @@ class RepositoryCrudTest {
     @Test
     fun `AcquisitionJobRepository insert and findById round-trip`() {
         val repo = AcquisitionJobRepository(db)
-        repo.insert(id = "job-1", status = "pending", source = "kurai")
+        repo.insert(id = "job-1", status = "pending", origin = "https://example.com/posts.json", query = "wave")
         val job = repo.findById("job-1")
         assertNotNull(job)
         assertEquals("job-1", job.id)
         assertEquals("pending", job.status)
-        assertEquals("kurai", job.source)
+        assertEquals("https://example.com/posts.json", job.origin)
+        assertEquals("wave", job.query)
+        assertNull(job.userId)
+        assertNull(job.completedAt)
+    }
+
+    @Test
+    fun `AcquisitionJobRepository insert with userId`() {
+        val repo = AcquisitionJobRepository(db)
+        repo.insert(
+            id = "job-2",
+            status = "running",
+            origin = "https://example.com/posts.json",
+            query = "mountains",
+            userId = 99L,
+        )
+        val job = repo.findById("job-2")
+        assertNotNull(job)
+        assertEquals(99L, job.userId)
     }
 
     @Test

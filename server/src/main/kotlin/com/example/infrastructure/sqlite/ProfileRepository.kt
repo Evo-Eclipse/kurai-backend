@@ -11,7 +11,7 @@ data class ProfileRow(
     val userId: Long,
     val embeddingVersion: String,
     val lastAppliedEventId: Long,
-    val updatedAt: String,
+    val updatedAt: Long,
 )
 
 class ProfileRepository(
@@ -27,10 +27,7 @@ class ProfileRepository(
                 it[UserProfileState.userId] = userId
                 it[UserProfileState.embeddingVersion] = embeddingVersion
                 it[UserProfileState.lastAppliedEventId] = lastAppliedEventId
-                it[UserProfileState.updatedAt] =
-                    Instant
-                        .now()
-                        .toString()
+                it[UserProfileState.updatedAt] = Instant.now().epochSecond
             }
         }
     }

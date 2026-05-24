@@ -9,8 +9,11 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 data class AcquisitionJobRow(
     val id: String,
     val status: String,
-    val source: String,
-    val createdAt: String,
+    val origin: String,
+    val query: String,
+    val userId: Long?,
+    val createdAt: Long,
+    val completedAt: Long?,
 )
 
 class AcquisitionJobRepository(
@@ -19,13 +22,17 @@ class AcquisitionJobRepository(
     fun insert(
         id: String,
         status: String,
-        source: String,
+        origin: String,
+        query: String,
+        userId: Long? = null,
     ) {
         transaction(db) {
             AcquisitionJobs.insert {
                 it[AcquisitionJobs.id] = id
                 it[AcquisitionJobs.status] = status
-                it[AcquisitionJobs.sourceTag] = source
+                it[AcquisitionJobs.origin] = origin
+                it[AcquisitionJobs.query] = query
+                it[AcquisitionJobs.userId] = userId
             }
         }
     }
@@ -40,8 +47,11 @@ class AcquisitionJobRepository(
                     AcquisitionJobRow(
                         id = row[AcquisitionJobs.id],
                         status = row[AcquisitionJobs.status],
-                        source = row[AcquisitionJobs.sourceTag],
+                        origin = row[AcquisitionJobs.origin],
+                        query = row[AcquisitionJobs.query],
+                        userId = row[AcquisitionJobs.userId],
                         createdAt = row[AcquisitionJobs.createdAt],
+                        completedAt = row[AcquisitionJobs.completedAt],
                     )
                 }
         }

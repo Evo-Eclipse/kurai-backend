@@ -15,7 +15,6 @@ private val ALL_TABLES =
         UserPrototypes,
         EmbeddingGenerations,
         IndexGenerations,
-        CatalogGrowth,
         AcquisitionJobs,
     )
 
@@ -76,7 +75,7 @@ private fun JdbcTransaction.applySqliteTriggersAndIndices() {
         """
         CREATE INDEX IF NOT EXISTS idx_user_events_positive
         ON user_events(user_id, id)
-        WHERE event_type IN ('like', 'save')
+        WHERE event_type IN ('prolong_view', 'like', 'share')
         """.trimIndent(),
     )
 }
