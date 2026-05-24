@@ -60,12 +60,12 @@ dependencies {
     implementation(ktorLibs.server.netty)
     implementation(ktorLibs.server.statusPages)
     implementation(libs.exposed.core)
-    implementation(libs.exposed.r2dbc)
-    implementation(libs.h2database.h2)
-    implementation(libs.h2database.r2dbc)
+    implementation(libs.exposed.jdbc)
+    implementation(libs.sqlite.jdbc)
     implementation(libs.logback.classic)
 
     testImplementation(kotlin("test"))
     testImplementation(libs.archunit.junit5)
+    testImplementation(libs.h2database.h2)
     testImplementation(ktorLibs.server.testHost)
 }
