@@ -71,12 +71,11 @@ class ArchUnitTest {
             .dependOnClassesThat()
             .resideInAPackage("..infrastructure..")
 
-    // The ..infrastructure.. and ..domain.. packages are empty in production
-    // code until later waves (infrastructure-sqlite, domain-model) populate
-    // them. We allow empty `should` to keep the rules active without
-    // false-positive failures. Synthetic-violation probes below prove the
-    // rules are still capable of failing once classes exist. Drop
-    // allowEmptyShould when the packages gain their first production classes.
+    // The ..domain.. package is empty in production code until later waves
+    // (domain-model et al.) populate it. We allow empty `should` to keep the
+    // rule active without false-positive failures. Synthetic-violation
+    // probes below prove the rule is still capable of failing once classes
+    // exist. Drop allowEmptyShould when domain-model lands.
     private fun infrastructureNotOnDomain() =
         noClasses()
             .that()
@@ -84,7 +83,6 @@ class ArchUnitTest {
             .should()
             .dependOnClassesThat()
             .resideInAPackage("..domain..")
-            .allowEmptyShould(true)
 
     private fun domainNotOnRouting() =
         noClasses()
