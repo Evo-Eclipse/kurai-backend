@@ -1,0 +1,3066 @@
+{
+    "posts": [
+        {
+            "id": 3211824,
+            "created_at": "2022-03-07T21:21:11.960+03:00",
+            "updated_at": "2026-05-25T16:33:09.970+03:00",
+            "file": {
+                "width": 1440,
+                "height": 1080,
+                "ext": "webm",
+                "size": 2481326,
+                "md5": "71f734daccd3953d52ef130328f59b28",
+                "url": "https://static1.e621.net/data/71/f7/71f734daccd3953d52ef130328f59b28.webm"
+            },
+            "preview": {
+                "width": 341,
+                "height": 256,
+                "url": "https://static1.e621.net/data/preview/71/f7/71f734daccd3953d52ef130328f59b28.jpg",
+                "alt": "https://static1.e621.net/data/preview/71/f7/71f734daccd3953d52ef130328f59b28.webp"
+            },
+            "sample": {
+                "has": true,
+                "width": 1133,
+                "height": 850,
+                "url": "https://static1.e621.net/data/sample/71/f7/71f734daccd3953d52ef130328f59b28.jpg",
+                "alt": "https://static1.e621.net/data/sample/71/f7/71f734daccd3953d52ef130328f59b28.webp",
+                "alternates": {
+                    "has": true,
+                    "original": {
+                        "fps": 24.0,
+                        "codec": "vp9",
+                        "size": 2481326,
+                        "width": 1440,
+                        "height": 1080,
+                        "url": "https://static1.e621.net/data/71/f7/71f734daccd3953d52ef130328f59b28.webm"
+                    },
+                    "variants": {
+                        "mp4": {
+                            "codec": "avc1.4D401E",
+                            "fps": 24.0,
+                            "size": 1958004,
+                            "width": 1440,
+                            "height": 1080,
+                            "url": "https://static1.e621.net/data/sample/71/f7/71f734daccd3953d52ef130328f59b28_alt.mp4"
+                        }
+                    },
+                    "samples": {
+                        "480p": {
+                            "fps": 24.0,
+                            "size": 1229554,
+                            "codec": "avc1.4D401E",
+                            "width": 960,
+                            "height": 720,
+                            "url": "https://static1.e621.net/data/sample/71/f7/71f734daccd3953d52ef130328f59b28_480p.mp4"
+                        },
+                        "720p": {
+                            "fps": 24.0,
+                            "size": 1229554,
+                            "codec": "avc1.4D401E",
+                            "width": 960,
+                            "height": 720,
+                            "url": "https://static1.e621.net/data/sample/71/f7/71f734daccd3953d52ef130328f59b28_720p.mp4"
+                        }
+                    }
+                }
+            },
+            "score": {
+                "up": 7872,
+                "down": -223,
+                "total": 7649
+            },
+            "tags": {
+                "general": [
+                    "3_fingers",
+                    "4_eyes",
+                    "anthro",
+                    "arm_tuft",
+                    "back_tentacles",
+                    "bed",
+                    "bedroom_eyes",
+                    "bent_over",
+                    "big_ears",
+                    "biped",
+                    "black_clothing",
+                    "black_footwear",
+                    "black_legwear",
+                    "black_panties",
+                    "black_sclera",
+                    "black_socks",
+                    "black_stockings",
+                    "black_thigh_highs",
+                    "black_thigh_socks",
+                    "black_underwear",
+                    "blush",
+                    "blush_lines",
+                    "bottomwear",
+                    "bouncing",
+                    "butt",
+                    "chest_tuft",
+                    "clothed",
+                    "clothed_anthro",
+                    "clothed_male",
+                    "clothing",
+                    "crossdressing",
+                    "crotch_tuft",
+                    "curvy_figure",
+                    "dancing",
+                    "elbow_tuft",
+                    "eurodance",
+                    "eye_through_hair",
+                    "eyebrow_through_hair",
+                    "eyebrows",
+                    "eyelashes",
+                    "eyelashes_through_hair",
+                    "femboy",
+                    "fingers",
+                    "footwear",
+                    "fur",
+                    "fur_tuft",
+                    "furniture",
+                    "green_eyes",
+                    "hair",
+                    "half-closed_eyes",
+                    "hug",
+                    "hugging_object",
+                    "hugging_pillow",
+                    "kneeling",
+                    "kneeling_on_bed",
+                    "legwear",
+                    "light_body",
+                    "light_fur",
+                    "light_hair",
+                    "long_tail",
+                    "looking_aside",
+                    "looking_at_viewer",
+                    "looking_back",
+                    "looking_back_at_viewer",
+                    "looking_forward",
+                    "lying",
+                    "lyrics",
+                    "male",
+                    "male_anthro",
+                    "multi_eye",
+                    "multicolored_text",
+                    "music",
+                    "music_video",
+                    "narrowed_eyes",
+                    "navel",
+                    "on_bed",
+                    "on_front",
+                    "on_furniture",
+                    "on_side",
+                    "one_eye_closed",
+                    "open_mouth",
+                    "open_smile",
+                    "oversized_clothing",
+                    "panties",
+                    "pillow",
+                    "pink_background",
+                    "pink_clothing",
+                    "pink_eyes",
+                    "pink_pillow",
+                    "pink_shirt",
+                    "pink_tail",
+                    "pink_tentacles",
+                    "pink_text",
+                    "pink_tongue",
+                    "pink_topwear",
+                    "round_ears",
+                    "seductive",
+                    "shaking_butt",
+                    "shirt",
+                    "short_hair",
+                    "shoulder_tuft",
+                    "simple_background",
+                    "sitting",
+                    "skirt",
+                    "smile",
+                    "socks",
+                    "solo",
+                    "spread_legs",
+                    "spreading",
+                    "standing",
+                    "star",
+                    "stockings",
+                    "swinging_legs",
+                    "synced_to_music",
+                    "tail",
+                    "teasing",
+                    "teeth",
+                    "tentacles",
+                    "text",
+                    "thick_thighs",
+                    "thigh_highs",
+                    "thigh_socks",
+                    "tongue",
+                    "topwear",
+                    "transformation",
+                    "translucent",
+                    "translucent_hair",
+                    "tuft",
+                    "two_tone_text",
+                    "underwear",
+                    "undressing",
+                    "upskirt",
+                    "wariza",
+                    "white_body",
+                    "white_fur",
+                    "white_hair",
+                    "white_text",
+                    "wink"
+                ],
+                "artist": [
+                    "sound_warning",
+                    "whygena"
+                ],
+                "contributor": [],
+                "copyright": [
+                    "boom_boom_boom_boom!!_(vengaboys)",
+                    "vengaboys"
+                ],
+                "character": [
+                    "reggie_(whygena)"
+                ],
+                "species": [
+                    "mammal",
+                    "mouse",
+                    "murid",
+                    "murine",
+                    "rodent"
+                ],
+                "invalid": [],
+                "meta": [
+                    "2022",
+                    "2d_animation",
+                    "4:3",
+                    "animated",
+                    "digital_media_(artwork)",
+                    "english_audio",
+                    "english_text",
+                    "frame_by_frame",
+                    "pink_theme",
+                    "short_playtime",
+                    "sound",
+                    "subtitled",
+                    "video"
+                ],
+                "lore": []
+            },
+            "locked_tags": [],
+            "change_seq": 76319711,
+            "flags": {
+                "pending": false,
+                "flagged": false,
+                "note_locked": false,
+                "status_locked": false,
+                "rating_locked": false,
+                "deleted": false
+            },
+            "rating": "q",
+            "fav_count": 10879,
+            "sources": [
+                "https://x.com/Whygena_Draws/status/1500862546340823040"
+            ],
+            "pools": [],
+            "relationships": {
+                "parent_id": null,
+                "has_children": true,
+                "has_active_children": true,
+                "children": [
+                    4880492,
+                    5067753,
+                    3353391,
+                    4186374,
+                    5145641,
+                    5101838,
+                    6115079
+                ]
+            },
+            "approver_id": 65774,
+            "uploader_id": 340613,
+            "uploader_name": "Whygena",
+            "description": "Other sites -\nhttps://twitter.com/Whygena_Draws\nhttps://whygena-draws.newgrounds.com/\n\nSupport my art -\nhttps://www.patreon.com/whygena",
+            "comment_count": 196,
+            "is_favorited": false,
+            "has_notes": false,
+            "duration": 13.893
+        },
+        {
+            "id": 2443148,
+            "created_at": "2020-10-11T07:03:29.565+03:00",
+            "updated_at": "2026-05-25T12:11:44.434+03:00",
+            "file": {
+                "width": 1120,
+                "height": 1280,
+                "ext": "png",
+                "size": 2508830,
+                "md5": "3fb7d1b3c493986c24fbaa7f22aa0841",
+                "url": "https://static1.e621.net/data/3f/b7/3fb7d1b3c493986c24fbaa7f22aa0841.png"
+            },
+            "preview": {
+                "width": 256,
+                "height": 293,
+                "url": "https://static1.e621.net/data/preview/3f/b7/3fb7d1b3c493986c24fbaa7f22aa0841.jpg",
+                "alt": "https://static1.e621.net/data/preview/3f/b7/3fb7d1b3c493986c24fbaa7f22aa0841.webp"
+            },
+            "sample": {
+                "has": true,
+                "width": 850,
+                "height": 971,
+                "url": "https://static1.e621.net/data/sample/3f/b7/3fb7d1b3c493986c24fbaa7f22aa0841.jpg",
+                "alt": "https://static1.e621.net/data/sample/3f/b7/3fb7d1b3c493986c24fbaa7f22aa0841.webp",
+                "alternates": {}
+            },
+            "score": {
+                "up": 4519,
+                "down": -69,
+                "total": 4450
+            },
+            "tags": {
+                "general": [
+                    "4_fingers",
+                    "anatomically_inaccurate",
+                    "anatomically_inaccurate_pawpads",
+                    "anthro",
+                    "arm_tuft",
+                    "backless_clothing",
+                    "backless_swimsuit",
+                    "big_butt",
+                    "blue_eyes",
+                    "blush",
+                    "bracelet",
+                    "bulge",
+                    "butt",
+                    "chest_tuft",
+                    "clothed",
+                    "clothing",
+                    "collar",
+                    "crossdressing",
+                    "detailed_background",
+                    "dialogue",
+                    "eyebrows",
+                    "eyelashes",
+                    "eyeliner",
+                    "eyeshadow",
+                    "femboy",
+                    "fingers",
+                    "fur",
+                    "gender_confusion",
+                    "glistening",
+                    "glistening_body",
+                    "glistening_clothing",
+                    "hair",
+                    "heart_eyes",
+                    "heart_pupils",
+                    "heart_symbol",
+                    "high-angle_view",
+                    "highleg",
+                    "jewelry",
+                    "kneeling",
+                    "kneeling_on_ground",
+                    "legs_together",
+                    "long_ears",
+                    "looking_at_viewer",
+                    "looking_up",
+                    "makeup",
+                    "male",
+                    "multicolored_clothing",
+                    "one-piece_swimsuit",
+                    "open-back_swimsuit",
+                    "open_mouth",
+                    "orientation_play",
+                    "outside",
+                    "poolside",
+                    "rainbow_clothing",
+                    "scut_tail",
+                    "short_hair",
+                    "short_tail",
+                    "shoulder_tuft",
+                    "solo",
+                    "stated_gender",
+                    "swimming_pool",
+                    "swimwear",
+                    "tail",
+                    "text",
+                    "tuft",
+                    "water",
+                    "wet",
+                    "wet_body",
+                    "wet_clothing",
+                    "white_body",
+                    "white_ears",
+                    "white_fur",
+                    "white_hair",
+                    "white_tail"
+                ],
+                "artist": [
+                    "conditional_dnp",
+                    "whisperfoot"
+                ],
+                "contributor": [],
+                "copyright": [
+                    "cc-by-nc-nd",
+                    "creative_commons"
+                ],
+                "character": [
+                    "texi_(yitexity)"
+                ],
+                "species": [
+                    "lagomorph",
+                    "leporid",
+                    "mammal",
+                    "rabbit"
+                ],
+                "invalid": [],
+                "meta": [
+                    "2020",
+                    "digital_media_(artwork)",
+                    "english_text",
+                    "full-length_portrait",
+                    "hi_res",
+                    "portrait",
+                    "signature"
+                ],
+                "lore": []
+            },
+            "locked_tags": [
+                "conditional_dnp"
+            ],
+            "change_seq": 76471217,
+            "flags": {
+                "pending": false,
+                "flagged": false,
+                "note_locked": false,
+                "status_locked": false,
+                "rating_locked": false,
+                "deleted": false
+            },
+            "rating": "q",
+            "fav_count": 8847,
+            "sources": [
+                "https://x.com/whisper_foot/status/1315139482589552640",
+                "https://www.newgrounds.com/art/view/whisperfoot/texi-by-the-pool",
+                "https://www.furaffinity.net/view/38631194/",
+                "https://inkbunny.net/s/2275570"
+            ],
+            "pools": [],
+            "relationships": {
+                "parent_id": null,
+                "has_children": false,
+                "has_active_children": false,
+                "children": []
+            },
+            "approver_id": null,
+            "uploader_id": 95927,
+            "uploader_name": "lemongrab",
+            "description": "[quote]\n[b][u]\tTexi By The Pool~[/u][/b]\n\nLast month's supporter poll actually had a tie, so here's the other winner! yitexity yitexity 's super adorable femboi bunny~ Glad I got to draw him!\n\nConsider supporting for high res images and voting: https://subscribestar.adult/whisperfoot\n[/quote]",
+            "comment_count": 56,
+            "is_favorited": false,
+            "has_notes": false,
+            "duration": null
+        },
+        {
+            "id": 2659576,
+            "created_at": "2021-03-19T01:27:37.960+03:00",
+            "updated_at": "2026-05-25T07:17:19.795+03:00",
+            "file": {
+                "width": 2480,
+                "height": 3508,
+                "ext": "jpg",
+                "size": 3080500,
+                "md5": "6f8ba7a2e9c37ce7edc09b354abdfdd0",
+                "url": "https://static1.e621.net/data/6f/8b/6f8ba7a2e9c37ce7edc09b354abdfdd0.jpg"
+            },
+            "preview": {
+                "width": 256,
+                "height": 362,
+                "url": "https://static1.e621.net/data/preview/6f/8b/6f8ba7a2e9c37ce7edc09b354abdfdd0.jpg",
+                "alt": "https://static1.e621.net/data/preview/6f/8b/6f8ba7a2e9c37ce7edc09b354abdfdd0.webp"
+            },
+            "sample": {
+                "has": true,
+                "width": 850,
+                "height": 1202,
+                "url": "https://static1.e621.net/data/sample/6f/8b/6f8ba7a2e9c37ce7edc09b354abdfdd0.jpg",
+                "alt": "https://static1.e621.net/data/sample/6f/8b/6f8ba7a2e9c37ce7edc09b354abdfdd0.webp",
+                "alternates": {}
+            },
+            "score": {
+                "up": 2828,
+                "down": -33,
+                "total": 2795
+            },
+            "tags": {
+                "general": [
+                    "anthro",
+                    "black_body",
+                    "black_fur",
+                    "blush",
+                    "breasts",
+                    "cleavage",
+                    "clothed",
+                    "clothed_anthro",
+                    "clothed_female",
+                    "clothing",
+                    "collar",
+                    "female",
+                    "female_anthro",
+                    "fur",
+                    "grey_hair",
+                    "hair",
+                    "index_to_index",
+                    "looking_at_viewer",
+                    "raining",
+                    "red_sclera",
+                    "seat_belt",
+                    "sitting",
+                    "small_breasts",
+                    "small_waist",
+                    "smile",
+                    "solo",
+                    "spiked_collar",
+                    "spikes",
+                    "text",
+                    "vehicle_interior",
+                    "white_body",
+                    "white_eyes",
+                    "white_fur"
+                ],
+                "artist": [
+                    "jizoku"
+                ],
+                "contributor": [],
+                "copyright": [
+                    "hellaverse",
+                    "helluva_boss",
+                    "mythology"
+                ],
+                "character": [
+                    "loona_(helluva_boss)",
+                    "moxxie_(helluva_boss)"
+                ],
+                "species": [
+                    "canid",
+                    "canid_demon",
+                    "canine",
+                    "demon",
+                    "hellhound",
+                    "mammal",
+                    "mythological_canine",
+                    "mythological_creature"
+                ],
+                "invalid": [],
+                "meta": [
+                    "2021",
+                    "absurd_res",
+                    "comic",
+                    "cover",
+                    "cover_art",
+                    "cover_page",
+                    "digital_media_(artwork)",
+                    "english_text",
+                    "hi_res",
+                    "lol_comments",
+                    "shaded"
+                ],
+                "lore": []
+            },
+            "locked_tags": [],
+            "change_seq": 76553689,
+            "flags": {
+                "pending": false,
+                "flagged": false,
+                "note_locked": false,
+                "status_locked": false,
+                "rating_locked": false,
+                "deleted": false
+            },
+            "rating": "q",
+            "fav_count": 7234,
+            "sources": [
+                "https://x.com/JizokuArt/status/1372349264567926784",
+                "https://pbs.twimg.com/media/EwuOxt0XAAMFMkD?format=jpg&name=orig"
+            ],
+            "pools": [
+                23886,
+                52627
+            ],
+            "relationships": {
+                "parent_id": null,
+                "has_children": true,
+                "has_active_children": false,
+                "children": [
+                    4082244,
+                    4081582
+                ]
+            },
+            "approver_id": 95927,
+            "uploader_id": 224736,
+            "uploader_name": "Acron",
+            "description": "",
+            "comment_count": 35,
+            "is_favorited": false,
+            "has_notes": false,
+            "duration": null
+        },
+        {
+            "id": 4129156,
+            "created_at": "2023-06-24T07:01:19.732+03:00",
+            "updated_at": "2026-05-25T19:05:58.613+03:00",
+            "file": {
+                "width": 1080,
+                "height": 1654,
+                "ext": "png",
+                "size": 1833385,
+                "md5": "45b3143d76b1895c1eedd12d2c297258",
+                "url": "https://static1.e621.net/data/45/b3/45b3143d76b1895c1eedd12d2c297258.png"
+            },
+            "preview": {
+                "width": 256,
+                "height": 392,
+                "url": "https://static1.e621.net/data/preview/45/b3/45b3143d76b1895c1eedd12d2c297258.jpg",
+                "alt": "https://static1.e621.net/data/preview/45/b3/45b3143d76b1895c1eedd12d2c297258.webp"
+            },
+            "sample": {
+                "has": true,
+                "width": 850,
+                "height": 1302,
+                "url": "https://static1.e621.net/data/sample/45/b3/45b3143d76b1895c1eedd12d2c297258.jpg",
+                "alt": "https://static1.e621.net/data/sample/45/b3/45b3143d76b1895c1eedd12d2c297258.webp",
+                "alternates": {}
+            },
+            "score": {
+                "up": 2648,
+                "down": -20,
+                "total": 2628
+            },
+            "tags": {
+                "general": [
+                    "anthro",
+                    "areola",
+                    "areola_slip",
+                    "armwear",
+                    "big_breasts",
+                    "biped",
+                    "blush",
+                    "bottomwear",
+                    "breasts",
+                    "camel_toe",
+                    "cleavage",
+                    "clothed",
+                    "clothed_anthro",
+                    "clothed_female",
+                    "clothing",
+                    "clumsy",
+                    "collar",
+                    "digitigrade",
+                    "elbow_gloves",
+                    "eyewear",
+                    "female",
+                    "female_anthro",
+                    "fingerless_gloves",
+                    "fur",
+                    "glasses",
+                    "gloves",
+                    "handwear",
+                    "heart_eyes",
+                    "heart_symbol",
+                    "huge_breasts",
+                    "legwear",
+                    "miniskirt",
+                    "nipples",
+                    "nipples_visible_through_clothing",
+                    "open_mouth",
+                    "panties",
+                    "paper",
+                    "pince-nez",
+                    "pink_areola",
+                    "purple_clothing",
+                    "purple_panties",
+                    "purple_underwear",
+                    "school_uniform",
+                    "skirt",
+                    "small_waist",
+                    "solo",
+                    "tail",
+                    "thick_thighs",
+                    "thigh_highs",
+                    "underwear",
+                    "uniform",
+                    "white_sclera"
+                ],
+                "artist": [
+                    "conditional_dnp",
+                    "yourdigimongirl"
+                ],
+                "contributor": [],
+                "copyright": [
+                    "bandai_namco",
+                    "digimon"
+                ],
+                "character": [
+                    "digi_(yourdigimongirl)"
+                ],
+                "species": [
+                    "canid",
+                    "digimon_(species)",
+                    "mammal",
+                    "renamon"
+                ],
+                "invalid": [],
+                "meta": [
+                    "2023",
+                    "colored",
+                    "comic",
+                    "cover",
+                    "cover_art",
+                    "cover_page",
+                    "hi_res"
+                ],
+                "lore": []
+            },
+            "locked_tags": [
+                "conditional_dnp"
+            ],
+            "change_seq": 71318348,
+            "flags": {
+                "pending": false,
+                "flagged": false,
+                "note_locked": false,
+                "status_locked": false,
+                "rating_locked": true,
+                "deleted": false
+            },
+            "rating": "q",
+            "fav_count": 6869,
+            "sources": [
+                "https://x.com/YourDigimonGirl/status/1672454752016412673"
+            ],
+            "pools": [
+                35222
+            ],
+            "relationships": {
+                "parent_id": null,
+                "has_children": false,
+                "has_active_children": false,
+                "children": []
+            },
+            "approver_id": 212564,
+            "uploader_id": 1124025,
+            "uploader_name": "YourDigimonGirl",
+            "description": "It's time for a big Update! I couldn't resist so I signed up to this Digimon School, hihi! The comic is gonna be Western but also Anime inspired 📝💖📘\n\n\n\nHope you all will like it, cuties!! 🎀🦊\n\n\n\n3 Pages are already live on my Patreon!\n\"https://www.patreon.com/yourdigimongirl\":https://www.patreon.com/yourdigimongirl\n\"https://twitter.com/YourDigimonGirl\":https://twitter.com/YourDigimonGirl",
+            "comment_count": 17,
+            "is_favorited": false,
+            "has_notes": false,
+            "duration": null
+        },
+        {
+            "id": 3254821,
+            "created_at": "2022-04-02T07:00:58.656+03:00",
+            "updated_at": "2026-05-25T19:17:41.832+03:00",
+            "file": {
+                "width": 900,
+                "height": 1200,
+                "ext": "png",
+                "size": 1294147,
+                "md5": "77fe03b3496b22b811e894736931c53a",
+                "url": "https://static1.e621.net/data/77/fe/77fe03b3496b22b811e894736931c53a.png"
+            },
+            "preview": {
+                "width": 256,
+                "height": 341,
+                "url": "https://static1.e621.net/data/preview/77/fe/77fe03b3496b22b811e894736931c53a.jpg",
+                "alt": "https://static1.e621.net/data/preview/77/fe/77fe03b3496b22b811e894736931c53a.webp"
+            },
+            "sample": {
+                "has": true,
+                "width": 850,
+                "height": 1133,
+                "url": "https://static1.e621.net/data/sample/77/fe/77fe03b3496b22b811e894736931c53a.jpg",
+                "alt": "https://static1.e621.net/data/sample/77/fe/77fe03b3496b22b811e894736931c53a.webp",
+                "alternates": {}
+            },
+            "score": {
+                "up": 2544,
+                "down": -23,
+                "total": 2521
+            },
+            "tags": {
+                "general": [
+                    "4_fingers",
+                    "anthro",
+                    "bedroom",
+                    "bottomless",
+                    "breasts",
+                    "cellphone",
+                    "cheek_tuft",
+                    "clothed",
+                    "clothing",
+                    "collar",
+                    "condom",
+                    "electronics",
+                    "facial_tuft",
+                    "female",
+                    "female_anthro",
+                    "fingers",
+                    "fur",
+                    "high-angle_view",
+                    "inner_ear_fluff",
+                    "legwear",
+                    "messy",
+                    "navel",
+                    "nipple_outline",
+                    "panties",
+                    "phone",
+                    "pose",
+                    "red_sclera",
+                    "sexual_barrier_device",
+                    "small_breasts",
+                    "smartphone",
+                    "smile",
+                    "solo",
+                    "spiked_collar",
+                    "spikes",
+                    "stockings",
+                    "thick_thighs",
+                    "thigh_gap",
+                    "thong",
+                    "tuft",
+                    "underwear",
+                    "unused_condom",
+                    "white_body",
+                    "white_fur",
+                    "wrapped_condom"
+                ],
+                "artist": [
+                    "conditional_dnp",
+                    "loonanudes"
+                ],
+                "contributor": [],
+                "copyright": [
+                    "hellaverse",
+                    "helluva_boss",
+                    "mythology",
+                    "starbucks"
+                ],
+                "character": [
+                    "loona_(helluva_boss)"
+                ],
+                "species": [
+                    "canid",
+                    "canid_demon",
+                    "canine",
+                    "demon",
+                    "hellhound",
+                    "mammal",
+                    "mythological_canine",
+                    "mythological_creature"
+                ],
+                "invalid": [],
+                "meta": [
+                    "2022",
+                    "3:4",
+                    "comic",
+                    "cover",
+                    "cover_art",
+                    "cover_page",
+                    "hi_res",
+                    "pinup"
+                ],
+                "lore": []
+            },
+            "locked_tags": [
+                "conditional_dnp"
+            ],
+            "change_seq": 70411042,
+            "flags": {
+                "pending": false,
+                "flagged": false,
+                "note_locked": false,
+                "status_locked": false,
+                "rating_locked": false,
+                "deleted": false
+            },
+            "rating": "q",
+            "fav_count": 6232,
+            "sources": [
+                "https://x.com/LoonaNudes/status/1510104895017439232",
+                "https://pbs.twimg.com/media/FPT4ZX3XoAA9SRZ?format=jpg&name=orig"
+            ],
+            "pools": [
+                29781
+            ],
+            "relationships": {
+                "parent_id": null,
+                "has_children": false,
+                "has_active_children": false,
+                "children": []
+            },
+            "approver_id": 171673,
+            "uploader_id": 1048092,
+            "uploader_name": "Loona_Queen_of_Simps",
+            "description": "I might have sucked off 'Tex in my dreams.. sry not sry🙄🥵\r\n\r\nduhh, its called Loona Comic.. What about it?💢\r\n\r\n672 Hours earlier on https://patreon.com/loonanudes 💵\r\n\r\nFirst 4 Pages this Month!\r\nhttps://twitter.com/LoonaNudes",
+            "comment_count": 7,
+            "is_favorited": false,
+            "has_notes": false,
+            "duration": null
+        },
+        {
+            "id": 3080413,
+            "created_at": "2021-12-20T00:19:02.900+03:00",
+            "updated_at": "2026-05-25T07:19:40.482+03:00",
+            "file": {
+                "width": 1000,
+                "height": 731,
+                "ext": "png",
+                "size": 878078,
+                "md5": "015b3c91db97cc1b6dcb61f3cadbab6a",
+                "url": "https://static1.e621.net/data/01/5b/015b3c91db97cc1b6dcb61f3cadbab6a.png"
+            },
+            "preview": {
+                "width": 350,
+                "height": 256,
+                "url": "https://static1.e621.net/data/preview/01/5b/015b3c91db97cc1b6dcb61f3cadbab6a.jpg",
+                "alt": "https://static1.e621.net/data/preview/01/5b/015b3c91db97cc1b6dcb61f3cadbab6a.webp"
+            },
+            "sample": {
+                "has": false,
+                "width": 1000,
+                "height": 731,
+                "url": null,
+                "alt": null,
+                "alternates": {}
+            },
+            "score": {
+                "up": 3250,
+                "down": -34,
+                "total": 3216
+            },
+            "tags": {
+                "general": [
+                    "5_fingers",
+                    "alternative_fashion",
+                    "anthro",
+                    "black_nose",
+                    "bra",
+                    "breasts",
+                    "claws",
+                    "clothed",
+                    "clothing",
+                    "crossgender",
+                    "curvy_figure",
+                    "fangs",
+                    "female",
+                    "female_anthro",
+                    "fingerless_gloves",
+                    "fingers",
+                    "fur",
+                    "gloves",
+                    "grey_body",
+                    "grey_fur",
+                    "hair",
+                    "hair_over_eye",
+                    "handwear",
+                    "medium_breasts",
+                    "midriff",
+                    "mtf_crossgender",
+                    "multicolored_body",
+                    "multicolored_fur",
+                    "navel",
+                    "one_eye_obstructed",
+                    "panties",
+                    "pink_womb_tattoo",
+                    "plushie",
+                    "smile",
+                    "solo",
+                    "tattoo",
+                    "teeth",
+                    "two_tone_body",
+                    "two_tone_fur",
+                    "under_boob",
+                    "underwear",
+                    "white_body",
+                    "white_fur",
+                    "white_hair",
+                    "wide_hips",
+                    "womb_tattoo"
+                ],
+                "artist": [
+                    "skeleion"
+                ],
+                "contributor": [],
+                "copyright": [
+                    "nintendo",
+                    "star_fox"
+                ],
+                "character": [
+                    "fox_mccloud",
+                    "wolf_o'donnell"
+                ],
+                "species": [
+                    "canid",
+                    "canine",
+                    "canis",
+                    "mammal",
+                    "wolf"
+                ],
+                "invalid": [],
+                "meta": [
+                    "2021",
+                    "digital_media_(artwork)",
+                    "portrait",
+                    "three-quarter_portrait"
+                ],
+                "lore": []
+            },
+            "locked_tags": [],
+            "change_seq": 76471228,
+            "flags": {
+                "pending": false,
+                "flagged": false,
+                "note_locked": false,
+                "status_locked": false,
+                "rating_locked": false,
+                "deleted": false
+            },
+            "rating": "q",
+            "fav_count": 6210,
+            "sources": [
+                "https://x.com/SkeleionSFW/status/1472674052649197571",
+                "https://www.deviantart.com/skeleion/art/Rule63-Wolf-O-donnell-901252282",
+                "https://www.furaffinity.net/view/45128258/",
+                "https://d.furaffinity.net/art/ashblueflames/1639948657/1639948657.ashblueflames_dec_wolf_2021__render_4.png",
+                "https://www.furaffinity.net/user/ashblueflames/"
+            ],
+            "pools": [],
+            "relationships": {
+                "parent_id": null,
+                "has_children": true,
+                "has_active_children": true,
+                "children": [
+                    3084024,
+                    3102901
+                ]
+            },
+            "approver_id": 169756,
+            "uploader_id": 169756,
+            "uploader_name": "Millcore",
+            "description": "A Wolf will always outdo a Fox🐺> 🦊\n\nI had a lot of fun working on a villain character this time.🤘 I really got to go all-in with my favorite themes and color scheme 😈\n",
+            "comment_count": 24,
+            "is_favorited": false,
+            "has_notes": false,
+            "duration": null
+        },
+        {
+            "id": 6124114,
+            "created_at": "2026-01-17T00:34:48.216+03:00",
+            "updated_at": "2026-05-25T08:02:10.206+03:00",
+            "file": {
+                "width": 2095,
+                "height": 1381,
+                "ext": "jpg",
+                "size": 512919,
+                "md5": "950bafb5a556439a0de38e5dccf89ae0",
+                "url": "https://static1.e621.net/data/95/0b/950bafb5a556439a0de38e5dccf89ae0.jpg"
+            },
+            "preview": {
+                "width": 388,
+                "height": 256,
+                "url": "https://static1.e621.net/data/preview/95/0b/950bafb5a556439a0de38e5dccf89ae0.jpg",
+                "alt": "https://static1.e621.net/data/preview/95/0b/950bafb5a556439a0de38e5dccf89ae0.webp"
+            },
+            "sample": {
+                "has": true,
+                "width": 1289,
+                "height": 850,
+                "url": "https://static1.e621.net/data/sample/95/0b/950bafb5a556439a0de38e5dccf89ae0.jpg",
+                "alt": "https://static1.e621.net/data/sample/95/0b/950bafb5a556439a0de38e5dccf89ae0.webp",
+                "alternates": {}
+            },
+            "score": {
+                "up": 4357,
+                "down": -34,
+                "total": 4323
+            },
+            "tags": {
+                "general": [
+                    "anthro",
+                    "anthrofied",
+                    "barefoot",
+                    "biped",
+                    "black_nose",
+                    "black_sclera",
+                    "bodily_fluids",
+                    "breasts",
+                    "clothed",
+                    "clothing",
+                    "day",
+                    "delivery_(commerce)",
+                    "delivery_employee",
+                    "detailed_background",
+                    "disgust",
+                    "doorway",
+                    "feet",
+                    "female",
+                    "fingers",
+                    "hat",
+                    "headgear",
+                    "headwear",
+                    "high-angle_view",
+                    "holding_object",
+                    "humor",
+                    "judging",
+                    "judging_you",
+                    "looking_at_viewer",
+                    "looking_up",
+                    "looking_up_at_viewer",
+                    "nervous",
+                    "nervous_sweat",
+                    "pawpads",
+                    "penetrable_sex_toy",
+                    "postal_delivery",
+                    "sex_toy",
+                    "shadow",
+                    "small_breasts",
+                    "solo",
+                    "standing",
+                    "sweat",
+                    "uwu",
+                    "white_eyes"
+                ],
+                "artist": [
+                    "shoutingisfun"
+                ],
+                "contributor": [],
+                "copyright": [
+                    "nintendo",
+                    "pokemon",
+                    "ups"
+                ],
+                "character": [],
+                "species": [
+                    "eeveelution",
+                    "generation_4_pokemon",
+                    "glaceon",
+                    "pokemon_(species)"
+                ],
+                "invalid": [],
+                "meta": [
+                    "2026",
+                    "digital_media_(artwork)",
+                    "hi_res",
+                    "lol_comments"
+                ],
+                "lore": []
+            },
+            "locked_tags": [],
+            "change_seq": 75614562,
+            "flags": {
+                "pending": false,
+                "flagged": false,
+                "note_locked": false,
+                "status_locked": false,
+                "rating_locked": false,
+                "deleted": false
+            },
+            "rating": "q",
+            "fav_count": 6053,
+            "sources": [
+                "https://discord.com/channels/793234842254311486/1161764693485047838/1461836023846797415",
+                "-https://cdn.discordapp.com/attachments/1161764693485047838/1461836023272181811/please_sign.jpg",
+                "https://x.com/shoutingisfun/status/2012276880221536715",
+                "https://bsky.app/profile/did:plc:74o76q6rzurzbrjl25g7yauj/post/3mcl26kquis2h"
+            ],
+            "pools": [],
+            "relationships": {
+                "parent_id": null,
+                "has_children": true,
+                "has_active_children": true,
+                "children": [
+                    6166419,
+                    6179404,
+                    6151467,
+                    6176695,
+                    6283639
+                ]
+            },
+            "approver_id": null,
+            "uploader_id": 336260,
+            "uploader_name": "Coopercaller",
+            "description": "she uh needs your signature",
+            "comment_count": 60,
+            "is_favorited": false,
+            "has_notes": false,
+            "duration": null
+        },
+        {
+            "id": 5107014,
+            "created_at": "2024-10-11T04:13:37.317+03:00",
+            "updated_at": "2026-05-25T17:52:46.155+03:00",
+            "file": {
+                "width": 1429,
+                "height": 2000,
+                "ext": "jpg",
+                "size": 432354,
+                "md5": "dd133453aad5344118327d0168d6451a",
+                "url": "https://static1.e621.net/data/dd/13/dd133453aad5344118327d0168d6451a.jpg"
+            },
+            "preview": {
+                "width": 256,
+                "height": 358,
+                "url": "https://static1.e621.net/data/preview/dd/13/dd133453aad5344118327d0168d6451a.jpg",
+                "alt": "https://static1.e621.net/data/preview/dd/13/dd133453aad5344118327d0168d6451a.webp"
+            },
+            "sample": {
+                "has": true,
+                "width": 850,
+                "height": 1190,
+                "url": "https://static1.e621.net/data/sample/dd/13/dd133453aad5344118327d0168d6451a.jpg",
+                "alt": "https://static1.e621.net/data/sample/dd/13/dd133453aad5344118327d0168d6451a.webp",
+                "alternates": {}
+            },
+            "score": {
+                "up": 3100,
+                "down": -24,
+                "total": 3076
+            },
+            "tags": {
+                "general": [
+                    "anthro",
+                    "big_butt",
+                    "bottomwear",
+                    "bulge",
+                    "butt",
+                    "cellphone",
+                    "clothed",
+                    "clothing",
+                    "dolphin_shorts",
+                    "electronics",
+                    "eyewear",
+                    "femboy",
+                    "glasses",
+                    "looking_at_viewer",
+                    "male",
+                    "nipple_outline",
+                    "nipple_slip",
+                    "nipples",
+                    "phone",
+                    "public",
+                    "public_transportation",
+                    "shorts",
+                    "skimpy",
+                    "smug",
+                    "solo",
+                    "sweater",
+                    "text",
+                    "thick_thighs",
+                    "topwear"
+                ],
+                "artist": [
+                    "coughytoffee"
+                ],
+                "contributor": [],
+                "copyright": [],
+                "character": [
+                    "shuff"
+                ],
+                "species": [
+                    "bovid",
+                    "caprine",
+                    "mammal",
+                    "sheep"
+                ],
+                "invalid": [],
+                "meta": [
+                    "english_text",
+                    "hi_res"
+                ],
+                "lore": []
+            },
+            "locked_tags": [],
+            "change_seq": 73806069,
+            "flags": {
+                "pending": false,
+                "flagged": false,
+                "note_locked": false,
+                "status_locked": false,
+                "rating_locked": false,
+                "deleted": false
+            },
+            "rating": "q",
+            "fav_count": 5833,
+            "sources": [
+                "https://bsky.app/profile/did:plc:ouuas55pzsqzvpjcjrf7sqhu/post/3lnmg2rxbd22y",
+                "https://amanita.us-east.host.bsky.network/xrpc/com.atproto.sync.getBlob?did=did:plc:ouuas55pzsqzvpjcjrf7sqhu&cid=bafkreiaj6jy35jzrtlirpcu2mxjukhvqk4uzu5gher4jvktolyajiexoei",
+                "https://x.com/CoughyToffeeX/status/1844531834983707085"
+            ],
+            "pools": [],
+            "relationships": {
+                "parent_id": null,
+                "has_children": true,
+                "has_active_children": true,
+                "children": [
+                    5455804
+                ]
+            },
+            "approver_id": 495015,
+            "uploader_id": 1356248,
+            "uploader_name": "JoshBilzerian",
+            "description": "[quote]Uh-oh.... what're u gonna do about it?\n\ncomm 4 @ffuhss!!<33[/quote]",
+            "comment_count": 6,
+            "is_favorited": false,
+            "has_notes": false,
+            "duration": null
+        },
+        {
+            "id": 2423431,
+            "created_at": "2020-09-26T01:11:53.444+03:00",
+            "updated_at": "2026-05-25T12:07:15.401+03:00",
+            "file": {
+                "width": 2356,
+                "height": 2548,
+                "ext": "jpg",
+                "size": 2297001,
+                "md5": "ca6f074b8b7407c0e51932cb12bdab5f",
+                "url": "https://static1.e621.net/data/ca/6f/ca6f074b8b7407c0e51932cb12bdab5f.jpg"
+            },
+            "preview": {
+                "width": 256,
+                "height": 277,
+                "url": "https://static1.e621.net/data/preview/ca/6f/ca6f074b8b7407c0e51932cb12bdab5f.jpg",
+                "alt": "https://static1.e621.net/data/preview/ca/6f/ca6f074b8b7407c0e51932cb12bdab5f.webp"
+            },
+            "sample": {
+                "has": true,
+                "width": 850,
+                "height": 919,
+                "url": "https://static1.e621.net/data/sample/ca/6f/ca6f074b8b7407c0e51932cb12bdab5f.jpg",
+                "alt": "https://static1.e621.net/data/sample/ca/6f/ca6f074b8b7407c0e51932cb12bdab5f.webp",
+                "alternates": {}
+            },
+            "score": {
+                "up": 3064,
+                "down": -34,
+                "total": 3030
+            },
+            "tags": {
+                "general": [
+                    "anthro",
+                    "barefoot",
+                    "bed",
+                    "black_pawpads",
+                    "bottomless",
+                    "breasts",
+                    "claws",
+                    "clothed",
+                    "clothing",
+                    "countershading",
+                    "crop_top",
+                    "digit_ring",
+                    "dutch_angle",
+                    "faceless_character",
+                    "faceless_female",
+                    "feet",
+                    "female",
+                    "female_anthro",
+                    "fluffy",
+                    "fluffy_tail",
+                    "fur",
+                    "furniture",
+                    "hand_on_leg",
+                    "hand_on_own_leg",
+                    "hand_on_own_thigh",
+                    "hand_on_thigh",
+                    "jewelry",
+                    "lying",
+                    "nipple_outline",
+                    "nipples",
+                    "on_back",
+                    "one_breast_out",
+                    "pawpads",
+                    "paws",
+                    "ring",
+                    "selfie",
+                    "shirt",
+                    "small_breasts",
+                    "soles",
+                    "solo",
+                    "spaghetti_strap",
+                    "tail",
+                    "toe_claws",
+                    "toes",
+                    "topwear",
+                    "translucent",
+                    "translucent_clothing",
+                    "wedding_ring"
+                ],
+                "artist": [
+                    "zaush"
+                ],
+                "contributor": [],
+                "copyright": [],
+                "character": [
+                    "amber_(zaush)"
+                ],
+                "species": [
+                    "bird_dog",
+                    "canid",
+                    "canine",
+                    "canis",
+                    "domestic_dog",
+                    "hunting_dog",
+                    "labrador",
+                    "mammal",
+                    "retriever"
+                ],
+                "invalid": [],
+                "meta": [
+                    "2020",
+                    "absurd_res",
+                    "comic",
+                    "digital_media_(artwork)",
+                    "greyscale",
+                    "hi_res",
+                    "monochrome"
+                ],
+                "lore": []
+            },
+            "locked_tags": [],
+            "change_seq": 69763438,
+            "flags": {
+                "pending": false,
+                "flagged": false,
+                "note_locked": false,
+                "status_locked": false,
+                "rating_locked": false,
+                "deleted": false
+            },
+            "rating": "q",
+            "fav_count": 5819,
+            "sources": [
+                "https://adamwan.art/gallery/espoused/selfie",
+                "https://adamwan.art/gallery/espoused",
+                "https://x.com/Zaush/status/1308313956730073090",
+                "https://pbs.twimg.com/media/EigQiwHU0AEtTfT?format=jpg&name=orig"
+            ],
+            "pools": [
+                21764
+            ],
+            "relationships": {
+                "parent_id": null,
+                "has_children": false,
+                "has_active_children": false,
+                "children": []
+            },
+            "approver_id": 169756,
+            "uploader_id": 461163,
+            "uploader_name": "Alpha7505",
+            "description": "",
+            "comment_count": 15,
+            "is_favorited": false,
+            "has_notes": false,
+            "duration": null
+        },
+        {
+            "id": 6228470,
+            "created_at": "2026-03-01T13:26:48.376+03:00",
+            "updated_at": "2026-05-25T17:20:49.613+03:00",
+            "file": {
+                "width": 1248,
+                "height": 1660,
+                "ext": "jpg",
+                "size": 1296804,
+                "md5": "b8c4463b1aeed82b6c83b45696266437",
+                "url": "https://static1.e621.net/data/b8/c4/b8c4463b1aeed82b6c83b45696266437.jpg"
+            },
+            "preview": {
+                "width": 256,
+                "height": 341,
+                "url": "https://static1.e621.net/data/preview/b8/c4/b8c4463b1aeed82b6c83b45696266437.jpg",
+                "alt": "https://static1.e621.net/data/preview/b8/c4/b8c4463b1aeed82b6c83b45696266437.webp"
+            },
+            "sample": {
+                "has": true,
+                "width": 850,
+                "height": 1131,
+                "url": "https://static1.e621.net/data/sample/b8/c4/b8c4463b1aeed82b6c83b45696266437.jpg",
+                "alt": "https://static1.e621.net/data/sample/b8/c4/b8c4463b1aeed82b6c83b45696266437.webp",
+                "alternates": {}
+            },
+            "score": {
+                "up": 3142,
+                "down": -10,
+                "total": 3132
+            },
+            "tags": {
+                "general": [
+                    "anthro",
+                    "areola",
+                    "barbell_piercing",
+                    "breasts",
+                    "brown_body",
+                    "clothed",
+                    "clothing",
+                    "clothing_lift",
+                    "detailed_background",
+                    "ear_piercing",
+                    "eyebrow_piercing",
+                    "eyelashes",
+                    "facial_piercing",
+                    "female",
+                    "female_anthro",
+                    "front_view",
+                    "fur",
+                    "inside",
+                    "looking_at_viewer",
+                    "multicolored_body",
+                    "nipple_barbell",
+                    "nipple_piercing",
+                    "nipples",
+                    "partially_clothed",
+                    "piercing",
+                    "pupils",
+                    "shirt",
+                    "shirt_lift",
+                    "smile",
+                    "solo",
+                    "topwear",
+                    "undressing",
+                    "wide_hips"
+                ],
+                "artist": [
+                    "millkydad"
+                ],
+                "contributor": [],
+                "copyright": [],
+                "character": [
+                    "lilith_(millkydad)"
+                ],
+                "species": [
+                    "canid",
+                    "canine",
+                    "fox",
+                    "mammal"
+                ],
+                "invalid": [],
+                "meta": [
+                    "2026",
+                    "half-length_portrait",
+                    "hi_res",
+                    "portrait"
+                ],
+                "lore": []
+            },
+            "locked_tags": [],
+            "change_seq": 75110232,
+            "flags": {
+                "pending": false,
+                "flagged": false,
+                "note_locked": false,
+                "status_locked": false,
+                "rating_locked": false,
+                "deleted": false
+            },
+            "rating": "q",
+            "fav_count": 5761,
+            "sources": [
+                "https://www.furaffinity.net/view/64174837/",
+                "https://d.furaffinity.net/art/millkydad/1772360383/1772360321.millkydad_by_millkydad.jpg"
+            ],
+            "pools": [],
+            "relationships": {
+                "parent_id": 6388471,
+                "has_children": false,
+                "has_active_children": false,
+                "children": []
+            },
+            "approver_id": null,
+            "uploader_id": 396514,
+            "uploader_name": "GetAGrip",
+            "description": "",
+            "comment_count": 10,
+            "is_favorited": false,
+            "has_notes": false,
+            "duration": null
+        },
+        {
+            "id": 3221260,
+            "created_at": "2022-03-13T08:32:38.437+03:00",
+            "updated_at": "2026-05-25T13:57:37.004+03:00",
+            "file": {
+                "width": 839,
+                "height": 548,
+                "ext": "gif",
+                "size": 470620,
+                "md5": "bf99c525a6b2790177a72277c4485af6",
+                "url": "https://static1.e621.net/data/bf/99/bf99c525a6b2790177a72277c4485af6.gif"
+            },
+            "preview": {
+                "width": 392,
+                "height": 256,
+                "url": "https://static1.e621.net/data/preview/bf/99/bf99c525a6b2790177a72277c4485af6.jpg",
+                "alt": "https://static1.e621.net/data/preview/bf/99/bf99c525a6b2790177a72277c4485af6.webp"
+            },
+            "sample": {
+                "has": false,
+                "width": 839,
+                "height": 548,
+                "url": null,
+                "alt": null,
+                "alternates": {}
+            },
+            "score": {
+                "up": 3459,
+                "down": -19,
+                "total": 3440
+            },
+            "tags": {
+                "general": [
+                    "accessory",
+                    "all_fours",
+                    "anthro",
+                    "barefoot",
+                    "breasts",
+                    "butt",
+                    "butt_focus",
+                    "calf_tuft",
+                    "clothed",
+                    "clothing",
+                    "eyes_closed",
+                    "fawn_spots",
+                    "feet",
+                    "female",
+                    "female_anthro",
+                    "fluffy",
+                    "fluffy_tail",
+                    "fur",
+                    "gloves_(marking)",
+                    "hair",
+                    "hair_accessory",
+                    "hair_tie",
+                    "hairclip",
+                    "handwear",
+                    "hat",
+                    "headgear",
+                    "headwear",
+                    "hooves",
+                    "leg_tuft",
+                    "markings",
+                    "one-piece_swimsuit",
+                    "one-piece_thong",
+                    "open-back_swimsuit",
+                    "ponytail",
+                    "poolside",
+                    "rear_view",
+                    "red_clothing",
+                    "red_one-piece_swimsuit",
+                    "red_swimwear",
+                    "scut_tail",
+                    "shaking_butt",
+                    "short_tail",
+                    "smile",
+                    "solo",
+                    "spots",
+                    "swimming_pool",
+                    "swimwear",
+                    "tail",
+                    "tail_through_swimsuit",
+                    "tan_body",
+                    "tan_fur",
+                    "tan_hair",
+                    "tan_spots",
+                    "top_hat",
+                    "tuft",
+                    "wiggle"
+                ],
+                "artist": [
+                    "waspsalad"
+                ],
+                "contributor": [],
+                "copyright": [],
+                "character": [
+                    "almond_(waspsalad)"
+                ],
+                "species": [
+                    "anatid",
+                    "anseriform",
+                    "avian",
+                    "bird",
+                    "deer",
+                    "duck",
+                    "mammal"
+                ],
+                "invalid": [],
+                "meta": [
+                    "2022",
+                    "2d_animation",
+                    "animated",
+                    "digital_media_(artwork)"
+                ],
+                "lore": []
+            },
+            "locked_tags": [],
+            "change_seq": 72350753,
+            "flags": {
+                "pending": false,
+                "flagged": false,
+                "note_locked": false,
+                "status_locked": false,
+                "rating_locked": false,
+                "deleted": false
+            },
+            "rating": "q",
+            "fav_count": 5575,
+            "sources": [
+                "https://x.com/waspsalad/status/1502839918174814213",
+                "https://www.furaffinity.net/view/46330582/"
+            ],
+            "pools": [],
+            "relationships": {
+                "parent_id": 2749394,
+                "has_children": false,
+                "has_active_children": false,
+                "children": []
+            },
+            "approver_id": 169756,
+            "uploader_id": 867661,
+            "uploader_name": "Waspsalad",
+            "description": "I don't really know how to animate, this is just a little test :D",
+            "comment_count": 27,
+            "is_favorited": false,
+            "has_notes": false,
+            "duration": 0.76
+        },
+        {
+            "id": 4859462,
+            "created_at": "2024-06-17T18:40:58.728+03:00",
+            "updated_at": "2026-05-25T12:13:50.891+03:00",
+            "file": {
+                "width": 1000,
+                "height": 750,
+                "ext": "gif",
+                "size": 3359098,
+                "md5": "9bfc73c75eda3ddcd655e360bdce9854",
+                "url": "https://static1.e621.net/data/9b/fc/9bfc73c75eda3ddcd655e360bdce9854.gif"
+            },
+            "preview": {
+                "width": 341,
+                "height": 256,
+                "url": "https://static1.e621.net/data/preview/9b/fc/9bfc73c75eda3ddcd655e360bdce9854.jpg",
+                "alt": "https://static1.e621.net/data/preview/9b/fc/9bfc73c75eda3ddcd655e360bdce9854.webp"
+            },
+            "sample": {
+                "has": false,
+                "width": 1000,
+                "height": 750,
+                "url": null,
+                "alt": null,
+                "alternates": {}
+            },
+            "score": {
+                "up": 4029,
+                "down": -47,
+                "total": 3982
+            },
+            "tags": {
+                "general": [
+                    "anthro",
+                    "areola",
+                    "beanie",
+                    "bed",
+                    "blush",
+                    "bottomwear",
+                    "bouncing_breasts",
+                    "breasts",
+                    "chest_tuft",
+                    "clothed",
+                    "clothing",
+                    "clothing_lift",
+                    "crossed_legs",
+                    "exposed_breasts",
+                    "female",
+                    "female_anthro",
+                    "flashing",
+                    "flashing_breasts",
+                    "furniture",
+                    "grin",
+                    "happy",
+                    "hat",
+                    "headgear",
+                    "headwear",
+                    "leggings",
+                    "legwear",
+                    "looking_at_viewer",
+                    "narrow_hips",
+                    "nipples",
+                    "no_bra",
+                    "on_bed",
+                    "pie_cut_eyes",
+                    "pillow",
+                    "pink_areola",
+                    "presenting",
+                    "presenting_breasts",
+                    "raised_clothing",
+                    "raised_sweater",
+                    "raised_topwear",
+                    "shorts",
+                    "sitting",
+                    "sitting_on_bed",
+                    "slim",
+                    "small_breasts",
+                    "smile",
+                    "solo",
+                    "sweater",
+                    "sweater_lift",
+                    "tail",
+                    "tail_motion",
+                    "tailwag",
+                    "thigh_highs",
+                    "thin_calves",
+                    "thin_legs",
+                    "thin_thighs",
+                    "topwear",
+                    "tuft"
+                ],
+                "artist": [
+                    "whygena"
+                ],
+                "contributor": [],
+                "copyright": [],
+                "character": [
+                    "fifi_(somemf)"
+                ],
+                "species": [
+                    "canid",
+                    "canine",
+                    "canis",
+                    "domestic_dog",
+                    "mammal"
+                ],
+                "invalid": [],
+                "meta": [
+                    "2024",
+                    "2d_animation",
+                    "4:3",
+                    "animated",
+                    "digital_media_(artwork)",
+                    "frame_by_frame"
+                ],
+                "lore": []
+            },
+            "locked_tags": [],
+            "change_seq": 75496177,
+            "flags": {
+                "pending": false,
+                "flagged": false,
+                "note_locked": false,
+                "status_locked": false,
+                "rating_locked": false,
+                "deleted": false
+            },
+            "rating": "q",
+            "fav_count": 5529,
+            "sources": [
+                "https://x.com/Whygena_Draws/status/1802723907738403298"
+            ],
+            "pools": [],
+            "relationships": {
+                "parent_id": null,
+                "has_children": false,
+                "has_active_children": false,
+                "children": []
+            },
+            "approver_id": 45665,
+            "uploader_id": 340613,
+            "uploader_name": "Whygena",
+            "description": "Other sites -\nhttps://twitter.com/Whygena_Draws\nhttps://whygena-draws.newgrounds.com/\n\nSupport my art -\nhttps://www.patreon.com/whygena",
+            "comment_count": 19,
+            "is_favorited": false,
+            "has_notes": false,
+            "duration": 11.62
+        },
+        {
+            "id": 3252622,
+            "created_at": "2022-04-01T02:28:45.263+03:00",
+            "updated_at": "2026-05-25T19:31:06.397+03:00",
+            "file": {
+                "width": 562,
+                "height": 584,
+                "ext": "gif",
+                "size": 2704377,
+                "md5": "813a25f9ca5acb43a020aa8a240a966b",
+                "url": "https://static1.e621.net/data/81/3a/813a25f9ca5acb43a020aa8a240a966b.gif"
+            },
+            "preview": {
+                "width": 256,
+                "height": 266,
+                "url": "https://static1.e621.net/data/preview/81/3a/813a25f9ca5acb43a020aa8a240a966b.jpg",
+                "alt": "https://static1.e621.net/data/preview/81/3a/813a25f9ca5acb43a020aa8a240a966b.webp"
+            },
+            "sample": {
+                "has": false,
+                "width": 562,
+                "height": 584,
+                "url": null,
+                "alt": null,
+                "alternates": {}
+            },
+            "score": {
+                "up": 2774,
+                "down": -15,
+                "total": 2759
+            },
+            "tags": {
+                "general": [
+                    "anthro",
+                    "areola",
+                    "bat_wings",
+                    "big_breasts",
+                    "bottomwear",
+                    "bouncing_breasts",
+                    "breast_drop",
+                    "breast_focus",
+                    "breasts",
+                    "clothed",
+                    "clothing",
+                    "clothing_lift",
+                    "curvy_figure",
+                    "cute_fangs",
+                    "dolphin_shorts",
+                    "eyeshadow",
+                    "fangs",
+                    "female",
+                    "flashing",
+                    "flashing_breasts",
+                    "fur",
+                    "glistening_eyelids",
+                    "huge_breasts",
+                    "lidded_eyes",
+                    "looking_at_viewer",
+                    "makeup",
+                    "membrane_(anatomy)",
+                    "membranous_wings",
+                    "nipples",
+                    "presenting",
+                    "presenting_breasts",
+                    "red_clothing",
+                    "red_sweater",
+                    "red_topwear",
+                    "shirt",
+                    "shirt_lift",
+                    "shorts",
+                    "simple_background",
+                    "solo",
+                    "sweater",
+                    "sweater_lift",
+                    "tan_body",
+                    "tan_skin",
+                    "teeth",
+                    "topwear",
+                    "voluptuous",
+                    "voluptuous_anthro",
+                    "voluptuous_female",
+                    "white_body",
+                    "white_fur",
+                    "wings"
+                ],
+                "artist": [
+                    "wamudraws"
+                ],
+                "contributor": [],
+                "copyright": [
+                    "sega",
+                    "sonic_the_hedgehog_(series)"
+                ],
+                "character": [
+                    "rouge_the_bat"
+                ],
+                "species": [
+                    "bat",
+                    "mammal"
+                ],
+                "invalid": [],
+                "meta": [
+                    "2022",
+                    "2d_animation",
+                    "animated",
+                    "digital_media_(artwork)",
+                    "frame_by_frame",
+                    "icon",
+                    "shaded"
+                ],
+                "lore": []
+            },
+            "locked_tags": [],
+            "change_seq": 75476858,
+            "flags": {
+                "pending": false,
+                "flagged": false,
+                "note_locked": false,
+                "status_locked": false,
+                "rating_locked": false,
+                "deleted": false
+            },
+            "rating": "q",
+            "fav_count": 5508,
+            "sources": [
+                "https://x.com/wamudraws/status/1509672865808982025"
+            ],
+            "pools": [],
+            "relationships": {
+                "parent_id": 3249397,
+                "has_children": false,
+                "has_active_children": false,
+                "children": []
+            },
+            "approver_id": null,
+            "uploader_id": 153124,
+            "uploader_name": "Mrkfoxy",
+            "description": "",
+            "comment_count": 8,
+            "is_favorited": false,
+            "has_notes": false,
+            "duration": 4.16
+        },
+        {
+            "id": 2064265,
+            "created_at": "2019-11-24T19:39:26.338+03:00",
+            "updated_at": "2026-05-25T07:22:31.413+03:00",
+            "file": {
+                "width": 1150,
+                "height": 1500,
+                "ext": "png",
+                "size": 2035576,
+                "md5": "9a53b0b05883c88e4bedabcb7ff55c5c",
+                "url": "https://static1.e621.net/data/9a/53/9a53b0b05883c88e4bedabcb7ff55c5c.png"
+            },
+            "preview": {
+                "width": 256,
+                "height": 334,
+                "url": "https://static1.e621.net/data/preview/9a/53/9a53b0b05883c88e4bedabcb7ff55c5c.jpg",
+                "alt": "https://static1.e621.net/data/preview/9a/53/9a53b0b05883c88e4bedabcb7ff55c5c.webp"
+            },
+            "sample": {
+                "has": true,
+                "width": 850,
+                "height": 1109,
+                "url": "https://static1.e621.net/data/sample/9a/53/9a53b0b05883c88e4bedabcb7ff55c5c.jpg",
+                "alt": "https://static1.e621.net/data/sample/9a/53/9a53b0b05883c88e4bedabcb7ff55c5c.webp",
+                "alternates": {}
+            },
+            "score": {
+                "up": 2590,
+                "down": -10,
+                "total": 2580
+            },
+            "tags": {
+                "general": [
+                    "anthro",
+                    "baseball_cap",
+                    "big_breasts",
+                    "blush",
+                    "breast_focus",
+                    "breasts",
+                    "brown_body",
+                    "brown_fur",
+                    "brown_hair",
+                    "clothed",
+                    "clothing",
+                    "clothing_lift",
+                    "female",
+                    "female_anthro",
+                    "flashing",
+                    "front_view",
+                    "fur",
+                    "green_eyes",
+                    "hair",
+                    "hand_behind_head",
+                    "hat",
+                    "headgear",
+                    "headwear",
+                    "high-angle_view",
+                    "looking_at_viewer",
+                    "lying",
+                    "mouth_hold",
+                    "navel",
+                    "nipples",
+                    "on_back",
+                    "presenting",
+                    "presenting_breasts",
+                    "pupils",
+                    "shirt",
+                    "shirt_in_mouth",
+                    "shirt_lift",
+                    "smile",
+                    "solo",
+                    "square",
+                    "square_pupils",
+                    "teeth",
+                    "topwear"
+                ],
+                "artist": [
+                    "conditional_dnp",
+                    "scappo"
+                ],
+                "contributor": [],
+                "copyright": [],
+                "character": [
+                    "tsenaya"
+                ],
+                "species": [
+                    "canid",
+                    "canine",
+                    "canis",
+                    "jackal",
+                    "mammal"
+                ],
+                "invalid": [],
+                "meta": [
+                    "2019",
+                    "digital_media_(artwork)",
+                    "half-length_portrait",
+                    "hi_res",
+                    "portrait"
+                ],
+                "lore": []
+            },
+            "locked_tags": [
+                "conditional_dnp"
+            ],
+            "change_seq": 74813618,
+            "flags": {
+                "pending": false,
+                "flagged": false,
+                "note_locked": false,
+                "status_locked": false,
+                "rating_locked": false,
+                "deleted": false
+            },
+            "rating": "q",
+            "fav_count": 5479,
+            "sources": [
+                "https://www.furaffinity.net/user/scappo/",
+                "https://www.furaffinity.net/view/33955514/"
+            ],
+            "pools": [],
+            "relationships": {
+                "parent_id": 2260952,
+                "has_children": false,
+                "has_active_children": false,
+                "children": []
+            },
+            "approver_id": 193424,
+            "uploader_id": 317583,
+            "uploader_name": "CosmicMewtwo",
+            "description": "The work-day's over, but she doesn't feel like going home yet! Keep her some company, would you?",
+            "comment_count": 15,
+            "is_favorited": false,
+            "has_notes": false,
+            "duration": null
+        },
+        {
+            "id": 1163093,
+            "created_at": "2017-03-14T17:04:07.067+03:00",
+            "updated_at": "2026-05-25T07:24:10.310+03:00",
+            "file": {
+                "width": 1072,
+                "height": 1000,
+                "ext": "png",
+                "size": 1829095,
+                "md5": "490b7bf07fdfd28ee726ca8cde24688d",
+                "url": "https://static1.e621.net/data/49/0b/490b7bf07fdfd28ee726ca8cde24688d.png"
+            },
+            "preview": {
+                "width": 274,
+                "height": 256,
+                "url": "https://static1.e621.net/data/preview/49/0b/490b7bf07fdfd28ee726ca8cde24688d.jpg",
+                "alt": "https://static1.e621.net/data/preview/49/0b/490b7bf07fdfd28ee726ca8cde24688d.webp"
+            },
+            "sample": {
+                "has": true,
+                "width": 911,
+                "height": 850,
+                "url": "https://static1.e621.net/data/sample/49/0b/490b7bf07fdfd28ee726ca8cde24688d.jpg",
+                "alt": "https://static1.e621.net/data/sample/49/0b/490b7bf07fdfd28ee726ca8cde24688d.webp",
+                "alternates": {}
+            },
+            "score": {
+                "up": 2732,
+                "down": -18,
+                "total": 2714
+            },
+            "tags": {
+                "general": [
+                    "anthro",
+                    "areola",
+                    "bathing",
+                    "big_breasts",
+                    "bikini",
+                    "black_bikini",
+                    "black_clothing",
+                    "black_nose",
+                    "black_swimwear",
+                    "blush",
+                    "breasts",
+                    "bubble_butt",
+                    "butt",
+                    "camera_view",
+                    "clothed",
+                    "clothing",
+                    "curvy_figure",
+                    "cutaway",
+                    "female",
+                    "forest",
+                    "front_view",
+                    "fur",
+                    "hair",
+                    "hands_behind_head",
+                    "hot_tub",
+                    "legs_in_water",
+                    "long_hair",
+                    "looking_at_viewer",
+                    "navel",
+                    "nipple_outline",
+                    "nipples",
+                    "one_breast_out",
+                    "open_mouth",
+                    "outside",
+                    "partially_submerged",
+                    "pink_nipples",
+                    "plant",
+                    "purple_eyes",
+                    "recording",
+                    "skimpy",
+                    "skindentation",
+                    "snow",
+                    "solo",
+                    "standing",
+                    "submerged_legs",
+                    "swimwear",
+                    "tail",
+                    "thick_thighs",
+                    "tree",
+                    "two-piece_swimsuit",
+                    "voluptuous",
+                    "voluptuous_anthro",
+                    "voluptuous_female",
+                    "wardrobe_malfunction",
+                    "white_body",
+                    "white_ears",
+                    "white_face",
+                    "white_fur",
+                    "white_hair",
+                    "white_tail",
+                    "wide_hips"
+                ],
+                "artist": [
+                    "chloe-dog"
+                ],
+                "contributor": [],
+                "copyright": [],
+                "character": [],
+                "species": [
+                    "canid",
+                    "canine",
+                    "canis",
+                    "mammal",
+                    "wolf"
+                ],
+                "invalid": [],
+                "meta": [
+                    "2017",
+                    "digital_media_(artwork)",
+                    "portrait",
+                    "shaded",
+                    "three-quarter_portrait"
+                ],
+                "lore": []
+            },
+            "locked_tags": [],
+            "change_seq": 62509385,
+            "flags": {
+                "pending": false,
+                "flagged": false,
+                "note_locked": false,
+                "status_locked": false,
+                "rating_locked": true,
+                "deleted": false
+            },
+            "rating": "q",
+            "fav_count": 5250,
+            "sources": [
+                "https://www.furaffinity.net/view/22891264/"
+            ],
+            "pools": [],
+            "relationships": {
+                "parent_id": null,
+                "has_children": false,
+                "has_active_children": false,
+                "children": []
+            },
+            "approver_id": 33842,
+            "uploader_id": 13521,
+            "uploader_name": "ultragamer89",
+            "description": "h2.Commission (ArcadiaTerui)\r\n\r\nJanuary commission for arcadiaterui as a gift for artemisgambit\r\n\r\nThank you! (*˘︶˘*).｡.:*♡\r\n\r\n\r\n\r\n\r\nCharacter © ArtemisGambit\r\n\r\nArt © Chloe-dog\r\n",
+            "comment_count": 18,
+            "is_favorited": false,
+            "has_notes": false,
+            "duration": null
+        },
+        {
+            "id": 585543,
+            "created_at": "2015-01-11T23:16:34.052+03:00",
+            "updated_at": "2026-05-25T07:24:25.272+03:00",
+            "file": {
+                "width": 800,
+                "height": 700,
+                "ext": "png",
+                "size": 183023,
+                "md5": "d699ed8cc066d6600a27ea0b8b4c1f26",
+                "url": "https://static1.e621.net/data/d6/99/d699ed8cc066d6600a27ea0b8b4c1f26.png"
+            },
+            "preview": {
+                "width": 293,
+                "height": 256,
+                "url": "https://static1.e621.net/data/preview/d6/99/d699ed8cc066d6600a27ea0b8b4c1f26.jpg",
+                "alt": "https://static1.e621.net/data/preview/d6/99/d699ed8cc066d6600a27ea0b8b4c1f26.webp"
+            },
+            "sample": {
+                "has": false,
+                "width": 800,
+                "height": 700,
+                "url": null,
+                "alt": null,
+                "alternates": {}
+            },
+            "score": {
+                "up": 3463,
+                "down": -63,
+                "total": 3400
+            },
+            "tags": {
+                "general": [
+                    "anthro",
+                    "biped",
+                    "black_body",
+                    "black_fur",
+                    "bottomwear",
+                    "briefs",
+                    "briefs_only",
+                    "clothed",
+                    "clothing",
+                    "dialogue",
+                    "ellipsis",
+                    "embarrassed",
+                    "fidgeting",
+                    "fingertips_touching",
+                    "fur",
+                    "gesture",
+                    "grey_body",
+                    "grey_fur",
+                    "humor",
+                    "index_to_index",
+                    "male",
+                    "multicolored_body",
+                    "multicolored_fur",
+                    "navel",
+                    "open_mouth",
+                    "shy",
+                    "simple_background",
+                    "skimpy",
+                    "solo",
+                    "standing",
+                    "stated_homosexuality",
+                    "stated_sexuality",
+                    "suggestive",
+                    "text",
+                    "the_truth",
+                    "tighty_whities",
+                    "tongue",
+                    "topless",
+                    "underwear",
+                    "underwear_only",
+                    "white_background",
+                    "white_body",
+                    "white_bottomwear",
+                    "white_briefs",
+                    "white_clothing",
+                    "white_fur",
+                    "white_underwear",
+                    "wide_eyed"
+                ],
+                "artist": [
+                    "cobaltsynapse"
+                ],
+                "contributor": [],
+                "copyright": [],
+                "character": [],
+                "species": [
+                    "canid",
+                    "canine",
+                    "canis",
+                    "domestic_dog",
+                    "husky",
+                    "mammal",
+                    "nordic_sled_dog",
+                    "spitz"
+                ],
+                "invalid": [],
+                "meta": [
+                    "2013",
+                    "colored",
+                    "colored_sketch",
+                    "digital_drawing_(artwork)",
+                    "digital_media_(artwork)",
+                    "english_text",
+                    "half-length_portrait",
+                    "lol_comments",
+                    "meme",
+                    "portrait",
+                    "reaction_image",
+                    "restricted_palette",
+                    "shaded",
+                    "sketch",
+                    "soft_shading",
+                    "unavailable_at_source"
+                ],
+                "lore": []
+            },
+            "locked_tags": [],
+            "change_seq": 75858064,
+            "flags": {
+                "pending": false,
+                "flagged": false,
+                "note_locked": false,
+                "status_locked": false,
+                "rating_locked": false,
+                "deleted": false
+            },
+            "rating": "q",
+            "fav_count": 5101,
+            "sources": [
+                "-https://i.imgur.com/Jjajw4C.png"
+            ],
+            "pools": [],
+            "relationships": {
+                "parent_id": 324900,
+                "has_children": false,
+                "has_active_children": false,
+                "children": []
+            },
+            "approver_id": 105815,
+            "uploader_id": 17290,
+            "uploader_name": "Blackphantom770",
+            "description": "Colored version",
+            "comment_count": 97,
+            "is_favorited": false,
+            "has_notes": false,
+            "duration": null
+        },
+        {
+            "id": 4726892,
+            "created_at": "2024-04-18T00:34:52.370+03:00",
+            "updated_at": "2026-05-25T07:24:32.772+03:00",
+            "file": {
+                "width": 1568,
+                "height": 2350,
+                "ext": "png",
+                "size": 2695110,
+                "md5": "e30373a8740c1a552e5e3ebab9942095",
+                "url": "https://static1.e621.net/data/e3/03/e30373a8740c1a552e5e3ebab9942095.png"
+            },
+            "preview": {
+                "width": 256,
+                "height": 384,
+                "url": "https://static1.e621.net/data/preview/e3/03/e30373a8740c1a552e5e3ebab9942095.jpg",
+                "alt": "https://static1.e621.net/data/preview/e3/03/e30373a8740c1a552e5e3ebab9942095.webp"
+            },
+            "sample": {
+                "has": true,
+                "width": 850,
+                "height": 1274,
+                "url": "https://static1.e621.net/data/sample/e3/03/e30373a8740c1a552e5e3ebab9942095.jpg",
+                "alt": "https://static1.e621.net/data/sample/e3/03/e30373a8740c1a552e5e3ebab9942095.webp",
+                "alternates": {}
+            },
+            "score": {
+                "up": 2748,
+                "down": -14,
+                "total": 2734
+            },
+            "tags": {
+                "general": [
+                    "anthro",
+                    "arm_armor",
+                    "armor",
+                    "big_breasts",
+                    "bikini_armor",
+                    "biped",
+                    "blue_eyes",
+                    "blush",
+                    "breasts",
+                    "cleavage",
+                    "clothed",
+                    "clothing",
+                    "curvy_figure",
+                    "ear_piercing",
+                    "ear_ring",
+                    "female",
+                    "female_anthro",
+                    "fur",
+                    "hand_on_hip",
+                    "hourglass_figure",
+                    "huge_breasts",
+                    "leg_armor",
+                    "looking_at_viewer",
+                    "melee_weapon",
+                    "narrowed_eyes",
+                    "orange_body",
+                    "orange_fur",
+                    "piercing",
+                    "ring_piercing",
+                    "shoulder_armor",
+                    "skimpy",
+                    "slim",
+                    "small_waist",
+                    "solo",
+                    "sword",
+                    "tail",
+                    "thick_thighs",
+                    "unconvincing_armor",
+                    "weapon",
+                    "wide_hips"
+                ],
+                "artist": [
+                    "cooliehigh"
+                ],
+                "contributor": [],
+                "copyright": [],
+                "character": [
+                    "ginger_(cooliehigh)"
+                ],
+                "species": [
+                    "canid",
+                    "canine",
+                    "fox",
+                    "mammal",
+                    "red_fox",
+                    "true_fox"
+                ],
+                "invalid": [],
+                "meta": [
+                    "2024",
+                    "hi_res"
+                ],
+                "lore": []
+            },
+            "locked_tags": [],
+            "change_seq": 71940379,
+            "flags": {
+                "pending": false,
+                "flagged": false,
+                "note_locked": false,
+                "status_locked": false,
+                "rating_locked": false,
+                "deleted": false
+            },
+            "rating": "q",
+            "fav_count": 5098,
+            "sources": [
+                "https://www.furaffinity.net/view/56313961/",
+                "https://d.furaffinity.net/art/cooliehigh/1713389633/1713389633.cooliehigh_ginger_bikini_armor.png",
+                "https://www.furaffinity.net/user/cooliehigh/"
+            ],
+            "pools": [],
+            "relationships": {
+                "parent_id": null,
+                "has_children": true,
+                "has_active_children": true,
+                "children": [
+                    4881716
+                ]
+            },
+            "approver_id": 76408,
+            "uploader_id": 336260,
+            "uploader_name": "Coopercaller",
+            "description": "The armor she wears when she's in heat and looks for weak bandits to let them defeat her! 🦊💕\nArmor is from Skyrim mod TAWOBA\n\nMore art, sets and comics if you'd like to support me!\nhttps://subscribestar.adult/cooliehigh",
+            "comment_count": 16,
+            "is_favorited": false,
+            "has_notes": false,
+            "duration": null
+        },
+        {
+            "id": 5974179,
+            "created_at": "2025-11-13T18:09:34.539+03:00",
+            "updated_at": "2026-05-25T18:24:50.704+03:00",
+            "file": {
+                "width": 1320,
+                "height": 1320,
+                "ext": "gif",
+                "size": 1593632,
+                "md5": "5499e12be702c9429d30a81c6d04f199",
+                "url": "https://static1.e621.net/data/54/99/5499e12be702c9429d30a81c6d04f199.gif"
+            },
+            "preview": {
+                "width": 256,
+                "height": 256,
+                "url": "https://static1.e621.net/data/preview/54/99/5499e12be702c9429d30a81c6d04f199.jpg",
+                "alt": "https://static1.e621.net/data/preview/54/99/5499e12be702c9429d30a81c6d04f199.webp"
+            },
+            "sample": {
+                "has": false,
+                "width": 1320,
+                "height": 1320,
+                "url": null,
+                "alt": null,
+                "alternates": {}
+            },
+            "score": {
+                "up": 2726,
+                "down": -18,
+                "total": 2708
+            },
+            "tags": {
+                "general": [
+                    ":3",
+                    "anthro",
+                    "anthrofied",
+                    "apron",
+                    "apron_only",
+                    "asking_viewer",
+                    "belly_outline",
+                    "beverage",
+                    "big_breasts",
+                    "big_butt",
+                    "biped",
+                    "black_body",
+                    "blinking",
+                    "blue_body",
+                    "blue_inner_ear",
+                    "breasts",
+                    "butt",
+                    "ceiling_lamp",
+                    "circle_eyebrows",
+                    "cleavage",
+                    "clipboard",
+                    "clothed",
+                    "clothing",
+                    "dessert",
+                    "detailed_background",
+                    "dialogue",
+                    "eyebrows",
+                    "eyelashes",
+                    "female",
+                    "female_anthro",
+                    "food",
+                    "front_view",
+                    "glistening",
+                    "glistening_body",
+                    "glistening_breasts",
+                    "glistening_butt",
+                    "glitch",
+                    "green_apron",
+                    "green_clothing",
+                    "huge_breasts",
+                    "ice_cream",
+                    "ice_cream_float",
+                    "lamp",
+                    "leaning",
+                    "leaning_forward",
+                    "machine",
+                    "mature_female",
+                    "multicolored_body",
+                    "natural_breasts",
+                    "nipple_outline",
+                    "open_:3",
+                    "open_mouth",
+                    "question_mark",
+                    "rear_view",
+                    "screen",
+                    "screen_face",
+                    "shaking_butt",
+                    "side_boob",
+                    "solo",
+                    "speech_bubble",
+                    "tail",
+                    "tail_motion",
+                    "text",
+                    "twitter_handle",
+                    "whiskers",
+                    "white_body",
+                    "white_tail"
+                ],
+                "artist": [
+                    "noah_(artist)"
+                ],
+                "contributor": [],
+                "copyright": [
+                    "pudu_robotics"
+                ],
+                "character": [],
+                "species": [
+                    "bellabot",
+                    "domestic_cat",
+                    "felid",
+                    "feline",
+                    "felis",
+                    "living_machine",
+                    "mammal",
+                    "robot",
+                    "robot_anthro"
+                ],
+                "invalid": [],
+                "meta": [
+                    "1:1",
+                    "2025",
+                    "aliasing",
+                    "animated",
+                    "artist_name",
+                    "binary_drawing",
+                    "cel_shading",
+                    "colored",
+                    "digital_drawing_(artwork)",
+                    "digital_media_(artwork)",
+                    "english_text",
+                    "hi_res",
+                    "loop",
+                    "pixel_(artwork)",
+                    "pixel_animation",
+                    "shaded"
+                ],
+                "lore": []
+            },
+            "locked_tags": [],
+            "change_seq": 74850158,
+            "flags": {
+                "pending": false,
+                "flagged": false,
+                "note_locked": false,
+                "status_locked": false,
+                "rating_locked": false,
+                "deleted": false
+            },
+            "rating": "q",
+            "fav_count": 5093,
+            "sources": [
+                "https://www.furaffinity.net/view/62975097/",
+                "https://d.furaffinity.net/art/marugari/1763046424/1763046424.marugari_bellabot_1_2.gif",
+                "https://www.furaffinity.net/user/marugari/",
+                "https://x.com/noah_marugari/status/1988919032691446109"
+            ],
+            "pools": [
+                52702
+            ],
+            "relationships": {
+                "parent_id": null,
+                "has_children": false,
+                "has_active_children": false,
+                "children": []
+            },
+            "approver_id": null,
+            "uploader_id": 336260,
+            "uploader_name": "Coopercaller",
+            "description": "From source:\n[section,expanded=cat waitress robot\n - by marugari ( https://www.furaffinity.net/user/marugari/ )]\ngif ver\n[/section]",
+            "comment_count": 14,
+            "is_favorited": false,
+            "has_notes": false,
+            "duration": 3.75
+        },
+        {
+            "id": 5015876,
+            "created_at": "2024-08-28T23:04:19.093+03:00",
+            "updated_at": "2026-05-25T07:25:07.707+03:00",
+            "file": {
+                "width": 1500,
+                "height": 2000,
+                "ext": "png",
+                "size": 2352711,
+                "md5": "6bb1bb53706510424a2153dd574cb97c",
+                "url": "https://static1.e621.net/data/6b/b1/6bb1bb53706510424a2153dd574cb97c.png"
+            },
+            "preview": {
+                "width": 256,
+                "height": 341,
+                "url": "https://static1.e621.net/data/preview/6b/b1/6bb1bb53706510424a2153dd574cb97c.jpg",
+                "alt": "https://static1.e621.net/data/preview/6b/b1/6bb1bb53706510424a2153dd574cb97c.webp"
+            },
+            "sample": {
+                "has": true,
+                "width": 850,
+                "height": 1133,
+                "url": "https://static1.e621.net/data/sample/6b/b1/6bb1bb53706510424a2153dd574cb97c.jpg",
+                "alt": "https://static1.e621.net/data/sample/6b/b1/6bb1bb53706510424a2153dd574cb97c.webp",
+                "alternates": {}
+            },
+            "score": {
+                "up": 2559,
+                "down": -10,
+                "total": 2549
+            },
+            "tags": {
+                "general": [
+                    "5_fingers",
+                    "anthro",
+                    "areola",
+                    "black_hair",
+                    "blue_eyes",
+                    "boy_shorts",
+                    "breasts",
+                    "camel_toe",
+                    "clothed",
+                    "clothing",
+                    "clothing_lift",
+                    "ear_piercing",
+                    "ear_ring",
+                    "eyebrow_piercing",
+                    "facial_piercing",
+                    "female",
+                    "fingers",
+                    "flashing",
+                    "flashing_breasts",
+                    "foreshortening",
+                    "fur",
+                    "gauged_ear",
+                    "gesture",
+                    "hair",
+                    "hand_gesture",
+                    "handpaw",
+                    "heterochromia",
+                    "looking_at_viewer",
+                    "low-angle_view",
+                    "medium_breasts",
+                    "navel",
+                    "nipples",
+                    "no_bra",
+                    "nose_piercing",
+                    "nose_ring",
+                    "panties",
+                    "paws",
+                    "piercing",
+                    "ring_piercing",
+                    "septum_piercing",
+                    "septum_ring",
+                    "solo",
+                    "topwear",
+                    "topwear_lift",
+                    "underwear",
+                    "v_sign",
+                    "white_body",
+                    "white_fur",
+                    "yellow_eyes"
+                ],
+                "artist": [
+                    "spuydjeks"
+                ],
+                "contributor": [],
+                "copyright": [],
+                "character": [
+                    "spuydjeks_(character)"
+                ],
+                "species": [
+                    "canid",
+                    "canine",
+                    "canis",
+                    "domestic_dog",
+                    "hyena",
+                    "mammal"
+                ],
+                "invalid": [],
+                "meta": [
+                    "2024",
+                    "3:4",
+                    "hi_res"
+                ],
+                "lore": []
+            },
+            "locked_tags": [],
+            "change_seq": 76757392,
+            "flags": {
+                "pending": false,
+                "flagged": false,
+                "note_locked": false,
+                "status_locked": false,
+                "rating_locked": false,
+                "deleted": false
+            },
+            "rating": "q",
+            "fav_count": 5039,
+            "sources": [
+                "https://www.furaffinity.net/view/57905310",
+                "https://www.furaffinity.net/user/spuydjeks",
+                "https://d.furaffinity.net/art/spuydjeks/1724875298/1724875298.spuydjeks_%D1%84%D1%83%D1%82%D0%B1%D0%BE%D0%BB%D0%BA%D0%B0_%D0%BA%D0%BE%D0%BF%D0%B8%D1%8F.png",
+                "https://www.furaffinity.net/user/spuydjeks/"
+            ],
+            "pools": [],
+            "relationships": {
+                "parent_id": null,
+                "has_children": true,
+                "has_active_children": true,
+                "children": [
+                    5065401
+                ]
+            },
+            "approver_id": 95927,
+            "uploader_id": 589819,
+            "uploader_name": "Swedistan_Doge",
+            "description": "h2.Photo 1\n\n-\n",
+            "comment_count": 12,
+            "is_favorited": false,
+            "has_notes": false,
+            "duration": null
+        },
+        {
+            "id": 5306330,
+            "created_at": "2025-01-14T07:08:08.288+03:00",
+            "updated_at": "2026-05-25T07:24:59.858+03:00",
+            "file": {
+                "width": 624,
+                "height": 900,
+                "ext": "gif",
+                "size": 5333632,
+                "md5": "8a2aa9c12d33b105cab6dfb97e39fe46",
+                "url": "https://static1.e621.net/data/8a/2a/8a2aa9c12d33b105cab6dfb97e39fe46.gif"
+            },
+            "preview": {
+                "width": 256,
+                "height": 369,
+                "url": "https://static1.e621.net/data/preview/8a/2a/8a2aa9c12d33b105cab6dfb97e39fe46.jpg",
+                "alt": "https://static1.e621.net/data/preview/8a/2a/8a2aa9c12d33b105cab6dfb97e39fe46.webp"
+            },
+            "sample": {
+                "has": false,
+                "width": 624,
+                "height": 900,
+                "url": null,
+                "alt": null,
+                "alternates": {}
+            },
+            "score": {
+                "up": 2932,
+                "down": -20,
+                "total": 2912
+            },
+            "tags": {
+                "general": [
+                    "anthro",
+                    "areola",
+                    "bare_breasts",
+                    "big_breasts",
+                    "biped",
+                    "blinking",
+                    "bone",
+                    "breast_focus",
+                    "breast_squish",
+                    "breasts",
+                    "claws",
+                    "clothed",
+                    "clothing",
+                    "curvy_figure",
+                    "detailed_background",
+                    "female",
+                    "fondling",
+                    "front_view",
+                    "fur",
+                    "glowing",
+                    "glowing_eyes",
+                    "grey_areola",
+                    "grey_nipples",
+                    "hair",
+                    "hand_on_breast",
+                    "hand_on_own_breast",
+                    "hip_sway",
+                    "holding_breast",
+                    "legs_together",
+                    "looking_at_viewer",
+                    "navel",
+                    "navel_piercing",
+                    "nipple_piercing",
+                    "nipples",
+                    "panties",
+                    "piercing",
+                    "pubes",
+                    "pupils",
+                    "self_fondle",
+                    "shaking_breasts",
+                    "shaking_hips",
+                    "skull",
+                    "skull_head",
+                    "solo",
+                    "squish",
+                    "standing",
+                    "tail",
+                    "tail_motion",
+                    "tail_sway",
+                    "thick_thighs",
+                    "three-quarter_view",
+                    "topless",
+                    "topless_anthro",
+                    "topless_female",
+                    "underwear",
+                    "voluptuous",
+                    "voluptuous_anthro",
+                    "voluptuous_female",
+                    "wide_hips"
+                ],
+                "artist": [
+                    "chelodoy"
+                ],
+                "contributor": [],
+                "copyright": [
+                    "scp_foundation"
+                ],
+                "character": [
+                    "scp-1471-a"
+                ],
+                "species": [
+                    "canid",
+                    "canine",
+                    "malo",
+                    "mammal",
+                    "skulldog_(species)"
+                ],
+                "invalid": [],
+                "meta": [
+                    "2025",
+                    "2d_animation",
+                    "animated",
+                    "frame_by_frame"
+                ],
+                "lore": []
+            },
+            "locked_tags": [],
+            "change_seq": 76703668,
+            "flags": {
+                "pending": false,
+                "flagged": false,
+                "note_locked": false,
+                "status_locked": false,
+                "rating_locked": false,
+                "deleted": false
+            },
+            "rating": "q",
+            "fav_count": 5023,
+            "sources": [
+                "https://www.furaffinity.net/view/59512459/",
+                "https://d.furaffinity.net/art/chelodoy/1736827600/1736827600.chelodoy_animation2mal0-ezgif_com-resize.gif",
+                "https://www.furaffinity.net/user/chelodoy/"
+            ],
+            "pools": [],
+            "relationships": {
+                "parent_id": null,
+                "has_children": false,
+                "has_active_children": false,
+                "children": []
+            },
+            "approver_id": null,
+            "uploader_id": 396514,
+            "uploader_name": "GetAGrip",
+            "description": "h2.Animation Mal0!\n\nWinner of the animation poll - Mal0!\nThis kind of characters are my favorite...\n\nNew animation and a cartoon WIP on my Patreon page !\npatreon.com/Chelodoy\n",
+            "comment_count": 16,
+            "is_favorited": false,
+            "has_notes": false,
+            "duration": 2.0
+        }
+    ]
+}

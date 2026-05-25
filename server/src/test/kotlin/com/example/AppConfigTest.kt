@@ -14,6 +14,11 @@ class AppConfigTest {
                 mapOf(
                     "KURAI_JWT_SECRET" to "super-secret",
                     "KURAI_LUCENE_DIR" to "/tmp/kurai-lucene",
+                    "KURAI_UNSPLASH_USER_AGENT" to "Kurai/1.0",
+                    "KURAI_UNSPLASH_ACCESS_KEY" to "unsplash-key",
+                    "KURAI_E621_USER_AGENT" to "Kurai/1.0",
+                    "KURAI_E621_USERNAME" to "user",
+                    "KURAI_E621_ACCESS_KEY" to "e621-key",
                 ),
             )
         assertEquals("super-secret", config.jwtSecret)

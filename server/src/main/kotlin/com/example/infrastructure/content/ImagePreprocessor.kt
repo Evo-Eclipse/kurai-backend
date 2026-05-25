@@ -61,7 +61,31 @@ class ImagePreprocessor {
         val r: ByteArray,
         val g: ByteArray,
         val b: ByteArray,
-    )
+    ) {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as ResampledImage
+
+            if (width != other.width) return false
+            if (height != other.height) return false
+            if (!r.contentEquals(other.r)) return false
+            if (!g.contentEquals(other.g)) return false
+            if (!b.contentEquals(other.b)) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = width
+            result = 31 * result + height
+            result = 31 * result + r.contentHashCode()
+            result = 31 * result + g.contentHashCode()
+            result = 31 * result + b.contentHashCode()
+            return result
+        }
+    }
 
     /**
      * Lanczos-3 resize, byte-for-byte compatible with Pillow's
@@ -157,7 +181,25 @@ class ImagePreprocessor {
     private data class Contribution(
         val indices: IntArray,
         val weights: FloatArray,
-    )
+    ) {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as Contribution
+
+            if (!indices.contentEquals(other.indices)) return false
+            if (!weights.contentEquals(other.weights)) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = indices.contentHashCode()
+            result = 31 * result + weights.contentHashCode()
+            return result
+        }
+    }
 
     private fun computeContributions(
         srcSize: Int,
@@ -228,7 +270,7 @@ class ImagePreprocessor {
      * flat `FloatArray(3·H·W)` laid out as `[R-plane, G-plane, B-plane]`,
      * each plane in row-major order. Per-pixel:
      *
-     *   value = (channel/255 − mean[c]) / std[c]
+     *   value = (channel/255 − mean_c) / std_c
      */
     private fun normalizeToChw(img: ResampledImage): FloatArray {
         val planeSize = img.width * img.height

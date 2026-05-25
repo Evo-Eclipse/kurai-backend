@@ -48,6 +48,9 @@ tasks.check {
 dependencies {
     implementation(project(":domain"))
 
+    implementation(ktorLibs.client.cio)
+    implementation(ktorLibs.client.contentNegotiation)
+    implementation(ktorLibs.client.core)
     implementation(ktorLibs.serialization.kotlinx.json)
     implementation(ktorLibs.server.callLogging)
     implementation(ktorLibs.server.conditionalHeaders)
@@ -69,5 +72,6 @@ dependencies {
     testImplementation(kotlin("test"))
     testImplementation(libs.archunit.junit5)
     testImplementation(libs.h2database.h2)
+    testImplementation(ktorLibs.client.mock)
     testImplementation(ktorLibs.server.testHost)
 }
