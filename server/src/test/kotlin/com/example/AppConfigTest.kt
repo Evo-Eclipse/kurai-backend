@@ -19,6 +19,7 @@ class AppConfigTest {
         assertEquals("super-secret", config.jwtSecret)
         assertEquals(Path.of("/tmp/kurai-lucene"), config.luceneDir)
         assertEquals(AppConfig.DEFAULT_LUCENE_DEPRECATED_GC_SECONDS, config.luceneDeprecatedGcSeconds)
+        assertEquals(AppConfig.DEFAULT_ONNX_INTRA_OP_THREADS, config.onnxIntraOpThreads)
     }
 
     @Test

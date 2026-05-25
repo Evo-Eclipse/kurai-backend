@@ -62,6 +62,7 @@ dependencies {
     implementation(libs.exposed.core)
     implementation(libs.exposed.jdbc)
     implementation(libs.lucene.core)
+    implementation(libs.onnxruntime)
     implementation(libs.sqlite.jdbc)
     implementation(libs.logback.classic)
 
