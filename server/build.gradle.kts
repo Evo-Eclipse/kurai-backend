@@ -61,6 +61,7 @@ dependencies {
     implementation(ktorLibs.server.statusPages)
     implementation(libs.exposed.core)
     implementation(libs.exposed.jdbc)
+    implementation(libs.lucene.core)
     implementation(libs.sqlite.jdbc)
     implementation(libs.logback.classic)
 

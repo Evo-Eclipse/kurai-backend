@@ -5,6 +5,7 @@ h2 = "2.4.240"
 kotlin = "2.3.21"
 ktlint = "14.2.0"
 logback = "1.5.21"
+lucene = "10.4.0"
 sqlite = "3.53.1.0"
 
 [libraries]
@@ -13,6 +14,7 @@ exposed-core = { module = "org.jetbrains.exposed:exposed-core", version.ref = "e
 exposed-jdbc = { module = "org.jetbrains.exposed:exposed-jdbc", version.ref = "exposed" }
 h2database-h2 = { module = "com.h2database:h2", version.ref = "h2" }
 logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
+lucene-core = { module = "org.apache.lucene:lucene-core", version.ref = "lucene" }
 sqlite-jdbc = { module = "org.xerial:sqlite-jdbc", version.ref = "sqlite" }
 
 [plugins]
