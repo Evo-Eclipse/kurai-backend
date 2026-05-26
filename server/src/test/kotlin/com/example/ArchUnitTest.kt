@@ -2,6 +2,8 @@ package com.example
 
 import com.example.archtest.violation.domain.DomainToRoutingViolation
 import com.example.archtest.violation.domain.FakeDomain
+import com.example.archtest.violation.domain.embedding.FakeEmbedding
+import com.example.archtest.violation.domain.profile.ProfileToEmbeddingViolation
 import com.example.archtest.violation.infrastructure.FakeInfrastructure
 import com.example.archtest.violation.infrastructure.InfrastructureToDomainViolation
 import com.example.archtest.violation.routing.RoutingViolation
@@ -53,6 +55,21 @@ class ArchUnitTest {
     }
 
     @Test
+    fun `domain profile does not depend on domain embedding`() {
+        profileNotOnEmbedding().check(productionClasses)
+    }
+
+    @Test
+    fun `ArchUnit catches profile-to-embedding violations`() {
+        val violationClasses =
+            ClassFileImporter().importClasses(
+                ProfileToEmbeddingViolation::class.java,
+                FakeEmbedding::class.java,
+            )
+        assertFailsWith<AssertionError> { profileNotOnEmbedding().check(violationClasses) }
+    }
+
+    @Test
     fun `ArchUnit catches domain-to-routing violations`() {
         val violationClasses =
             ClassFileImporter().importClasses(
@@ -83,6 +100,15 @@ class ArchUnitTest {
             .should()
             .dependOnClassesThat()
             .resideInAPackage("..domain..")
+
+    private fun profileNotOnEmbedding() =
+        noClasses()
+            .that()
+            .resideInAPackage("..domain.profile..")
+            .should()
+            .dependOnClassesThat()
+            .resideInAPackage("..domain.embedding..")
+            .allowEmptyShould(true)
 
     private fun domainNotOnRouting() =
         noClasses()

@@ -12,5 +12,8 @@ configure<org.jlleitschuh.gradle.ktlint.KtlintExtension> {
 }
 
 dependencies {
+    implementation(libs.caffeine)
+    implementation(libs.kotlinx.coroutines.core)
+
     testImplementation(kotlin("test"))
 }
