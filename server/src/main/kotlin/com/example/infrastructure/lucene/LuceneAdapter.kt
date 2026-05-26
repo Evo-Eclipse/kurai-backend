@@ -5,6 +5,7 @@ import org.apache.lucene.codecs.lucene104.Lucene104Codec
 import org.apache.lucene.codecs.lucene99.Lucene99HnswVectorsFormat
 import org.apache.lucene.document.Document
 import org.apache.lucene.document.KnnFloatVectorField
+import org.apache.lucene.document.LongPoint
 import org.apache.lucene.document.StoredField
 import org.apache.lucene.index.DirectoryReader
 import org.apache.lucene.index.IndexWriter
@@ -82,6 +83,7 @@ class LuceneAdapter(
         val doc =
             Document().apply {
                 add(StoredField(FIELD_ITEM_ID, itemId))
+                add(LongPoint(FIELD_ITEM_ID_INDEX, itemId))
                 add(KnnFloatVectorField(FIELD_VECTOR, vector, VectorSimilarityFunction.COSINE))
             }
         writer.addDocument(doc)
@@ -130,6 +132,24 @@ class LuceneAdapter(
         }
     }
 
+    fun getVector(itemId: Long): FloatArray? {
+        val reader = readerRef.get()
+        if (reader.numDocs() == 0) return null
+        val searcher = IndexSearcher(reader)
+        val hits = searcher.search(LongPoint.newExactQuery(FIELD_ITEM_ID_INDEX, itemId), 1)
+        if (hits.scoreDocs.isEmpty()) return null
+        val globalDocId = hits.scoreDocs[0].doc
+        for (ctx in reader.leaves()) {
+            if (globalDocId < ctx.docBase || globalDocId >= ctx.docBase + ctx.reader().maxDoc()) continue
+            val localDocId = globalDocId - ctx.docBase
+            val vv = ctx.reader().getFloatVectorValues(FIELD_VECTOR) ?: return null
+            val iter = vv.iterator()
+            if (iter.advance(localDocId) != localDocId) return null
+            return vv.vectorValue(iter.index()).copyOf()
+        }
+        return null
+    }
+
     override fun close() {
         try {
             writer.close()
@@ -156,6 +176,7 @@ class LuceneAdapter(
         const val HNSW_EF_CONSTRUCTION: Int = 100
         const val L2_TOLERANCE: Float = 1e-3f
         private const val FIELD_ITEM_ID = "item_id"
+        private const val FIELD_ITEM_ID_INDEX = "item_id_idx"
         private const val FIELD_VECTOR = "vector"
 
         private fun l2Norm(v: FloatArray): Float {
