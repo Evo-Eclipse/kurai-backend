@@ -20,8 +20,6 @@ class SplittingTest {
 
     @Test
     fun `two tight separable clusters yield silhouette above 0_5`() {
-        val center0 = FloatArray(Scoring.ALPHA_SESSION.toInt().coerceAtLeast(64)).also { it[0] = 1f }
-        val center1 = FloatArray(center0.size).also { it[1] = 1f }
         val dim = 128
         val c0 = FloatArray(dim).also { it[0] = 1f }
         val c1 = FloatArray(dim).also { it[1] = 1f }

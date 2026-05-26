@@ -45,6 +45,8 @@ object Scoring {
         if (w == 0f) return profile.copy(lastAppliedEventId = event.id)
         val absW = abs(w)
         val isNegative = w < 0f
+        // Both vectors track attention regardless of valence (absW); they are reserved
+        // for future attention-aware re-ranking and are not used by score().
         val newSession = l2Normalize(blend(profile.sessionVector, itemVector, ALPHA_SESSION * absW))
         val newLongTerm = l2Normalize(blend(profile.longTermVector, itemVector, ALPHA_LONG_TERM * absW))
         val updatedPositives =

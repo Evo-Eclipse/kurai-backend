@@ -1,11 +1,12 @@
 package com.example.domain.cluster
 
+import com.example.domain.model.Prototype
 import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
 internal const val EXPECTED_K = 23
-internal const val EXPECTED_DIM = 768
+internal const val EXPECTED_DIM = Prototype.VECTOR_DIM
 
 // Format: uint32 k (LE) | k x 768 x float32 (LE)
 internal fun loadCentroids(stream: InputStream): Array<FloatArray> {

@@ -1,5 +1,6 @@
 package com.example.domain.embedding
 
+import com.example.domain.model.Prototype
 import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
 
@@ -48,7 +49,7 @@ class EmbeddingService(
     internal val estimatedCacheSize: Long get() = cache.estimatedSize()
 
     companion object {
-        const val VECTOR_BYTES = 768 * 4
+        const val VECTOR_BYTES = Prototype.VECTOR_DIM * 4
         const val DEFAULT_MAX_BYTES = 150L * 1024 * 1024 // ~50K entries at 768 dims
     }
 }

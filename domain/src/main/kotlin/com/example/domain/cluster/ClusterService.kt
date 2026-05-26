@@ -14,6 +14,7 @@ class ClusterService private constructor(
         k: Int,
         seed: Long,
     ): List<Int> {
+        require(k in 1..EXPECTED_K) { "k must be in [1, $EXPECTED_K], got $k" }
         val rng = Random(seed)
         val occupied =
             profile.positivePrototypes
