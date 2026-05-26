@@ -1,10 +1,11 @@
-package com.example.domain.embedding
+package com.example.application.embedding
 
+import com.example.domain.embedding.EmbedLookupPort
 import com.example.domain.model.Prototype
 import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
 
-class EmbeddingService(
+class CachingEmbeddingAdapter(
     private val lookupFromStore: EmbedLookupPort,
     private val onHit: (itemId: Long) -> Unit = {},
     private val onMiss: (itemId: Long) -> Unit = {},
@@ -43,7 +44,6 @@ class EmbeddingService(
         return result
     }
 
-    // Exposed for test assertions only.
     internal fun cleanUp() = cache.cleanUp()
 
     internal val estimatedCacheSize: Long get() = cache.estimatedSize()
