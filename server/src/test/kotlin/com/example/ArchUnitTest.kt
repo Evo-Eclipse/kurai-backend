@@ -62,6 +62,18 @@ class ArchUnitTest {
     }
 
     @Test
+    fun `routing handlers do not depend on domain inference`() {
+        noClasses()
+            .that()
+            .resideInAPackage("..routing.handlers..")
+            .should()
+            .dependOnClassesThat()
+            .resideInAPackage("..domain.inference..")
+            .allowEmptyShould(true)
+            .check(productionClasses)
+    }
+
+    @Test
     fun `routing handlers do not depend on infrastructure onnx`() {
         handlersNotOnOnnx().check(productionClasses)
     }
