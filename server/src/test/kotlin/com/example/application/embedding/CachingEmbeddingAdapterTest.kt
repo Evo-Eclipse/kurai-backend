@@ -1,6 +1,5 @@
 package com.example.application.embedding
 
-import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -18,7 +17,7 @@ class CachingEmbeddingAdapterTest {
                 onHit = { hits++ },
                 onMiss = { misses++ },
             )
-        runBlocking { adapter.lookupVectors(listOf(1L)) }
+        adapter.lookupVectors(listOf(1L))
         assertEquals(0, hits)
         assertEquals(1, misses)
     }
@@ -35,10 +34,8 @@ class CachingEmbeddingAdapterTest {
                 },
                 onHit = { hits++ },
             )
-        runBlocking {
-            adapter.lookupVectors(listOf(1L))
-            adapter.lookupVectors(listOf(1L))
-        }
+        adapter.lookupVectors(listOf(1L))
+        adapter.lookupVectors(listOf(1L))
         assertEquals(1, storeCalls, "Store should only be called once")
         assertEquals(1, hits)
     }
@@ -52,10 +49,8 @@ class CachingEmbeddingAdapterTest {
                 lookupFromStore = { ids -> ids.associateWith { vec(it.toInt()) } },
                 maxCacheBytes = maxBytes,
             )
-        runBlocking {
-            for (id in 1L..30L) {
-                adapter.lookupVectors(listOf(id))
-            }
+        for (id in 1L..30L) {
+            adapter.lookupVectors(listOf(id))
         }
         adapter.cleanUp()
         // Caffeine may retain slightly more than the budget during cleanup windows,
@@ -76,11 +71,9 @@ class CachingEmbeddingAdapterTest {
                     ids.associateWith { vec(it.toInt()) }
                 },
             )
-        runBlocking {
-            adapter.lookupVectors(listOf(1L))
-            capturedMissIds = emptyList()
-            adapter.lookupVectors(listOf(1L, 2L, 3L))
-        }
+        adapter.lookupVectors(listOf(1L))
+        capturedMissIds = emptyList()
+        adapter.lookupVectors(listOf(1L, 2L, 3L))
         assertEquals(listOf(2L, 3L), capturedMissIds.sorted(), "Store called only for cache misses")
     }
 }

@@ -8,13 +8,13 @@ class ProfileService(
     private val loadEvents: EventLoadPort,
     private val saveProfile: ProfileSavePort,
 ) {
-    suspend fun getOrLoad(userId: Long): UserProfile {
+    fun getOrLoad(userId: Long): UserProfile {
         val base = loadProfile(userId) ?: UserProfile.coldStart(userId)
         val events = loadEvents(userId, base.lastAppliedEventId)
         return events.fold(base) { acc, (ev, vec) -> Scoring.applyEma(acc, ev, vec) }
     }
 
-    suspend fun update(
+    fun update(
         userId: Long,
         event: UserEvent,
         itemVector: FloatArray,

@@ -18,7 +18,7 @@ class CachingEmbeddingAdapter(
             .weigher<Long, FloatArray> { _, v -> v.size * 4 }
             .build()
 
-    suspend fun lookupVectors(itemIds: List<Long>): Map<Long, FloatArray> {
+    fun lookupVectors(itemIds: List<Long>): Map<Long, FloatArray> {
         val result = mutableMapOf<Long, FloatArray>()
         val misses = mutableListOf<Long>()
 
