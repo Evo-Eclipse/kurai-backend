@@ -8,7 +8,7 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 data class EventData(
     val userId: Long,
     val itemId: Long,
-    val eventType: String,
+    val weight: Float,
     val embeddingVersion: String,
 )
 
@@ -18,14 +18,14 @@ class EventRepository(
     fun append(
         userId: Long,
         itemId: Long,
-        eventType: String,
+        weight: Float,
         embeddingVersion: String,
     ): Long =
         transaction(db) {
             UserEvents.insert {
                 it[UserEvents.userId] = userId
                 it[UserEvents.itemId] = itemId
-                it[UserEvents.eventType] = eventType
+                it[UserEvents.weight] = weight
                 it[UserEvents.embeddingVersion] = embeddingVersion
             }[UserEvents.id]
         }
@@ -36,7 +36,7 @@ class EventRepository(
                 .batchInsert(events) { e ->
                     this[UserEvents.userId] = e.userId
                     this[UserEvents.itemId] = e.itemId
-                    this[UserEvents.eventType] = e.eventType
+                    this[UserEvents.weight] = e.weight
                     this[UserEvents.embeddingVersion] = e.embeddingVersion
                 }.map { it[UserEvents.id] }
         }
