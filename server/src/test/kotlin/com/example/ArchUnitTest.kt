@@ -91,5 +91,4 @@ class ArchUnitTest {
             .should()
             .dependOnClassesThat()
             .resideInAPackage("..routing..")
-            .allowEmptyShould(true)
 }
