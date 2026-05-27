@@ -64,25 +64,27 @@ class AcquisitionService(
                 .fetch(SourceQuery(tags, limit))
                 .flatMapMerge(PIPELINE_CONCURRENCY) { image ->
                     flow {
-                        val vec =
-                            withContext(Dispatchers.Default) {
-                                inferenceService.embed(image.bytes)
-                            }
                         val (itemId, isNew) =
                             withContext(Dispatchers.IO) {
-                                val (id, isNew) =
-                                    itemRepository.insertIdempotent(
-                                        md5 = image.md5,
-                                        url = image.cdnUrl,
-                                        origin = image.originPostUrl,
-                                        rating = image.rating,
-                                        embeddingVersion = activeEmbeddingVersion(),
-                                        indexedAt = Instant.now().epochSecond,
-                                    )
-                                if (isNew) luceneAdapter.write(id, vec)
-                                Pair(id, isNew)
+                                itemRepository.insertIdempotent(
+                                    md5 = image.md5,
+                                    url = image.cdnUrl,
+                                    origin = image.originPostUrl,
+                                    rating = image.rating,
+                                    embeddingVersion = activeEmbeddingVersion(),
+                                    indexedAt = Instant.now().epochSecond,
+                                )
                             }
-                        if (isNew) objectStore.put("images/${image.md5}", image.bytes)
+                        if (isNew) {
+                            val vec =
+                                withContext(Dispatchers.Default) {
+                                    inferenceService.embed(image.bytes)
+                                }
+                            withContext(Dispatchers.IO) {
+                                luceneAdapter.write(itemId, vec)
+                            }
+                            objectStore.put("images/${image.md5}", image.bytes)
+                        }
                         emit(itemId)
                     }
                 }.collect()

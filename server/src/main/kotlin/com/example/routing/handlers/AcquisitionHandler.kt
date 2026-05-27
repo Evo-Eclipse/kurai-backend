@@ -1,6 +1,7 @@
 package com.example.routing.handlers
 
 import com.example.application.acquisition.AcquisitionService
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.plugins.BadRequestException
@@ -52,6 +53,7 @@ class AcquisitionHandler(
             throw BadRequestException("tags list must not exceed $MAX_TAGS entries")
         }
         if (!jobSemaphore.tryAcquire()) {
+            call.response.headers.append(HttpHeaders.RetryAfter, "5")
             call.respond(HttpStatusCode.TooManyRequests)
             return
         }
