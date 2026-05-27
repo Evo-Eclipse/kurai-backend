@@ -1,7 +1,6 @@
 package com.example.routing.handlers
 
 import com.example.application.acquisition.AcquisitionService
-import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.plugins.BadRequestException
@@ -9,7 +8,6 @@ import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Semaphore
 import kotlinx.serialization.Serializable
 import java.util.UUID
 
@@ -37,10 +35,7 @@ data class AcquisitionJobResponse(
 class AcquisitionHandler(
     private val acquisitionService: AcquisitionService,
     private val scope: CoroutineScope,
-    maxConcurrentJobs: Int = MAX_CONCURRENT_JOBS,
 ) {
-    private val jobSemaphore = Semaphore(maxConcurrentJobs)
-
     suspend fun handleRun(call: ApplicationCall) {
         val req = call.receive<AcquisitionRunRequest>()
         if (req.source !in acquisitionService.knownSources()) {
@@ -52,20 +47,9 @@ class AcquisitionHandler(
         if (req.tags.size > MAX_TAGS) {
             throw BadRequestException("tags list must not exceed $MAX_TAGS entries")
         }
-        if (!jobSemaphore.tryAcquire()) {
-            call.response.headers.append(HttpHeaders.RetryAfter, "5")
-            call.respond(HttpStatusCode.TooManyRequests)
-            return
-        }
         val jobId = UUID.randomUUID().toString()
         acquisitionService.createJob(jobId, req.source, req.tags)
-        scope.launch {
-            try {
-                acquisitionService.run(jobId, req.source, req.tags, req.limit)
-            } finally {
-                jobSemaphore.release()
-            }
-        }
+        scope.launch { acquisitionService.run(jobId, req.source, req.tags, req.limit) }
         call.respond(HttpStatusCode.Accepted, AcquisitionRunResponse(jobId))
     }
 
@@ -84,7 +68,6 @@ class AcquisitionHandler(
     }
 
     companion object {
-        const val MAX_CONCURRENT_JOBS = 4
         const val MAX_LIMIT = 10_000
         const val MAX_TAGS = 10_000
     }
