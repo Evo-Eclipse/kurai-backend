@@ -52,6 +52,8 @@ dependencies {
     implementation(ktorLibs.client.contentNegotiation)
     implementation(ktorLibs.client.core)
     implementation(ktorLibs.serialization.kotlinx.json)
+    implementation(ktorLibs.server.auth)
+    implementation(ktorLibs.server.auth.jwt)
     implementation(ktorLibs.server.callLogging)
     implementation(ktorLibs.server.conditionalHeaders)
     implementation(ktorLibs.server.config.yaml)

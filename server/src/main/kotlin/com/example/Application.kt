@@ -1,5 +1,7 @@
 package com.example
 
+import com.auth0.jwt.JWT
+import com.auth0.jwt.algorithms.Algorithm
 import com.example.application.acquisition.AcquisitionService
 import com.example.domain.inference.InferenceService
 import com.example.infrastructure.content.CdnContentSource
@@ -21,6 +23,9 @@ import io.ktor.client.engine.cio.CIO
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
+import io.ktor.server.auth.Authentication
+import io.ktor.server.auth.jwt.JWTPrincipal
+import io.ktor.server.auth.jwt.jwt
 import io.ktor.server.plugins.calllogging.CallLogging
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.statuspages.StatusPages
@@ -40,7 +45,7 @@ private const val ONNX_OUTPUT_NAME = "image_embeds"
 fun Application.configure() {
     val config = AppConfig.load()
     val gate = ReadinessGate()
-    configure(gate)
+    configure(gate, config.jwtSecret)
 
     val db =
         Database.connect(
@@ -111,11 +116,35 @@ fun Application.configure() {
     gate.markReady()
 }
 
-// Testable entry point — caller controls readiness state.
-fun Application.configure(readinessGate: ReadinessGate) {
+// Testable entry point — caller controls readiness state and JWT secret.
+// Pass an empty jwtSecret to skip JWT auth (only safe in test scope where
+// no authenticate("kurai") routes are installed).
+fun Application.configure(
+    readinessGate: ReadinessGate,
+    jwtSecret: String = "",
+) {
     install(ContentNegotiation) { json() }
+    // Default CallLogging format: logs method + URI + status, not headers.
+    // Authorization header values never appear in log output.
     install(CallLogging)
     install(StatusPages) { errorMapping() }
+    install(Authentication) {
+        jwt("kurai") {
+            verifier(
+                JWT
+                    .require(Algorithm.HMAC256(jwtSecret))
+                    .withClaimPresence("sub")
+                    .build(),
+            )
+            validate { credential ->
+                credential.payload
+                    .getClaim("sub")
+                    .asString()
+                    .takeIf { !it.isNullOrBlank() }
+                    ?.let { JWTPrincipal(credential.payload) }
+            }
+        }
+    }
 
     configureHealthRoutes(readinessGate)
 }
