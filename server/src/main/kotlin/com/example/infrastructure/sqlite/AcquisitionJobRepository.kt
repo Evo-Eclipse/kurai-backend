@@ -5,6 +5,7 @@ import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.update
 
 data class AcquisitionJobRow(
     val id: String,
@@ -14,6 +15,7 @@ data class AcquisitionJobRow(
     val userId: Long?,
     val createdAt: Long,
     val completedAt: Long?,
+    val errorMessage: String?,
 )
 
 class AcquisitionJobRepository(
@@ -37,6 +39,21 @@ class AcquisitionJobRepository(
         }
     }
 
+    fun updateStatus(
+        id: String,
+        status: String,
+        completedAt: Long? = null,
+        errorMessage: String? = null,
+    ) {
+        transaction(db) {
+            AcquisitionJobs.update({ AcquisitionJobs.id eq id }) {
+                it[AcquisitionJobs.status] = status
+                if (completedAt != null) it[AcquisitionJobs.completedAt] = completedAt
+                if (errorMessage != null) it[AcquisitionJobs.errorMessage] = errorMessage
+            }
+        }
+    }
+
     fun findById(id: String): AcquisitionJobRow? =
         transaction(db) {
             AcquisitionJobs
@@ -52,6 +69,7 @@ class AcquisitionJobRepository(
                         userId = row[AcquisitionJobs.userId],
                         createdAt = row[AcquisitionJobs.createdAt],
                         completedAt = row[AcquisitionJobs.completedAt],
+                        errorMessage = row[AcquisitionJobs.errorMessage],
                     )
                 }
         }

@@ -101,6 +101,7 @@ object AcquisitionJobs : Table("acquisition_jobs") {
                 .epochSecond
         }
     val completedAt = long("completed_at").nullable()
+    val errorMessage = text("error_message").nullable()
 
     override val primaryKey = PrimaryKey(id)
 }

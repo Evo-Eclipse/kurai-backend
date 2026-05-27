@@ -23,7 +23,7 @@ class RepositoryCrudTest {
     @Test
     fun `ItemRepository insertIdempotent returns same id on re-insert`() {
         val repo = ItemRepository(db)
-        val id1 =
+        val (id1, isNew1) =
             repo.insertIdempotent(
                 md5 = "948fa4499b4ba297484b540c7c263273",
                 url = "https://cdn.example.com/1.jpg",
@@ -32,7 +32,7 @@ class RepositoryCrudTest {
                 embeddingVersion = "v1",
                 indexedAt = 1_700_000_000L,
             )
-        val id2 =
+        val (id2, isNew2) =
             repo.insertIdempotent(
                 md5 = "948fa4499b4ba297484b540c7c263273",
                 url = "https://cdn.example.com/1.jpg",
@@ -42,12 +42,14 @@ class RepositoryCrudTest {
                 indexedAt = 1_700_000_000L,
             )
         assertEquals(id1, id2)
+        assert(isNew1) { "first insert should be new" }
+        assert(!isNew2) { "second insert should not be new" }
     }
 
     @Test
     fun `ItemRepository insertIdempotent assigns distinct ids for different md5`() {
         val repo = ItemRepository(db)
-        val id1 =
+        val (id1) =
             repo.insertIdempotent(
                 md5 = "948fa4499b4ba297484b540c7c263273",
                 url = "https://cdn.example.com/a.jpg",
@@ -56,7 +58,7 @@ class RepositoryCrudTest {
                 embeddingVersion = "v1",
                 indexedAt = 1_700_000_000L,
             )
-        val id2 =
+        val (id2) =
             repo.insertIdempotent(
                 md5 = "85eaa59d6ed4d2db104a478cc2f160b6",
                 url = "https://cdn.example.com/b.jpg",
@@ -115,6 +117,18 @@ class RepositoryCrudTest {
         assertEquals("wave", job.query)
         assertNull(job.userId)
         assertNull(job.completedAt)
+        assertNull(job.errorMessage)
+    }
+
+    @Test
+    fun `AcquisitionJobRepository updateStatus stores errorMessage`() {
+        val repo = AcquisitionJobRepository(db)
+        repo.insert(id = "job-err", status = "running", origin = "src", query = "q")
+        repo.updateStatus("job-err", "failed", errorMessage = "something went wrong")
+        val job = repo.findById("job-err")
+        assertNotNull(job)
+        assertEquals("failed", job.status)
+        assertEquals("something went wrong", job.errorMessage)
     }
 
     @Test

@@ -16,16 +16,21 @@ class ItemRepository(
         rating: String?,
         embeddingVersion: String,
         indexedAt: Long,
-    ): Long =
+    ): Pair<Long, Boolean> =
         transaction(db) {
-            Items.insertIgnore {
-                it[Items.md5] = md5
-                it[Items.url] = url
-                it[Items.origin] = origin
-                it[Items.rating] = rating
-                it[Items.embeddingVersion] = embeddingVersion
-                it[Items.indexedAt] = indexedAt
+            val stmt =
+                Items.insertIgnore {
+                    it[Items.md5] = md5
+                    it[Items.url] = url
+                    it[Items.origin] = origin
+                    it[Items.rating] = rating
+                    it[Items.embeddingVersion] = embeddingVersion
+                    it[Items.indexedAt] = indexedAt
+                }
+            if (stmt.insertedCount > 0) {
+                Pair(stmt[Items.id], true)
+            } else {
+                Pair(Items.selectAll().where { Items.md5 eq md5 }.single()[Items.id], false)
             }
-            Items.selectAll().where { Items.md5 eq md5 }.single()[Items.id]
         }
 }

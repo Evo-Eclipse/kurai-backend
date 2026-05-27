@@ -20,9 +20,9 @@ import java.security.MessageDigest
  * Inference calls are serialized by [mutex]. ONNX Runtime's `OrtSession.run`
  * is itself thread-safe, so the mutex is not for correctness; it caps peak
  * RSS on the 4 GB droplet (NFR-1) by preventing concurrent tensor
- * allocations from the acquisition `flatMapMerge(8)` pipeline. If profiling
- * later shows the serialization is a bottleneck, drop the mutex and
- * configure ONNX inter/intra-op threading to throttle instead.
+ * allocations from the acquisition pipeline. If profiling later shows the
+ * serialization is a bottleneck, drop the mutex and configure ONNX
+ * inter/intra-op threading to throttle instead.
  *
  * Model bytes are integrity-checked against [expectedSha256] before the
  * session is created. A mismatch fails fast at construction — required so
