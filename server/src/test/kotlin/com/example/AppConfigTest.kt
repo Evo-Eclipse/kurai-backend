@@ -19,6 +19,10 @@ class AppConfigTest {
                     "KURAI_E621_USER_AGENT" to "Kurai/1.0",
                     "KURAI_E621_USERNAME" to "user",
                     "KURAI_E621_ACCESS_KEY" to "e621-key",
+                    "KURAI_SQLITE_PATH" to "/tmp/kurai.db",
+                    "KURAI_OBJECT_STORE_DIR" to "/tmp/kurai-objects",
+                    "KURAI_ONNX_MODEL_PATH" to "/tmp/model.onnx",
+                    "KURAI_ONNX_MODEL_SHA256" to "abc123",
                 ),
             )
         assertEquals("super-secret", config.jwtSecret)

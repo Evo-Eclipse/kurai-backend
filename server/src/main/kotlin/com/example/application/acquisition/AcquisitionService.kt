@@ -15,6 +15,13 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withContext
 import java.time.Instant
 
+data class JobStatus(
+    val id: String,
+    val status: String,
+    val createdAt: Long,
+    val completedAt: Long?,
+)
+
 class AcquisitionService(
     private val jobRepository: AcquisitionJobRepository,
     private val inferenceService: InferenceService,
@@ -22,6 +29,7 @@ class AcquisitionService(
     private val luceneAdapter: LuceneAdapter,
     private val objectStore: ObjectStorePort,
     private val activeEmbeddingVersion: () -> String,
+    private val contentSources: Map<String, ContentSource> = emptyMap(),
 ) {
     fun createJob(
         jobId: String,
@@ -85,7 +93,28 @@ class AcquisitionService(
         }
     }
 
-    fun getJob(jobId: String): AcquisitionJobRow? = jobRepository.findById(jobId)
+    fun knownSources(): Set<String> = contentSources.keys
+
+    suspend fun run(
+        jobId: String,
+        source: String,
+        tags: List<String>,
+        limit: Int,
+    ) {
+        val contentSource =
+            requireNotNull(contentSources[source]) { "No ContentSource registered for: $source" }
+        run(jobId, source, tags, limit, contentSource)
+    }
+
+    fun getJob(jobId: String): JobStatus? =
+        jobRepository.findById(jobId)?.let { row ->
+            JobStatus(
+                id = row.id,
+                status = row.status,
+                createdAt = row.createdAt,
+                completedAt = row.completedAt,
+            )
+        }
 
     companion object {
         const val PIPELINE_CONCURRENCY = 10

@@ -3,11 +3,13 @@ package com.example
 import com.example.archtest.violation.domain.DomainToRoutingViolation
 import com.example.archtest.violation.domain.FakeDomain
 import com.example.archtest.violation.domain.embedding.FakeEmbedding
+import com.example.archtest.violation.domain.inference.FakeInference
 import com.example.archtest.violation.domain.profile.ProfileToEmbeddingViolation
 import com.example.archtest.violation.infrastructure.FakeInfrastructure
 import com.example.archtest.violation.infrastructure.InfrastructureToDomainViolation
 import com.example.archtest.violation.infrastructure.onnx.FakeOnnx
 import com.example.archtest.violation.routing.RoutingViolation
+import com.example.archtest.violation.routing.handlers.HandlersToInferenceViolation
 import com.example.archtest.violation.routing.handlers.RankingHandlerOnnxViolation
 import com.tngtech.archunit.core.importer.ClassFileImporter
 import com.tngtech.archunit.core.importer.ImportOption
@@ -63,19 +65,22 @@ class ArchUnitTest {
 
     @Test
     fun `routing handlers do not depend on domain inference`() {
-        noClasses()
-            .that()
-            .resideInAPackage("..routing.handlers..")
-            .should()
-            .dependOnClassesThat()
-            .resideInAPackage("..domain.inference..")
-            .allowEmptyShould(true)
-            .check(productionClasses)
+        handlersNotOnInference().check(productionClasses)
     }
 
     @Test
     fun `routing handlers do not depend on infrastructure onnx`() {
         handlersNotOnOnnx().check(productionClasses)
+    }
+
+    @Test
+    fun `ArchUnit catches handlers-to-inference violations`() {
+        val violationClasses =
+            ClassFileImporter().importClasses(
+                HandlersToInferenceViolation::class.java,
+                FakeInference::class.java,
+            )
+        assertFailsWith<AssertionError> { handlersNotOnInference().check(violationClasses) }
     }
 
     @Test
@@ -125,6 +130,14 @@ class ArchUnitTest {
             .dependOnClassesThat()
             .resideInAPackage("..domain..")
 
+    private fun handlersNotOnInference() =
+        noClasses()
+            .that()
+            .resideInAPackage("..routing.handlers..")
+            .should()
+            .dependOnClassesThat()
+            .resideInAPackage("..domain.inference..")
+
     private fun handlersNotOnOnnx() =
         noClasses()
             .that()
@@ -132,7 +145,6 @@ class ArchUnitTest {
             .should()
             .dependOnClassesThat()
             .resideInAPackage("..infrastructure.onnx..")
-            .allowEmptyShould(true)
 
     private fun profileNotOnEmbedding() =
         noClasses()

@@ -11,6 +11,10 @@ data class AppConfig(
     val onnxIntraOpThreads: Int,
     val unsplash: UnsplashConfig,
     val e621: E621Config,
+    val sqlitePath: Path,
+    val objectStoreDir: Path,
+    val onnxModelPath: Path,
+    val onnxModelSha256: String,
 ) {
     companion object {
         const val DEFAULT_LUCENE_DEPRECATED_GC_SECONDS: Long = 60
@@ -55,6 +59,18 @@ data class AppConfig(
                             env["KURAI_E621_ACCESS_KEY"]
                                 ?: error("Missing required environment variable: KURAI_E621_ACCESS_KEY"),
                     ),
+                sqlitePath =
+                    env["KURAI_SQLITE_PATH"]?.let(Path::of)
+                        ?: error("Missing required environment variable: KURAI_SQLITE_PATH"),
+                objectStoreDir =
+                    env["KURAI_OBJECT_STORE_DIR"]?.let(Path::of)
+                        ?: error("Missing required environment variable: KURAI_OBJECT_STORE_DIR"),
+                onnxModelPath =
+                    env["KURAI_ONNX_MODEL_PATH"]?.let(Path::of)
+                        ?: error("Missing required environment variable: KURAI_ONNX_MODEL_PATH"),
+                onnxModelSha256 =
+                    env["KURAI_ONNX_MODEL_SHA256"]
+                        ?: error("Missing required environment variable: KURAI_ONNX_MODEL_SHA256"),
             )
     }
 }
