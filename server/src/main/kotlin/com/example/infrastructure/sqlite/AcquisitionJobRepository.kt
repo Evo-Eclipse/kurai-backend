@@ -5,6 +5,7 @@ import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.update
 
 data class AcquisitionJobRow(
     val id: String,
@@ -33,6 +34,19 @@ class AcquisitionJobRepository(
                 it[AcquisitionJobs.origin] = origin
                 it[AcquisitionJobs.query] = query
                 it[AcquisitionJobs.userId] = userId
+            }
+        }
+    }
+
+    fun updateStatus(
+        id: String,
+        status: String,
+        completedAt: Long? = null,
+    ) {
+        transaction(db) {
+            AcquisitionJobs.update({ AcquisitionJobs.id eq id }) {
+                it[AcquisitionJobs.status] = status
+                if (completedAt != null) it[AcquisitionJobs.completedAt] = completedAt
             }
         }
     }
