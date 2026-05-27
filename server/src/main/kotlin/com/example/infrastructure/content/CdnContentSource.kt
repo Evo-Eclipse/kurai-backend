@@ -34,7 +34,8 @@ class CdnContentSource(
                 rateLimiter.acquire()
                 val response = httpClient.get(url)
                 check(response.status == HttpStatusCode.OK) {
-                    "CDN fetch for $url returned ${response.status}"
+                    val safeUrl = java.net.URI.create(url).let { "${it.scheme}://${it.host}${it.path}" }
+                    "CDN fetch for $safeUrl returned ${response.status}"
                 }
                 val bytes = response.bodyAsBytes()
                 val md5 = md5Hex(bytes)

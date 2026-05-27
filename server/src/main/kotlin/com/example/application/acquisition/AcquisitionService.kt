@@ -20,6 +20,7 @@ data class JobStatus(
     val status: String,
     val createdAt: Long,
     val completedAt: Long?,
+    val errorMessage: String?,
 )
 
 class AcquisitionService(
@@ -67,9 +68,9 @@ class AcquisitionService(
                             withContext(Dispatchers.Default) {
                                 inferenceService.embed(image.bytes)
                             }
-                        val itemId =
+                        val (itemId, isNew) =
                             withContext(Dispatchers.IO) {
-                                val id =
+                                val (id, isNew) =
                                     itemRepository.insertIdempotent(
                                         md5 = image.md5,
                                         url = image.cdnUrl,
@@ -78,17 +79,19 @@ class AcquisitionService(
                                         embeddingVersion = activeEmbeddingVersion(),
                                         indexedAt = Instant.now().epochSecond,
                                     )
-                                luceneAdapter.write(id, vec)
-                                id
+                                if (isNew) luceneAdapter.write(id, vec)
+                                Pair(id, isNew)
                             }
-                        objectStore.put("images/${image.md5}", image.bytes)
+                        if (isNew) objectStore.put("images/${image.md5}", image.bytes)
                         emit(itemId)
                     }
                 }.collect()
             luceneAdapter.refresh()
             jobRepository.updateStatus(jobId, "done", Instant.now().epochSecond)
         } catch (e: Exception) {
-            jobRepository.updateStatus(jobId, "failed", Instant.now().epochSecond)
+            // Commit any partial Lucene writes so a retry doesn't produce duplicate index entries.
+            runCatching { luceneAdapter.refresh() }
+            jobRepository.updateStatus(jobId, "failed", Instant.now().epochSecond, e.message)
             throw e
         }
     }
@@ -113,6 +116,7 @@ class AcquisitionService(
                 status = row.status,
                 createdAt = row.createdAt,
                 completedAt = row.completedAt,
+                errorMessage = row.errorMessage,
             )
         }
 

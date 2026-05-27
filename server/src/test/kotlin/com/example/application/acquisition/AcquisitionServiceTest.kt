@@ -25,6 +25,7 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class AcquisitionServiceTest {
     private lateinit var db: Database
@@ -191,7 +192,45 @@ class AcquisitionServiceTest {
                 failingService.run("job-1", "test", emptyList(), 5, fakeSource(images))
             } catch (_: RuntimeException) {
             }
-            assertEquals("failed", failingService.getJob("job-1")!!.status)
+            val job = failingService.getJob("job-1")!!
+            assertEquals("failed", job.status)
+            assertEquals("embed failed", job.errorMessage)
+        }
+    }
+
+    @Test
+    fun `objectStore skips write for images already in SQLite`() {
+        runBlocking {
+            val images = (1..5).map { makeImage(it) }
+            val service = makeService()
+            service.createJob("job-1", "test", emptyList())
+            service.run("job-1", "test", emptyList(), 5, fakeSource(images))
+            val sizeAfterFirst = blobs.size
+
+            service.createJob("job-2", "test", emptyList())
+            service.run("job-2", "test", emptyList(), 5, fakeSource(images))
+
+            assertEquals(sizeAfterFirst, blobs.size, "objectStore.put must not be called for already-stored images")
+        }
+    }
+
+    @Test
+    fun `objectStore write count tracks only new images across partial overlap`() {
+        runBlocking {
+            val first = (1..5).map { makeImage(it) }
+            val overlap = (3..8).map { makeImage(it) }
+            val service = makeService()
+
+            service.createJob("job-1", "test", emptyList())
+            service.run("job-1", "test", emptyList(), 5, fakeSource(first))
+            val sizeAfterFirst = blobs.size
+            assertEquals(5, sizeAfterFirst)
+
+            service.createJob("job-2", "test", emptyList())
+            service.run("job-2", "test", emptyList(), 6, fakeSource(overlap))
+
+            // Images 3,4,5 already stored; 6,7,8 are new → 3 new writes
+            assertTrue(blobs.size == 8, "Expected 8 unique blobs, got ${blobs.size}")
         }
     }
 }

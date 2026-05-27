@@ -15,6 +15,7 @@ data class AcquisitionJobRow(
     val userId: Long?,
     val createdAt: Long,
     val completedAt: Long?,
+    val errorMessage: String?,
 )
 
 class AcquisitionJobRepository(
@@ -42,11 +43,13 @@ class AcquisitionJobRepository(
         id: String,
         status: String,
         completedAt: Long? = null,
+        errorMessage: String? = null,
     ) {
         transaction(db) {
             AcquisitionJobs.update({ AcquisitionJobs.id eq id }) {
                 it[AcquisitionJobs.status] = status
                 if (completedAt != null) it[AcquisitionJobs.completedAt] = completedAt
+                if (errorMessage != null) it[AcquisitionJobs.errorMessage] = errorMessage
             }
         }
     }
@@ -66,6 +69,7 @@ class AcquisitionJobRepository(
                         userId = row[AcquisitionJobs.userId],
                         createdAt = row[AcquisitionJobs.createdAt],
                         completedAt = row[AcquisitionJobs.completedAt],
+                        errorMessage = row[AcquisitionJobs.errorMessage],
                     )
                 }
         }

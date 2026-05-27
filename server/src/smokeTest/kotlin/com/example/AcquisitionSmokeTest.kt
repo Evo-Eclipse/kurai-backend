@@ -142,7 +142,7 @@ class AcquisitionSmokeTest {
         }
 
     @Test
-    fun `GET acquisition jobs returns 200 with status field`() =
+    fun `GET acquisition jobs returns 200 with status and errorMessage fields`() =
         testApplication {
             application {
                 configure(ReadinessGate().also { it.markReady() })
@@ -164,5 +164,37 @@ class AcquisitionSmokeTest {
             assertEquals(HttpStatusCode.OK, getResponse.status)
             val body = Json.parseToJsonElement(getResponse.bodyAsText()).jsonObject
             assertNotNull(body["status"])
+            // errorMessage is always present in the response (null for non-failed jobs)
+            assert(body.containsKey("errorMessage"))
+        }
+
+    @Test
+    fun `POST acquisition run with limit above max returns 400`() =
+        testApplication {
+            application {
+                configure(ReadinessGate().also { it.markReady() })
+                configureAcquisitionRoutes(makeHandler())
+            }
+            val response =
+                client.post("/acquisition/run") {
+                    contentType(ContentType.Application.Json)
+                    setBody("""{"source":"test","tags":[],"limit":99999}""")
+                }
+            assertEquals(HttpStatusCode.BadRequest, response.status)
+        }
+
+    @Test
+    fun `POST acquisition run with negative limit returns 400`() =
+        testApplication {
+            application {
+                configure(ReadinessGate().also { it.markReady() })
+                configureAcquisitionRoutes(makeHandler())
+            }
+            val response =
+                client.post("/acquisition/run") {
+                    contentType(ContentType.Application.Json)
+                    setBody("""{"source":"test","tags":[],"limit":-1}""")
+                }
+            assertEquals(HttpStatusCode.BadRequest, response.status)
         }
 }
