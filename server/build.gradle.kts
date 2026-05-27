@@ -75,6 +75,7 @@ dependencies {
 
     testImplementation(kotlin("test"))
     testImplementation(libs.archunit.junit5)
+    testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.h2database.h2)
     testImplementation(ktorLibs.client.mock)
     testImplementation(ktorLibs.server.testHost)
