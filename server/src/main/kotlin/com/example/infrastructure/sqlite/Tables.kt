@@ -29,7 +29,7 @@ object UserEvents : Table("user_events") {
     val id = long("id").autoIncrement()
     val userId = long("user_id")
     val itemId = long("item_id")
-    val eventType = text("event_type") // dislike | short_view | view | prolong_view | like | share
+    val weight = float("weight") // [-1.0, 1.0]; positive = affinity, negative = aversion
 
     /**
      * Snapshot of the active embedding version at event time. Kept denormalized

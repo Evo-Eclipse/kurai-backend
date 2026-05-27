@@ -2,9 +2,13 @@ package com.example
 
 import com.example.archtest.violation.domain.DomainToRoutingViolation
 import com.example.archtest.violation.domain.FakeDomain
+import com.example.archtest.violation.domain.embedding.FakeEmbedding
+import com.example.archtest.violation.domain.profile.ProfileToEmbeddingViolation
 import com.example.archtest.violation.infrastructure.FakeInfrastructure
 import com.example.archtest.violation.infrastructure.InfrastructureToDomainViolation
+import com.example.archtest.violation.infrastructure.onnx.FakeOnnx
 import com.example.archtest.violation.routing.RoutingViolation
+import com.example.archtest.violation.routing.handlers.RankingHandlerOnnxViolation
 import com.tngtech.archunit.core.importer.ClassFileImporter
 import com.tngtech.archunit.core.importer.ImportOption
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses
@@ -53,6 +57,48 @@ class ArchUnitTest {
     }
 
     @Test
+    fun `domain profile does not depend on domain embedding`() {
+        profileNotOnEmbedding().check(productionClasses)
+    }
+
+    @Test
+    fun `routing handlers do not depend on domain inference`() {
+        noClasses()
+            .that()
+            .resideInAPackage("..routing.handlers..")
+            .should()
+            .dependOnClassesThat()
+            .resideInAPackage("..domain.inference..")
+            .allowEmptyShould(true)
+            .check(productionClasses)
+    }
+
+    @Test
+    fun `routing handlers do not depend on infrastructure onnx`() {
+        handlersNotOnOnnx().check(productionClasses)
+    }
+
+    @Test
+    fun `ArchUnit catches handlers-to-onnx violations`() {
+        val violationClasses =
+            ClassFileImporter().importClasses(
+                RankingHandlerOnnxViolation::class.java,
+                FakeOnnx::class.java,
+            )
+        assertFailsWith<AssertionError> { handlersNotOnOnnx().check(violationClasses) }
+    }
+
+    @Test
+    fun `ArchUnit catches profile-to-embedding violations`() {
+        val violationClasses =
+            ClassFileImporter().importClasses(
+                ProfileToEmbeddingViolation::class.java,
+                FakeEmbedding::class.java,
+            )
+        assertFailsWith<AssertionError> { profileNotOnEmbedding().check(violationClasses) }
+    }
+
+    @Test
     fun `ArchUnit catches domain-to-routing violations`() {
         val violationClasses =
             ClassFileImporter().importClasses(
@@ -71,11 +117,6 @@ class ArchUnitTest {
             .dependOnClassesThat()
             .resideInAPackage("..infrastructure..")
 
-    // The ..domain.. package is empty in production code until later waves
-    // (domain-model et al.) populate it. We allow empty `should` to keep the
-    // rule active without false-positive failures. Synthetic-violation
-    // probes below prove the rule is still capable of failing once classes
-    // exist. Drop allowEmptyShould when domain-model lands.
     private fun infrastructureNotOnDomain() =
         noClasses()
             .that()
@@ -84,6 +125,23 @@ class ArchUnitTest {
             .dependOnClassesThat()
             .resideInAPackage("..domain..")
 
+    private fun handlersNotOnOnnx() =
+        noClasses()
+            .that()
+            .resideInAPackage("..routing.handlers..")
+            .should()
+            .dependOnClassesThat()
+            .resideInAPackage("..infrastructure.onnx..")
+            .allowEmptyShould(true)
+
+    private fun profileNotOnEmbedding() =
+        noClasses()
+            .that()
+            .resideInAPackage("..domain.profile..")
+            .should()
+            .dependOnClassesThat()
+            .resideInAPackage("..domain.embedding..")
+
     private fun domainNotOnRouting() =
         noClasses()
             .that()
@@ -91,5 +149,4 @@ class ArchUnitTest {
             .should()
             .dependOnClassesThat()
             .resideInAPackage("..routing..")
-            .allowEmptyShould(true)
 }

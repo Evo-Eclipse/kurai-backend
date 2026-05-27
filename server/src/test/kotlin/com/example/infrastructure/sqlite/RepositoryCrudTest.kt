@@ -73,7 +73,7 @@ class RepositoryCrudTest {
         val repo = EventRepository(db)
         val events =
             (1..10_000).map { i ->
-                EventData(userId = 1L, itemId = i.toLong(), eventType = "prolong_view", embeddingVersion = "v1")
+                EventData(userId = 1L, itemId = i.toLong(), weight = 1.0f, embeddingVersion = "v1")
             }
         val ids = repo.appendBatch(events)
         assertEquals(10_000, ids.size)

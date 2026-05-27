@@ -9,6 +9,8 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class LuceneAdapterTest {
@@ -82,6 +84,30 @@ class LuceneAdapterTest {
         latenciesMs.sort()
         val p95 = latenciesMs[(samples * 95) / 100]
         assertTrue(p95 < 30, "p95 latency must be < 30 ms, was ${p95}ms")
+    }
+
+    @Test
+    fun `getVector returns bit-exact vector for a written itemId`() {
+        val vec = randomNormalizedVector(seed = 11)
+        adapter.write(itemId = 77L, vector = vec)
+        adapter.refresh()
+        val result = assertNotNull(adapter.getVector(77L))
+        assertEquals(vec.size, result.size)
+        var maxDiff = 0f
+        for (i in vec.indices) maxDiff = maxOf(maxDiff, kotlin.math.abs(vec[i] - result[i]))
+        assertTrue(maxDiff < 1e-6f, "Round-trip vector should be bit-exact, max diff=$maxDiff")
+    }
+
+    @Test
+    fun `getVector returns null for unknown itemId`() {
+        adapter.write(itemId = 1L, vector = randomNormalizedVector(seed = 1))
+        adapter.refresh()
+        assertNull(adapter.getVector(999L))
+    }
+
+    @Test
+    fun `getVector on empty index returns null`() {
+        assertNull(adapter.getVector(1L))
     }
 
     @Test

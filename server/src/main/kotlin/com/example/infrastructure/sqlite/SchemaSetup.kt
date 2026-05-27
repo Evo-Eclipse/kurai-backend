@@ -75,7 +75,7 @@ private fun JdbcTransaction.applySqliteTriggersAndIndices() {
         """
         CREATE INDEX IF NOT EXISTS idx_user_events_positive
         ON user_events(user_id, id)
-        WHERE event_type IN ('prolong_view', 'like', 'share')
+        WHERE weight > 0
         """.trimIndent(),
     )
 }
