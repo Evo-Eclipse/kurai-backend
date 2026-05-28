@@ -19,6 +19,13 @@ data class AppConfig(
     val profilePersistIntervalMs: Long,
     val kMeansCheckIntervalMs: Long,
 ) {
+    init {
+        require(luceneDeprecatedGcSeconds > 0) { "KURAI_LUCENE_DEPRECATED_GC_SECONDS should be positive" }
+        require(onnxIntraOpThreads > 0) { "KURAI_ONNX_INTRA_OP_THREADS should be positive" }
+        require(profilePersistIntervalMs > 0) { "KURAI_PROFILE_PERSIST_INTERVAL_MS should be positive" }
+        require(kMeansCheckIntervalMs > 0) { "KURAI_KMEANS_CHECK_INTERVAL_MS should be positive" }
+    }
+
     companion object {
         const val DEFAULT_LUCENE_DEPRECATED_GC_SECONDS: Long = 60
         const val DEFAULT_ONNX_INTRA_OP_THREADS: Int = 2

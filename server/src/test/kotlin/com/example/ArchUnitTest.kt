@@ -187,8 +187,8 @@ class ArchUnitTest {
             .callMethod(
                 ProfileRepository::class.java,
                 "upsert",
-                Long::class.javaPrimitiveType!!,
+                checkNotNull(Long::class.javaPrimitiveType),
                 String::class.java,
-                Long::class.javaPrimitiveType!!,
+                checkNotNull(Long::class.javaPrimitiveType),
             )
 }

@@ -55,10 +55,15 @@ object UserProfileState : Table("user_profile_state") {
     override val primaryKey = PrimaryKey(userId)
 }
 
+object PrototypeType {
+    const val POSITIVE = "positive"
+    const val NEGATIVE = "negative"
+}
+
 object UserPrototypes : Table("user_prototypes") {
     val id = long("id").autoIncrement()
     val userId = long("user_id")
-    val prototypeType = text("prototype_type") // positive | negative
+    val prototypeType = text("prototype_type") // PrototypeType.POSITIVE | PrototypeType.NEGATIVE
     val vector = blob("vector") // float32[768], little-endian
     val weight = double("weight").default(1.0)
     val embeddingVersion = text("embedding_version")

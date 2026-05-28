@@ -27,6 +27,7 @@ import com.example.infrastructure.sqlite.EventRepository
 import com.example.infrastructure.sqlite.ItemRepository
 import com.example.infrastructure.sqlite.ProfileRepository
 import com.example.infrastructure.sqlite.PrototypeRepository
+import com.example.infrastructure.sqlite.PrototypeType
 import com.example.infrastructure.sqlite.initSchema
 import com.example.infrastructure.storage.LocalObjectStore
 import com.example.routing.configureHealthRoutes
@@ -155,11 +156,11 @@ fun Application.configure() {
                         embeddingVersion = EmbeddingVersion(row.embeddingVersion),
                         positivePrototypes =
                             protos
-                                .filter { it.prototypeType == "positive" }
+                                .filter { it.prototypeType == PrototypeType.POSITIVE }
                                 .map { Prototype(it.vector, it.weight.toFloat()) },
                         negativePrototypes =
                             protos
-                                .filter { it.prototypeType == "negative" }
+                                .filter { it.prototypeType == PrototypeType.NEGATIVE }
                                 .map { Prototype(it.vector, it.weight.toFloat()) },
                         sessionVector = FloatArray(Prototype.VECTOR_DIM),
                         longTermVector = FloatArray(Prototype.VECTOR_DIM),

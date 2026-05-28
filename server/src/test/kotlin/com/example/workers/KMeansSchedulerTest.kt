@@ -77,14 +77,12 @@ class KMeansSchedulerTest {
                     minGrowthFactor = 1.10,
                     minAgeMs = 24 * 3_600_000L,
                 )
-            // Simulate lastKnownCount = 100_000 items; current = 105_000 (<10% growth)
-            // We can't set lastKnownCount directly, so we verify the scheduler
-            // makes no update when item count is 0 (lastKnownCount stays 0 → growthMet=false)
+            // With no items in the DB the vector sample is empty, so the scheduler
+            // skips training regardless of the growth condition.
             val job = launch { scheduler.run() }
             advanceTimeBy(3_601_000)
 
-            // With lastKnownCount=0, growthMet=false (requires lastKnownCount>0)
-            assertNull(ref.get(), "Should not update when lastKnownCount is 0 (first run)")
+            assertNull(ref.get(), "Should not update when there are no vectors to train on")
             job.cancel()
             job.join()
         }

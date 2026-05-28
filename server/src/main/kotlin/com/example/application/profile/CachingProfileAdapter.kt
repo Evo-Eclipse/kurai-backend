@@ -62,11 +62,13 @@ class CachingProfileAdapter(
 
     fun cachedUserIds(): Set<Long> = cache.asMap().keys.toSet()
 
-    fun forceUpdate(
+    suspend fun forceUpdate(
         userId: Long,
         profile: UserProfile,
     ) {
-        cache.put(userId, profile)
+        mutexFor(userId).withLock {
+            cache.put(userId, profile)
+        }
     }
 
     private fun mutexFor(userId: Long): Mutex = mutexes.computeIfAbsent(userId) { Mutex() }

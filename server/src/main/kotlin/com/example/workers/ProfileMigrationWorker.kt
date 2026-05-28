@@ -8,6 +8,7 @@ import com.example.domain.model.UserProfile
 import com.example.domain.profile.Scoring
 import com.example.infrastructure.sqlite.EventRepository
 import com.example.infrastructure.sqlite.ProfileRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -24,9 +25,15 @@ class ProfileMigrationWorker(
     private val scanIntervalMs: Long = SCAN_INTERVAL_MS,
 ) {
     suspend fun run() {
-        while (true) {
-            migrateOneBatch()
-            delay(scanIntervalMs)
+        try {
+            while (true) {
+                migrateOneBatch()
+                delay(scanIntervalMs)
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.error("ProfileMigrationWorker crashed; worker stopped permanently", e)
         }
     }
 
@@ -74,7 +81,7 @@ class ProfileMigrationWorker(
         withContext(Dispatchers.IO) {
             profileRepo.upsert(userId, targetVersion.value, maxId)
         }
-        cachingProfile.invalidate(userId)
+        cachingProfile.forceUpdate(userId, rebuiltProfile.copy(lastAppliedEventId = maxId))
         log.debug("ProfileMigrationWorker: migrated userId=$userId to version=${targetVersion.value}")
     }
 

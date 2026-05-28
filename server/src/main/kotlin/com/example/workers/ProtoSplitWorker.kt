@@ -9,6 +9,8 @@ import com.example.domain.profile.splitPrototypes
 import com.example.infrastructure.sqlite.EventRepository
 import com.example.infrastructure.sqlite.PrototypeRepository
 import com.example.infrastructure.sqlite.PrototypeRow
+import com.example.infrastructure.sqlite.PrototypeType
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -24,9 +26,15 @@ class ProtoSplitWorker(
     private val intervalMs: Long = 3_600_000,
 ) {
     suspend fun run() {
-        while (true) {
-            delay(intervalMs)
-            sweep()
+        try {
+            while (true) {
+                delay(intervalMs)
+                sweep()
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.error("ProtoSplitWorker crashed; worker stopped permanently", e)
         }
     }
 
@@ -57,7 +65,7 @@ class ProtoSplitWorker(
         val rows =
             newPrototypes.map { p ->
                 PrototypeRow(
-                    prototypeType = "positive",
+                    prototypeType = PrototypeType.POSITIVE,
                     vector = p.vector,
                     weight = p.weight.toDouble(),
                     embeddingVersion = profile.embeddingVersion.value,
@@ -76,7 +84,7 @@ class ProtoSplitWorker(
         if (maxK < 2) return Triple(1, vecs.indices.map { 0 }, 0.0)
         var bestK = 2
         var bestAssignments = emptyList<Int>()
-        var bestScore = Double.MIN_VALUE
+        var bestScore = -Double.MAX_VALUE
         for (k in 2..maxK) {
             val assignments = splitPrototypes(vecs, k, seed = seed)
             val score = silhouette(vecs, assignments)
@@ -108,6 +116,5 @@ class ProtoSplitWorker(
         const val MIN_EVENTS = 30
         const val MIN_SILHOUETTE = 0.25
         const val MAX_POS = 5
-        const val MAX_NEG = 3
     }
 }
