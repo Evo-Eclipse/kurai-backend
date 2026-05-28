@@ -5,6 +5,7 @@ import com.auth0.jwt.algorithms.Algorithm
 import com.example.application.acquisition.AcquisitionService
 import com.example.application.embedding.CachingEmbeddingAdapter
 import com.example.application.profile.CachingProfileAdapter
+import com.example.domain.cluster.ClusterService
 import com.example.domain.embedding.EmbedLookupPort
 import com.example.domain.events.EventQueue
 import com.example.domain.inference.InferenceService
@@ -30,8 +31,10 @@ import com.example.infrastructure.storage.LocalObjectStore
 import com.example.routing.configureHealthRoutes
 import com.example.routing.handlers.AcquisitionHandler
 import com.example.routing.handlers.IngestionHandler
+import com.example.routing.handlers.RankingHandler
 import com.example.routing.routes.configureAcquisitionRoutes
 import com.example.routing.routes.configureIngestionRoutes
+import com.example.routing.routes.configureRankingRoutes
 import com.example.workers.EventBatcherWorker
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
@@ -50,7 +53,10 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.exposed.v1.jdbc.Database
+import org.slf4j.LoggerFactory
 import java.nio.file.Files
+
+private val log = LoggerFactory.getLogger("com.example.Application")
 
 // ViT-B/16 (DINOv2 / CLIP-style export) node names.
 private val ONNX_INPUT_SHAPE = longArrayOf(1, 3, 224, 224)
@@ -178,6 +184,20 @@ fun Application.configure() {
             activeEmbeddingVersion = { EmbeddingVersion(embeddingVersionRepo.getActiveVersion() ?: "unknown") },
         )
     configureIngestionRoutes(ingestionHandler)
+
+    val clusterService: ClusterService? =
+        runCatching { ClusterService.load() }
+            .onFailure { log.warn("clusters_vitb16.bin not found — ε-exploration disabled") }
+            .getOrNull()
+
+    val rankingHandler =
+        RankingHandler(
+            cachingProfile = cachingProfile,
+            cachingEmbedding = cachingEmbedding,
+            clusterService = clusterService,
+            activeEmbeddingVersion = { EmbeddingVersion(embeddingVersionRepo.getActiveVersion() ?: "unknown") },
+        )
+    configureRankingRoutes(rankingHandler)
 
     Runtime.getRuntime().addShutdownHook(
         Thread {
