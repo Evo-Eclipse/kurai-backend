@@ -26,6 +26,7 @@ import com.example.infrastructure.sqlite.EventData
 import com.example.infrastructure.sqlite.EventRepository
 import com.example.infrastructure.sqlite.ItemRepository
 import com.example.infrastructure.sqlite.ProfileRepository
+import com.example.infrastructure.sqlite.PrototypeRepository
 import com.example.infrastructure.sqlite.initSchema
 import com.example.infrastructure.storage.LocalObjectStore
 import com.example.routing.configureHealthRoutes
@@ -39,6 +40,7 @@ import com.example.workers.EventBatcherWorker
 import com.example.workers.KMeansScheduler
 import com.example.workers.ProfileMigrationWorker
 import com.example.workers.ProfilePersistWorker
+import com.example.workers.ProtoSplitWorker
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.serialization.kotlinx.json.json
@@ -130,6 +132,7 @@ fun Application.configure() {
 
     val profileRepo = ProfileRepository(db)
     val eventRepo = EventRepository(db)
+    val prototypeRepo = PrototypeRepository(db)
 
     val embedLookup: EmbedLookupPort = { ids ->
         ids.mapNotNull { id -> lucene.getVector(id)?.let { id to it } }.toMap()
@@ -140,12 +143,18 @@ fun Application.configure() {
         CachingProfileAdapter(
             loadProfile = { userId ->
                 profileRepo.load(userId)?.let { row ->
+                    val protos = prototypeRepo.load(userId)
                     UserProfile(
                         userId = row.userId,
                         embeddingVersion = EmbeddingVersion(row.embeddingVersion),
-                        positivePrototypes = emptyList(),
-                        negativePrototypes = emptyList(),
-                        // Prototypes are populated by worker-proto-split (wave 27).
+                        positivePrototypes =
+                            protos
+                                .filter { it.prototypeType == "positive" }
+                                .map { Prototype(it.vector, it.weight.toFloat()) },
+                        negativePrototypes =
+                            protos
+                                .filter { it.prototypeType == "negative" }
+                                .map { Prototype(it.vector, it.weight.toFloat()) },
                         sessionVector = FloatArray(Prototype.VECTOR_DIM),
                         longTermVector = FloatArray(Prototype.VECTOR_DIM),
                         lastAppliedEventId = row.lastAppliedEventId,
@@ -186,6 +195,14 @@ fun Application.configure() {
             activeEmbeddingVersion = { EmbeddingVersion(embeddingVersionRepo.getActiveVersion() ?: "unknown") },
         )
     acquisitionScope.launch { profileMigrationWorker.run() }
+    val protoSplitWorker =
+        ProtoSplitWorker(
+            cachingProfile = cachingProfile,
+            cachingEmbedding = cachingEmbedding,
+            prototypeRepo = prototypeRepo,
+            eventRepo = eventRepo,
+        )
+    acquisitionScope.launch { protoSplitWorker.run() }
 
     val ingestionHandler =
         IngestionHandler(
