@@ -6,6 +6,7 @@ import com.example.application.embedding.CachingEmbeddingAdapter
 import com.example.application.profile.CachingProfileAdapter
 import com.example.domain.cluster.ClusterService
 import com.example.domain.model.EmbeddingVersion
+import com.example.domain.model.UserProfile
 import com.example.domain.profile.Scoring
 import com.example.domain.profile.mmr
 import io.ktor.http.HttpHeaders
@@ -16,6 +17,7 @@ import io.ktor.server.auth.principal
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import kotlinx.serialization.Serializable
+import java.time.Instant
 
 @Serializable
 data class RankingRequest(
@@ -79,10 +81,25 @@ class RankingHandler(
 
         val vecs = cachingEmbedding.lookupVectors(req.candidateIds)
         val scored = req.candidateIds.mapNotNull { id -> vecs[id]?.let { id to Scoring.score(profile, it) } }
-        val mmrIds = scored.mmr(vecs, lambda = 0.5f, n = req.topK)
 
-        // ε-exploration and cold-start stratification added in wave 23
-        val finalIds = mmrIds.distinct().take(req.topK)
+        val finalIds: List<Long> =
+            when {
+                profile.positivePrototypes.isNotEmpty() ->
+                    scored.mmr(vecs, lambda = 0.5f, n = req.topK).distinct().take(req.topK)
+                clusterService != null -> {
+                    // Cold-start: no positive prototypes yet — distribute across target clusters.
+                    val seed = Instant.now().epochSecond / 3600
+                    coldStartRanking(
+                        req.candidateIds.filter { it in vecs },
+                        vecs,
+                        req.topK,
+                        clusterService,
+                        profile,
+                        seed,
+                    )
+                }
+                else -> req.candidateIds.take(req.topK)
+            }
 
         call.respond(
             RankingResponse(
@@ -92,6 +109,26 @@ class RankingHandler(
                     },
             ),
         )
+    }
+
+    private fun coldStartRanking(
+        candidates: List<Long>,
+        vectors: Map<Long, FloatArray>,
+        topK: Int,
+        cs: ClusterService,
+        profile: UserProfile,
+        seed: Long,
+    ): List<Long> {
+        val targetClusters = cs.epsilonCandidates(profile, k = topK, seed = seed)
+        val byCluster: Map<Int, List<Long>> = candidates.groupBy { id -> cs.assignCluster(vectors.getValue(id)) }
+        val queues = targetClusters.map { ArrayDeque(byCluster[it] ?: emptyList()) }
+        val result = mutableListOf<Long>()
+        while (result.size < topK) {
+            val before = result.size
+            queues.forEach { q -> if (q.isNotEmpty() && result.size < topK) result.add(q.removeFirst()) }
+            if (result.size == before) break
+        }
+        return result
     }
 
     companion object {

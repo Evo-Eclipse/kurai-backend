@@ -6,6 +6,7 @@ import com.example.ReadinessGate
 import com.example.application.embedding.CachingEmbeddingAdapter
 import com.example.application.profile.CachingProfileAdapter
 import com.example.configure
+import com.example.domain.cluster.ClusterService
 import com.example.domain.model.EmbeddingVersion
 import com.example.domain.model.Prototype
 import com.example.domain.model.UserProfile
@@ -21,6 +22,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.server.testing.testApplication
 import kotlinx.serialization.json.Json
+import java.nio.file.Path
 import java.util.Date
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -30,6 +32,13 @@ import kotlin.test.assertTrue
 class RankingHandlerTest {
     private val secret = "ranking-test-secret-32-bytes-long"
     private val algo = Algorithm.HMAC256(secret)
+
+    private val testClustersPath: Path =
+        Path.of(
+            checkNotNull(RankingHandlerTest::class.java.getResource("/clusters.bin")) {
+                "clusters.bin not found in test resources"
+            }.toURI(),
+        )
 
     private fun token(sub: String): String =
         JWT
@@ -207,6 +216,121 @@ class RankingHandlerTest {
                 }
             assertEquals(HttpStatusCode.OK, response.status)
         }
+
+    // Wave 23: cold-start stratified selection tests
+
+    @Test
+    fun `cold-start covers at least 60 percent of target clusters`() {
+        val cs = ClusterService.load(testClustersPath)
+        // 30 candidates: 2 per cluster for clusters 0..14, clusters 15..22 empty
+        val vecs =
+            (0L until 30L).associate { id ->
+                val cluster = (id / 2).toInt()
+                id + 1 to basisVec(cluster)
+            }
+        val candidateIds = (1L..30L).toList()
+        val candidateIdsJson = candidateIds.joinToString(",")
+        rankingTest(coldProfile(), vecs, clusterService = cs) { client ->
+            val response =
+                client.post("/ranking/score") {
+                    header(HttpHeaders.Authorization, "Bearer ${token("1")}")
+                    contentType(ContentType.Application.Json)
+                    setBody("""{"userId":1,"candidateIds":[$candidateIdsJson],"topK":24}""")
+                }
+            assertEquals(HttpStatusCode.OK, response.status)
+            val body = Json.decodeFromString<RankingResponse>(response.bodyAsText())
+            // Unique cluster count ≥ 15 out of 24 (≥ 60%)
+            val returnedClusters = body.items.map { item -> cs.assignCluster(vecs.getValue(item.itemId)) }.toSet()
+            assertTrue(
+                returnedClusters.size >= 15,
+                "Expected ≥ 15 unique clusters, got ${returnedClusters.size}: $returnedClusters",
+            )
+        }
+    }
+
+    @Test
+    fun `single positive prototype uses warm MMR pipeline not cold-start`() {
+        // Profile with exactly 1 prototype → warm path, result ordered by cosine similarity
+        val proto = Prototype(basisVec(0), 1f)
+        val profile =
+            UserProfile(
+                userId = 1L,
+                embeddingVersion = EmbeddingVersion("v1"),
+                positivePrototypes = listOf(proto),
+                negativePrototypes = emptyList(),
+                sessionVector = FloatArray(Prototype.VECTOR_DIM),
+                longTermVector = FloatArray(Prototype.VECTOR_DIM),
+                lastAppliedEventId = 0L,
+            )
+        // Item 1 aligns with prototype; items 2, 3 do not
+        val vecs =
+            mapOf(
+                1L to basisVec(0),
+                2L to basisVec(1),
+                3L to basisVec(2),
+            )
+        rankingTest(profile, vecs, clusterService = ClusterService.load(testClustersPath)) { client ->
+            val response =
+                client.post("/ranking/score") {
+                    header(HttpHeaders.Authorization, "Bearer ${token("1")}")
+                    contentType(ContentType.Application.Json)
+                    setBody("""{"userId":1,"candidateIds":[1,2,3],"topK":1}""")
+                }
+            assertEquals(HttpStatusCode.OK, response.status)
+            val body = Json.decodeFromString<RankingResponse>(response.bodyAsText())
+            assertEquals(1, body.items.size)
+            // Warm MMR should rank item 1 highest (aligns with prototype)
+            assertEquals(1L, body.items[0].itemId)
+        }
+    }
+
+    @Test
+    fun `cold-start with null clusterService falls through to arbitrary topK`() {
+        val vecs = (1L..5L).associate { id -> id to normalVec(id.toInt()) }
+        rankingTest(coldProfile(), vecs, clusterService = null) { client ->
+            val response =
+                client.post("/ranking/score") {
+                    header(HttpHeaders.Authorization, "Bearer ${token("1")}")
+                    contentType(ContentType.Application.Json)
+                    setBody("""{"userId":1,"candidateIds":[1,2,3,4,5],"topK":3}""")
+                }
+            assertEquals(HttpStatusCode.OK, response.status)
+            val body = Json.decodeFromString<RankingResponse>(response.bodyAsText())
+            // Falls back to candidateIds.take(topK)
+            assertEquals(3, body.items.size)
+            assertEquals(listOf(1L, 2L, 3L), body.items.map { it.itemId })
+        }
+    }
+
+    @Test
+    fun `cold-start is deterministic for same seed within the same hour`() {
+        val cs = ClusterService.load(testClustersPath)
+        val vecs = (1L..20L).associate { id -> id to basisVec(((id - 1) % 24).toInt()) }
+        val candidateIds = (1L..20L).toList()
+        val candidateIdsJson = candidateIds.joinToString(",")
+
+        var firstResult: List<Long>? = null
+        var secondResult: List<Long>? = null
+
+        rankingTest(coldProfile(), vecs, clusterService = cs) { client ->
+            val r1 =
+                client.post("/ranking/score") {
+                    header(HttpHeaders.Authorization, "Bearer ${token("1")}")
+                    contentType(ContentType.Application.Json)
+                    setBody("""{"userId":1,"candidateIds":[$candidateIdsJson],"topK":10}""")
+                }
+            firstResult = Json.decodeFromString<RankingResponse>(r1.bodyAsText()).items.map { it.itemId }
+            val r2 =
+                client.post("/ranking/score") {
+                    header(HttpHeaders.Authorization, "Bearer ${token("1")}")
+                    contentType(ContentType.Application.Json)
+                    setBody("""{"userId":1,"candidateIds":[$candidateIdsJson],"topK":10}""")
+                }
+            secondResult = Json.decodeFromString<RankingResponse>(r2.bodyAsText()).items.map { it.itemId }
+        }
+
+        assertEquals(firstResult, secondResult, "Same seed within the same hour should produce same order")
+    }
 
     private fun rankingTest(
         profile: UserProfile,

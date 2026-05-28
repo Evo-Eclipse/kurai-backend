@@ -186,9 +186,11 @@ fun Application.configure() {
     configureIngestionRoutes(ingestionHandler)
 
     val clusterService: ClusterService? =
-        runCatching { ClusterService.load() }
-            .onFailure { log.warn("clusters_vitb16.bin not found — ε-exploration disabled") }
-            .getOrNull()
+        config.clustersPath?.let { path ->
+            runCatching { ClusterService.load(path) }
+                .onFailure { log.warn("Failed to load clusters from $path — ε-exploration disabled") }
+                .getOrNull()
+        }
 
     val rankingHandler =
         RankingHandler(
