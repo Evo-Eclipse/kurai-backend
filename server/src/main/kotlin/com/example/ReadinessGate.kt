@@ -7,5 +7,9 @@ class ReadinessGate {
         ready = true
     }
 
+    fun markStopping() {
+        ready = false
+    }
+
     fun isReady(): Boolean = ready
 }

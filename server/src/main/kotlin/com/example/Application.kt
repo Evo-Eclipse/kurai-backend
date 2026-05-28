@@ -45,6 +45,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
+import io.ktor.server.application.ApplicationStopping
 import io.ktor.server.application.install
 import io.ktor.server.auth.Authentication
 import io.ktor.server.auth.jwt.JWTPrincipal
@@ -53,15 +54,20 @@ import io.ktor.server.plugins.calllogging.CallLogging
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.statuspages.StatusPages
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.slf4j.LoggerFactory
 import java.nio.file.Files
 
 private val log = LoggerFactory.getLogger("com.example.Application")
+private const val SHUTDOWN_DEADLINE_MS = 25_000L
 
 // ViT-B/16 (DINOv2 / CLIP-style export) node names.
 private val ONNX_INPUT_SHAPE = longArrayOf(1, 3, 224, 224)
@@ -244,14 +250,26 @@ fun Application.configure() {
         acquisitionScope.launch { kMeansScheduler.run() }
     }
 
-    Runtime.getRuntime().addShutdownHook(
-        Thread {
-            acquisitionScope.cancel()
-            lucene.close()
-            onnxAdapter.close()
-            httpClient.close()
-        },
-    )
+    environment.monitor.subscribe(ApplicationStopping) {
+        runBlocking(Dispatchers.IO) {
+            withTimeout(SHUTDOWN_DEADLINE_MS) {
+                gate.markStopping()
+                acquisitionScope.cancel()
+                (acquisitionScope.coroutineContext[Job] ?: error("acquisitionScope has no Job")).join()
+                lucene.close()
+                onnxAdapter.close()
+                httpClient.close()
+            }
+        }
+    }
+
+    // Warm cache for all known users so that any events committed before a previous
+    // kill -9 are applied before the server accepts new traffic.
+    runBlocking {
+        withContext(Dispatchers.IO) { profileRepo.loadAllUserIds() }.forEach { userId ->
+            cachingProfile.getOrLoad(userId)
+        }
+    }
 
     gate.markReady()
 }
