@@ -49,6 +49,6 @@ class ClusterService private constructor(
     companion object {
         fun load(path: Path): ClusterService = ClusterService(loadCentroids(Files.newInputStream(path)))
 
-        internal fun fromCentroids(centroids: Array<FloatArray>): ClusterService = ClusterService(centroids)
+        fun fromCentroids(centroids: Array<FloatArray>): ClusterService = ClusterService(centroids)
     }
 }

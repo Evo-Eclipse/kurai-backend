@@ -36,6 +36,8 @@ import com.example.routing.routes.configureAcquisitionRoutes
 import com.example.routing.routes.configureIngestionRoutes
 import com.example.routing.routes.configureRankingRoutes
 import com.example.workers.EventBatcherWorker
+import com.example.workers.KMeansScheduler
+import com.example.workers.ProfilePersistWorker
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.serialization.kotlinx.json.json
@@ -164,9 +166,6 @@ fun Application.configure() {
                     ) to vec
                 }
             },
-            saveProfile = { profile ->
-                profileRepo.upsert(profile.userId, profile.embeddingVersion.value, profile.lastAppliedEventId)
-            },
         )
 
     val eventBatcher = EventBatcher(flush = { events -> eventRepo.appendBatch(events) })
@@ -175,6 +174,8 @@ fun Application.configure() {
             eventBatcher.enqueue(EventData(event.userId, event.itemId, event.weight, event.embeddingVersion.value))
         }
     acquisitionScope.launch { EventBatcherWorker(eventBatcher).run() }
+    val profilePersistWorker = ProfilePersistWorker(cachingProfile, profileRepo, config.profilePersistIntervalMs)
+    acquisitionScope.launch { profilePersistWorker.run() }
 
     val ingestionHandler =
         IngestionHandler(
@@ -185,21 +186,36 @@ fun Application.configure() {
         )
     configureIngestionRoutes(ingestionHandler)
 
-    val clusterService: ClusterService? =
-        config.clustersPath?.let { path ->
-            runCatching { ClusterService.load(path) }
-                .onFailure { log.warn("Failed to load clusters from $path — ε-exploration disabled") }
-                .getOrNull()
-        }
+    val clusterServiceRef =
+        java.util.concurrent.atomic.AtomicReference(
+            config.clustersPath?.let { path ->
+                runCatching { ClusterService.load(path) }
+                    .onFailure { log.warn("Failed to load clusters from $path — ε-exploration disabled") }
+                    .getOrNull()
+            },
+        )
 
     val rankingHandler =
         RankingHandler(
             cachingProfile = cachingProfile,
             cachingEmbedding = cachingEmbedding,
-            clusterService = clusterService,
+            getClusterService = { clusterServiceRef.get() },
             activeEmbeddingVersion = { EmbeddingVersion(embeddingVersionRepo.getActiveVersion() ?: "unknown") },
         )
     configureRankingRoutes(rankingHandler)
+
+    if (config.clustersPath != null) {
+        val kMeansScheduler =
+            KMeansScheduler(
+                itemRepo = itemRepo,
+                luceneAdapter = lucene,
+                objectStore = objectStore,
+                clustersKey = config.clustersPath.fileName.toString(),
+                clusterServiceRef = clusterServiceRef,
+                intervalMs = config.kMeansCheckIntervalMs,
+            )
+        acquisitionScope.launch { kMeansScheduler.run() }
+    }
 
     Runtime.getRuntime().addShutdownHook(
         Thread {

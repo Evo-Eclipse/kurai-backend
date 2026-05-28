@@ -5,7 +5,6 @@ import com.example.domain.model.Prototype
 import com.example.domain.model.UserEvent
 import com.example.domain.profile.EventLoadPort
 import com.example.domain.profile.ProfileLoadPort
-import com.example.domain.profile.ProfileSavePort
 import com.example.domain.profile.Scoring
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -27,8 +26,6 @@ class CachingProfileAdapterTest {
         weight: Float = 0.5f,
     ) = UserEvent(id, 1L, id, weight, ev, 1000L)
 
-    private fun noOpSave(): ProfileSavePort = { _ -> }
-
     private fun emptyLoadProfile(): ProfileLoadPort = { _ -> null }
 
     private fun emptyLoadEvents(): EventLoadPort = { _, _ -> emptyList() }
@@ -41,7 +38,6 @@ class CachingProfileAdapterTest {
                 CachingProfileAdapter(
                     loadProfile = emptyLoadProfile(),
                     loadEvents = emptyLoadEvents(),
-                    saveProfile = noOpSave(),
                 )
             val jobs =
                 (1L..count.toLong()).map { id ->
@@ -60,7 +56,6 @@ class CachingProfileAdapterTest {
                 CachingProfileAdapter(
                     loadProfile = emptyLoadProfile(),
                     loadEvents = emptyLoadEvents(),
-                    saveProfile = noOpSave(),
                     cacheCapacity = 2L,
                 )
             adapter.update(1L, event(1L), itemVec(1))
@@ -78,7 +73,6 @@ class CachingProfileAdapterTest {
                 CachingProfileAdapter(
                     loadProfile = emptyLoadProfile(),
                     loadEvents = emptyLoadEvents(),
-                    saveProfile = noOpSave(),
                 )
             adapter.update(1L, event(1L), itemVec(1))
             val first = adapter.snapshotDirty()

@@ -64,7 +64,6 @@ class RankingHandlerTest {
         CachingProfileAdapter(
             loadProfile = { _ -> profile },
             loadEvents = { _, _ -> emptyList() },
-            saveProfile = {},
         )
 
     private fun embeddingAdapter(vectors: Map<Long, FloatArray>) =
@@ -108,7 +107,7 @@ class RankingHandlerTest {
             RankingHandler(
                 profileAdapter(warmProfile()),
                 embeddingAdapter(vecs),
-                clusterService = null,
+                getClusterService = { null },
                 activeEmbeddingVersion = { EmbeddingVersion("v1") },
             )
         testApplication {
@@ -137,7 +136,7 @@ class RankingHandlerTest {
             RankingHandler(
                 profileAdapter(warmProfile("v1")),
                 embeddingAdapter(emptyMap()),
-                clusterService = null,
+                getClusterService = { null },
                 activeEmbeddingVersion = { EmbeddingVersion("v2") },
             )
         testApplication {
@@ -230,7 +229,7 @@ class RankingHandlerTest {
             }
         val candidateIds = (1L..30L).toList()
         val candidateIdsJson = candidateIds.joinToString(",")
-        rankingTest(coldProfile(), vecs, clusterService = cs) { client ->
+        rankingTest(coldProfile(), vecs, getClusterService = { cs }) { client ->
             val response =
                 client.post("/ranking/score") {
                     header(HttpHeaders.Authorization, "Bearer ${token("1")}")
@@ -269,7 +268,7 @@ class RankingHandlerTest {
                 2L to basisVec(1),
                 3L to basisVec(2),
             )
-        rankingTest(profile, vecs, clusterService = ClusterService.load(testClustersPath)) { client ->
+        rankingTest(profile, vecs, getClusterService = { ClusterService.load(testClustersPath) }) { client ->
             val response =
                 client.post("/ranking/score") {
                     header(HttpHeaders.Authorization, "Bearer ${token("1")}")
@@ -287,7 +286,7 @@ class RankingHandlerTest {
     @Test
     fun `cold-start with null clusterService falls through to arbitrary topK`() {
         val vecs = (1L..5L).associate { id -> id to normalVec(id.toInt()) }
-        rankingTest(coldProfile(), vecs, clusterService = null) { client ->
+        rankingTest(coldProfile(), vecs, getClusterService = { null }) { client ->
             val response =
                 client.post("/ranking/score") {
                     header(HttpHeaders.Authorization, "Bearer ${token("1")}")
@@ -312,7 +311,7 @@ class RankingHandlerTest {
         var firstResult: List<Long>? = null
         var secondResult: List<Long>? = null
 
-        rankingTest(coldProfile(), vecs, clusterService = cs) { client ->
+        rankingTest(coldProfile(), vecs, getClusterService = { cs }) { client ->
             val r1 =
                 client.post("/ranking/score") {
                     header(HttpHeaders.Authorization, "Bearer ${token("1")}")
@@ -335,7 +334,7 @@ class RankingHandlerTest {
     private fun rankingTest(
         profile: UserProfile,
         vectors: Map<Long, FloatArray>,
-        clusterService: com.example.domain.cluster.ClusterService? = null,
+        getClusterService: () -> ClusterService? = { null },
         activeVersion: EmbeddingVersion = profile.embeddingVersion,
         block: suspend io.ktor.server.testing.ApplicationTestBuilder.(io.ktor.client.HttpClient) -> Unit,
     ) = testApplication {
@@ -343,7 +342,7 @@ class RankingHandlerTest {
             RankingHandler(
                 profileAdapter(profile),
                 embeddingAdapter(vectors),
-                clusterService,
+                getClusterService,
                 activeEmbeddingVersion = { activeVersion },
             )
         application {

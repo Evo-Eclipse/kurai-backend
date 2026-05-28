@@ -16,12 +16,16 @@ data class AppConfig(
     val onnxModelPath: Path,
     val onnxModelSha256: String,
     val clustersPath: Path?,
+    val profilePersistIntervalMs: Long,
+    val kMeansCheckIntervalMs: Long,
 ) {
     companion object {
         const val DEFAULT_LUCENE_DEPRECATED_GC_SECONDS: Long = 60
         const val DEFAULT_ONNX_INTRA_OP_THREADS: Int = 2
         const val DEFAULT_UNSPLASH_BASE_URL: String = "https://api.unsplash.com"
         const val DEFAULT_E621_BASE_URL: String = "https://e621.net"
+        const val DEFAULT_PROFILE_PERSIST_INTERVAL_MS: Long = 30_000
+        const val DEFAULT_KMEANS_CHECK_INTERVAL_MS: Long = 3_600_000
 
         fun load(env: Map<String, String> = System.getenv()): AppConfig =
             AppConfig(
@@ -73,6 +77,12 @@ data class AppConfig(
                     env["KURAI_ONNX_MODEL_SHA256"]
                         ?: error("Missing required environment variable: KURAI_ONNX_MODEL_SHA256"),
                 clustersPath = env["KURAI_CLUSTERS_PATH"]?.let(Path::of),
+                profilePersistIntervalMs =
+                    env["KURAI_PROFILE_PERSIST_INTERVAL_MS"]?.toLong()
+                        ?: DEFAULT_PROFILE_PERSIST_INTERVAL_MS,
+                kMeansCheckIntervalMs =
+                    env["KURAI_KMEANS_CHECK_INTERVAL_MS"]?.toLong()
+                        ?: DEFAULT_KMEANS_CHECK_INTERVAL_MS,
             )
     }
 }

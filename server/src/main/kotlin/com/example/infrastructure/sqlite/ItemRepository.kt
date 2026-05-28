@@ -1,5 +1,6 @@
 package com.example.infrastructure.sqlite
 
+import org.jetbrains.exposed.v1.core.Random
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.insertIgnore
@@ -32,5 +33,19 @@ class ItemRepository(
             } else {
                 Pair(Items.selectAll().where { Items.md5 eq md5 }.single()[Items.id], false)
             }
+        }
+
+    fun countAll(): Long =
+        transaction(db) {
+            Items.selectAll().count()
+        }
+
+    fun loadSample(limit: Int): List<Long> =
+        transaction(db) {
+            Items
+                .selectAll()
+                .orderBy(Random())
+                .limit(limit)
+                .map { it[Items.id] }
         }
 }

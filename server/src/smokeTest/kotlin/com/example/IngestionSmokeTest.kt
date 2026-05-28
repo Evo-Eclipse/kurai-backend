@@ -93,7 +93,6 @@ class IngestionSmokeTest {
                     }
                 },
                 loadEvents = { _, _ -> emptyList() },
-                saveProfile = {},
             )
         val eventBatcher = EventBatcher(flush = { events -> eventRepo.appendBatch(events) })
         val eventQueue: EventQueue =

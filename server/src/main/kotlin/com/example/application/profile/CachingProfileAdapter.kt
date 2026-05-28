@@ -4,7 +4,6 @@ import com.example.domain.model.UserEvent
 import com.example.domain.model.UserProfile
 import com.example.domain.profile.EventLoadPort
 import com.example.domain.profile.ProfileLoadPort
-import com.example.domain.profile.ProfileSavePort
 import com.example.domain.profile.Scoring
 import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
@@ -15,7 +14,6 @@ import java.util.concurrent.ConcurrentHashMap
 class CachingProfileAdapter(
     private val loadProfile: ProfileLoadPort,
     private val loadEvents: EventLoadPort,
-    private val saveProfile: ProfileSavePort,
     cacheCapacity: Long = DEFAULT_CAPACITY,
 ) {
     private val cache: Cache<Long, UserProfile> =
@@ -55,6 +53,20 @@ class CachingProfileAdapter(
             iter.remove()
         }
         return drained
+    }
+
+    fun invalidate(userId: Long) {
+        cache.invalidate(userId)
+        dirtyMap.remove(userId)
+    }
+
+    fun cachedUserIds(): Set<Long> = cache.asMap().keys.toSet()
+
+    fun forceUpdate(
+        userId: Long,
+        profile: UserProfile,
+    ) {
+        cache.put(userId, profile)
     }
 
     private fun mutexFor(userId: Long): Mutex = mutexes.computeIfAbsent(userId) { Mutex() }

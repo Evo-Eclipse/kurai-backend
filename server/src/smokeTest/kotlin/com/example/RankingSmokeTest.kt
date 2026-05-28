@@ -69,13 +69,12 @@ class RankingSmokeTest {
                     }
                 },
                 loadEvents = { _, _ -> emptyList() },
-                saveProfile = {},
             )
         val cachingEmbedding = CachingEmbeddingAdapter(lookupFromStore = { _ -> emptyMap() })
         return RankingHandler(
             cachingProfile = cachingProfile,
             cachingEmbedding = cachingEmbedding,
-            clusterService = null,
+            getClusterService = { null },
             activeEmbeddingVersion = { EmbeddingVersion("v1") },
         )
     }
