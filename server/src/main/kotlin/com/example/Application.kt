@@ -3,7 +3,15 @@ package com.example
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 import com.example.application.acquisition.AcquisitionService
+import com.example.application.embedding.CachingEmbeddingAdapter
+import com.example.application.profile.CachingProfileAdapter
+import com.example.domain.embedding.EmbedLookupPort
+import com.example.domain.events.EventQueue
 import com.example.domain.inference.InferenceService
+import com.example.domain.model.EmbeddingVersion
+import com.example.domain.model.Prototype
+import com.example.domain.model.UserEvent
+import com.example.domain.model.UserProfile
 import com.example.infrastructure.content.CdnContentSource
 import com.example.infrastructure.content.E621ContentSource
 import com.example.infrastructure.content.ImagePreprocessor
@@ -12,12 +20,19 @@ import com.example.infrastructure.lucene.LuceneAdapter
 import com.example.infrastructure.onnx.OnnxInferenceAdapter
 import com.example.infrastructure.sqlite.AcquisitionJobRepository
 import com.example.infrastructure.sqlite.EmbeddingGenerationRepository
+import com.example.infrastructure.sqlite.EventBatcher
+import com.example.infrastructure.sqlite.EventData
+import com.example.infrastructure.sqlite.EventRepository
 import com.example.infrastructure.sqlite.ItemRepository
+import com.example.infrastructure.sqlite.ProfileRepository
 import com.example.infrastructure.sqlite.initSchema
 import com.example.infrastructure.storage.LocalObjectStore
 import com.example.routing.configureHealthRoutes
 import com.example.routing.handlers.AcquisitionHandler
+import com.example.routing.handlers.IngestionHandler
 import com.example.routing.routes.configureAcquisitionRoutes
+import com.example.routing.routes.configureIngestionRoutes
+import com.example.workers.EventBatcherWorker
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.serialization.kotlinx.json.json
@@ -32,6 +47,7 @@ import io.ktor.server.plugins.statuspages.StatusPages
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.exposed.v1.jdbc.Database
 import java.nio.file.Files
@@ -101,8 +117,67 @@ fun Application.configure() {
 
     val acquisitionScope = CoroutineScope(SupervisorJob())
     val acquisitionHandler = AcquisitionHandler(acquisitionService, acquisitionScope)
-
     configureAcquisitionRoutes(acquisitionHandler)
+
+    val profileRepo = ProfileRepository(db)
+    val eventRepo = EventRepository(db)
+
+    val embedLookup: EmbedLookupPort = { ids ->
+        ids.mapNotNull { id -> lucene.getVector(id)?.let { id to it } }.toMap()
+    }
+    val cachingEmbedding = CachingEmbeddingAdapter(lookupFromStore = embedLookup)
+
+    val cachingProfile =
+        CachingProfileAdapter(
+            loadProfile = { userId ->
+                profileRepo.load(userId)?.let { row ->
+                    UserProfile(
+                        userId = row.userId,
+                        embeddingVersion = EmbeddingVersion(row.embeddingVersion),
+                        positivePrototypes = emptyList(),
+                        negativePrototypes = emptyList(),
+                        // Prototypes are populated by worker-proto-split (wave 27).
+                        sessionVector = FloatArray(Prototype.VECTOR_DIM),
+                        longTermVector = FloatArray(Prototype.VECTOR_DIM),
+                        lastAppliedEventId = row.lastAppliedEventId,
+                    )
+                }
+            },
+            loadEvents = { userId, sinceId ->
+                val rows = eventRepo.loadSince(userId, sinceId)
+                val vecs = cachingEmbedding.lookupVectors(rows.map { it.itemId })
+                rows.mapNotNull { row ->
+                    val vec = vecs[row.itemId] ?: return@mapNotNull null
+                    UserEvent(
+                        id = 0L,
+                        userId = row.userId,
+                        itemId = row.itemId,
+                        weight = row.weight,
+                        embeddingVersion = EmbeddingVersion(row.embeddingVersion),
+                        ts = 0L,
+                    ) to vec
+                }
+            },
+            saveProfile = { profile ->
+                profileRepo.upsert(profile.userId, profile.embeddingVersion.value, profile.lastAppliedEventId)
+            },
+        )
+
+    val eventBatcher = EventBatcher(flush = { events -> eventRepo.appendBatch(events) })
+    val eventQueue: EventQueue =
+        EventQueue { event ->
+            eventBatcher.enqueue(EventData(event.userId, event.itemId, event.weight, event.embeddingVersion.value))
+        }
+    acquisitionScope.launch { EventBatcherWorker(eventBatcher).run() }
+
+    val ingestionHandler =
+        IngestionHandler(
+            cachingProfile = cachingProfile,
+            cachingEmbedding = cachingEmbedding,
+            eventQueue = eventQueue,
+            activeEmbeddingVersion = { EmbeddingVersion(embeddingVersionRepo.getActiveVersion() ?: "unknown") },
+        )
+    configureIngestionRoutes(ingestionHandler)
 
     Runtime.getRuntime().addShutdownHook(
         Thread {
