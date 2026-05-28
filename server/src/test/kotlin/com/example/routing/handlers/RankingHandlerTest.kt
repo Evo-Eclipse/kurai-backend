@@ -303,7 +303,7 @@ class RankingHandlerTest {
     }
 
     @Test
-    fun `cold-start is deterministic for same seed within the same hour`() {
+    fun `cold-start is deterministic for same user within the same day`() {
         val cs = ClusterService.load(testClustersPath)
         val vecs = (1L..20L).associate { id -> id to basisVec(((id - 1) % 24).toInt()) }
         val candidateIds = (1L..20L).toList()
@@ -329,7 +329,7 @@ class RankingHandlerTest {
             secondResult = Json.decodeFromString<RankingResponse>(r2.bodyAsText()).items.map { it.itemId }
         }
 
-        assertEquals(firstResult, secondResult, "Same seed within the same hour should produce same order")
+        assertEquals(firstResult, secondResult, "Same user within the same day should produce same order")
     }
 
     private fun rankingTest(

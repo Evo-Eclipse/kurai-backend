@@ -10,7 +10,7 @@ class ClusterService private constructor(
     private val centroids: Array<FloatArray>,
 ) {
     val size: Int get() = centroids.size
-    val dim: Int get() = centroids[0].size
+    val dim: Int get() = centroids.firstOrNull()?.size ?: error("centroids array is empty")
 
     fun assignCluster(vector: FloatArray): Int {
         require(vector.size == dim) {

@@ -44,13 +44,18 @@ class RankingHandler(
     private val activeEmbeddingVersion: () -> EmbeddingVersion,
 ) {
     suspend fun handleScore(call: ApplicationCall) {
+        val principal =
+            call.principal<JWTPrincipal>()
+                ?: run {
+                    call.respond(HttpStatusCode.Unauthorized, ErrorResponse(ErrorDetail("UNAUTHORIZED")))
+                    return
+                }
+
         val sub =
-            call
-                .principal<JWTPrincipal>()
-                ?.payload
-                ?.getClaim("sub")
-                ?.asString()
-                ?.toLongOrNull()
+            principal.payload
+                .getClaim("sub")
+                .asString()
+                .toLongOrNull()
                 ?: run {
                     call.respond(HttpStatusCode.Unauthorized, ErrorResponse(ErrorDetail("UNAUTHORIZED")))
                     return
@@ -81,6 +86,7 @@ class RankingHandler(
 
         val vecs = cachingEmbedding.lookupVectors(req.candidateIds)
         val scored = req.candidateIds.mapNotNull { id -> vecs[id]?.let { id to Scoring.score(profile, it) } }
+        val scoredMap: Map<Long, Float> = scored.toMap()
 
         val finalIds: List<Long> =
             when {
@@ -88,11 +94,13 @@ class RankingHandler(
                     scored.mmr(vecs, lambda = 0.5f, n = req.topK).distinct().take(req.topK)
                 clusterService != null -> {
                     // Cold-start: no positive prototypes yet — distribute across target clusters.
-                    val seed = Instant.now().epochSecond / 3600
+                    // Seed combines userId with a daily bucket so the ordering is stable within
+                    // a session but rotates each day and differs across users.
+                    val seed = req.userId xor (Instant.now().epochSecond / 86400)
                     coldStartRanking(
                         req.candidateIds.filter { it in vecs },
                         vecs,
-                        req.topK,
+                        minOf(req.topK, clusterService.size),
                         clusterService,
                         profile,
                         seed,
@@ -105,7 +113,7 @@ class RankingHandler(
             RankingResponse(
                 items =
                     finalIds.map { id ->
-                        ScoredItemResponse(id, scored.find { it.first == id }?.second ?: 0f)
+                        ScoredItemResponse(id, scoredMap[id] ?: 0f)
                     },
             ),
         )

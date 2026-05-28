@@ -30,18 +30,20 @@ class IngestionHandler(
     private val activeEmbeddingVersion: () -> EmbeddingVersion,
 ) {
     suspend fun handleIngest(call: ApplicationCall) {
-        val sub =
-            call
-                .principal<JWTPrincipal>()
-                ?.payload
-                ?.getClaim("sub")
-                ?.asString()
-                ?.toLongOrNull()
+        val principal =
+            call.principal<JWTPrincipal>()
                 ?: run {
-                    call.respond(
-                        HttpStatusCode.Unauthorized,
-                        ErrorResponse(ErrorDetail("UNAUTHORIZED")),
-                    )
+                    call.respond(HttpStatusCode.Unauthorized, ErrorResponse(ErrorDetail("UNAUTHORIZED")))
+                    return
+                }
+
+        val sub =
+            principal.payload
+                .getClaim("sub")
+                .asString()
+                .toLongOrNull()
+                ?: run {
+                    call.respond(HttpStatusCode.Unauthorized, ErrorResponse(ErrorDetail("UNAUTHORIZED")))
                     return
                 }
 
@@ -57,7 +59,7 @@ class IngestionHandler(
                 ?: run {
                     call.respond(
                         HttpStatusCode.UnprocessableEntity,
-                        ErrorResponse(ErrorDetail("ITEM_NOT_FOUND")),
+                        ErrorResponse(ErrorDetail("ITEM_NOT_INDEXED")),
                     )
                     return
                 }

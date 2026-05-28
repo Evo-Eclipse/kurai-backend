@@ -22,7 +22,6 @@ import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
 import org.jetbrains.exposed.v1.jdbc.Database
 import java.util.Date
-import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -51,9 +50,6 @@ class RankingSmokeTest {
         // Pre-insert a profile so embeddingVersion matches the active version in the handler.
         ProfileRepository(db).upsert(userId = USER_ID, embeddingVersion = "v1", lastAppliedEventId = 0L)
     }
-
-    @AfterTest
-    fun tearDown() {}
 
     private fun buildHandler(): RankingHandler {
         val profileRepo = ProfileRepository(db)

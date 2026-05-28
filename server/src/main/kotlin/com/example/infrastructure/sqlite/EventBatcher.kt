@@ -36,6 +36,7 @@ class EventBatcher(
      */
     suspend fun runFlushLoop() =
         coroutineScope {
+            buffer.clear()
             val timeoutChannel = Channel<Unit>(capacity = Channel.CONFLATED)
 
             fun launchTimeout() =
@@ -74,7 +75,8 @@ class EventBatcher(
 
     /**
      * Flushes any items remaining in the in-memory buffer or channel. Call after cancellation.
-     * Safe because runFlushLoop is no longer running when this is called.
+     * PRECONDITION: runFlushLoop's coroutineScope must have fully completed before calling this;
+     * buffer access is not synchronized and concurrent access is a data race.
      */
     suspend fun drainAndFlush() {
         while (true) {
