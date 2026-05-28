@@ -13,25 +13,32 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class ClusterServiceTest {
-    private fun syntheticBinary(k: Int): ByteArray {
-        val buf = ByteBuffer.allocate(4 + k * EXPECTED_DIM * 4).order(ByteOrder.LITTLE_ENDIAN)
+    // Format: uint32 k | uint32 dim | k x dim x float32
+    private fun syntheticBinary(
+        k: Int,
+        dim: Int = 16,
+    ): ByteArray {
+        val buf = ByteBuffer.allocate(8 + k * dim * 4).order(ByteOrder.LITTLE_ENDIAN)
         buf.putInt(k)
+        buf.putInt(dim)
         repeat(k) { i ->
-            // Each centroid is a unit vector along dimension i % EXPECTED_DIM
-            repeat(EXPECTED_DIM) { d -> buf.putFloat(if (d == i % EXPECTED_DIM) 1f else 0f) }
+            repeat(dim) { d -> buf.putFloat(if (d == i % dim) 1f else 0f) }
         }
         return buf.array()
     }
 
+    private fun serviceWith(
+        k: Int,
+        dim: Int = 16,
+    ): ClusterService = ClusterService.fromCentroids(loadCentroids(ByteArrayInputStream(syntheticBinary(k, dim))))
+
     private fun coldProfile() = UserProfile.coldStart(1L)
 
-    private fun concentratedProfile(): UserProfile {
-        // All prototypes near centroid 0 (unit vector along dim 0)
-        val vec0 = Scoring.l2Normalize(FloatArray(EXPECTED_DIM).also { it[0] = 1f })
-        val ev = EmbeddingVersion("v1")
+    private fun concentratedProfile(dim: Int): UserProfile {
+        val vec0 = Scoring.l2Normalize(FloatArray(dim).also { it[0] = 1f })
         return UserProfile(
             userId = 1L,
-            embeddingVersion = ev,
+            embeddingVersion = EmbeddingVersion("v1"),
             positivePrototypes = listOf(Prototype(vec0, 1f)),
             negativePrototypes = emptyList(),
             sessionVector = FloatArray(Prototype.VECTOR_DIM),
@@ -41,39 +48,57 @@ class ClusterServiceTest {
     }
 
     @Test
-    fun `fromCentroids with valid 23x768 binary succeeds`() {
-        val bytes = syntheticBinary(EXPECTED_K)
-        val service = ClusterService.fromCentroids(loadCentroids(ByteArrayInputStream(bytes)))
-        // assignCluster should return a valid index
-        val vec = FloatArray(EXPECTED_DIM).also { it[0] = 1f }
-        val idx = service.assignCluster(vec)
-        assertTrue(idx in 0 until EXPECTED_K)
-    }
-
-    @Test
-    fun `loadCentroids with wrong k throws IllegalStateException`() {
-        val bytes = syntheticBinary(22)
-        assertFailsWith<IllegalStateException> {
-            loadCentroids(ByteArrayInputStream(bytes))
+    fun `fromCentroids accepts arbitrary k and dim`() {
+        for ((k, dim) in listOf(1 to 4, 8 to 16, 24 to 768, 100 to 32)) {
+            val service = serviceWith(k, dim)
+            assertEquals(k, service.size)
+            assertEquals(dim, service.dim)
         }
     }
 
     @Test
+    fun `loadCentroids with k=0 throws`() {
+        val buf =
+            ByteBuffer.allocate(8).order(ByteOrder.LITTLE_ENDIAN).also {
+                it.putInt(0)
+                it.putInt(16)
+            }
+        assertFailsWith<IllegalStateException> { loadCentroids(ByteArrayInputStream(buf.array())) }
+    }
+
+    @Test
+    fun `loadCentroids with dim=0 throws`() {
+        val buf =
+            ByteBuffer.allocate(8).order(ByteOrder.LITTLE_ENDIAN).also {
+                it.putInt(8)
+                it.putInt(0)
+            }
+        assertFailsWith<IllegalStateException> { loadCentroids(ByteArrayInputStream(buf.array())) }
+    }
+
+    @Test
+    fun `assignCluster rejects vector with wrong dimension`() {
+        val service = serviceWith(k = 4, dim = 16)
+        assertFailsWith<IllegalArgumentException> { service.assignCluster(FloatArray(8)) }
+    }
+
+    @Test
     fun `epsilonCandidates on cold profile returns k distinct indices`() {
-        val service = ClusterService.fromCentroids(loadCentroids(ByteArrayInputStream(syntheticBinary(EXPECTED_K))))
+        val service = serviceWith(k = 8)
         val result = service.epsilonCandidates(coldProfile(), k = 5, seed = 42L)
         assertEquals(5, result.size)
         assertEquals(result.size, result.toSet().size, "Indices must be distinct")
-        assertTrue(result.all { it in 0 until EXPECTED_K })
+        assertTrue(result.all { it in 0 until 8 })
     }
 
     @Test
     fun `epsilonCandidates on concentrated profile avoids occupied cluster`() {
-        val service = ClusterService.fromCentroids(loadCentroids(ByteArrayInputStream(syntheticBinary(EXPECTED_K))))
-        val profile = concentratedProfile()
+        // Prototype requires VECTOR_DIM vectors, so cluster service must use the same dim.
+        val dim = Prototype.VECTOR_DIM
+        val service = serviceWith(k = 8, dim = dim)
+        val profile = concentratedProfile(dim)
         val occupiedCluster = service.assignCluster(profile.positivePrototypes[0].vector)
-        val result = service.epsilonCandidates(profile, k = EXPECTED_K - 1, seed = 0L)
-        // The occupied cluster should not appear among the first EXPECTED_K-1 picks
+        val result = service.epsilonCandidates(profile, k = 7, seed = 0L)
         assertTrue(
             occupiedCluster !in result,
             "Occupied cluster $occupiedCluster should not be in epsilon candidates $result",
@@ -82,7 +107,7 @@ class ClusterServiceTest {
 
     @Test
     fun `epsilonCandidates is deterministic for fixed seed`() {
-        val service = ClusterService.fromCentroids(loadCentroids(ByteArrayInputStream(syntheticBinary(EXPECTED_K))))
+        val service = serviceWith(k = 8)
         val r1 = service.epsilonCandidates(coldProfile(), k = 5, seed = 12345L)
         val r2 = service.epsilonCandidates(coldProfile(), k = 5, seed = 12345L)
         assertEquals(r1, r2)

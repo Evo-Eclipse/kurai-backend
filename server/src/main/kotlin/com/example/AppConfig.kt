@@ -15,6 +15,7 @@ data class AppConfig(
     val objectStoreDir: Path,
     val onnxModelPath: Path,
     val onnxModelSha256: String,
+    val clustersPath: Path?,
 ) {
     companion object {
         const val DEFAULT_LUCENE_DEPRECATED_GC_SECONDS: Long = 60
@@ -71,6 +72,7 @@ data class AppConfig(
                 onnxModelSha256 =
                     env["KURAI_ONNX_MODEL_SHA256"]
                         ?: error("Missing required environment variable: KURAI_ONNX_MODEL_SHA256"),
+                clustersPath = env["KURAI_CLUSTERS_PATH"]?.let(Path::of),
             )
     }
 }
