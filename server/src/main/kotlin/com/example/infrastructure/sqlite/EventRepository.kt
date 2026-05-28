@@ -4,6 +4,7 @@ import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greater
+import org.jetbrains.exposed.v1.core.greaterEq
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.batchInsert
 import org.jetbrains.exposed.v1.jdbc.insert
@@ -52,6 +53,37 @@ class EventRepository(
                         embeddingVersion = row[UserEvents.embeddingVersion],
                     )
                 }
+        }
+
+    fun loadPositiveSince(
+        userId: Long,
+        sinceEventId: Long,
+    ): List<EventData> =
+        transaction(db) {
+            UserEvents
+                .selectAll()
+                .where {
+                    (UserEvents.userId eq userId) and
+                        (UserEvents.id greater sinceEventId) and
+                        (UserEvents.weight greaterEq 0f)
+                }.orderBy(UserEvents.id to SortOrder.ASC)
+                .map { row ->
+                    EventData(
+                        userId = row[UserEvents.userId],
+                        itemId = row[UserEvents.itemId],
+                        weight = row[UserEvents.weight],
+                        embeddingVersion = row[UserEvents.embeddingVersion],
+                    )
+                }
+        }
+
+    fun maxEventId(userId: Long): Long =
+        transaction(db) {
+            UserEvents
+                .selectAll()
+                .where { UserEvents.userId eq userId }
+                .maxByOrNull { it[UserEvents.id] }
+                ?.get(UserEvents.id) ?: 0L
         }
 
     fun appendBatch(events: List<EventData>): List<Long> =

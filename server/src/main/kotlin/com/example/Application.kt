@@ -37,6 +37,7 @@ import com.example.routing.routes.configureIngestionRoutes
 import com.example.routing.routes.configureRankingRoutes
 import com.example.workers.EventBatcherWorker
 import com.example.workers.KMeansScheduler
+import com.example.workers.ProfileMigrationWorker
 import com.example.workers.ProfilePersistWorker
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
@@ -176,6 +177,15 @@ fun Application.configure() {
     acquisitionScope.launch { EventBatcherWorker(eventBatcher).run() }
     val profilePersistWorker = ProfilePersistWorker(cachingProfile, profileRepo, config.profilePersistIntervalMs)
     acquisitionScope.launch { profilePersistWorker.run() }
+    val profileMigrationWorker =
+        ProfileMigrationWorker(
+            profileRepo = profileRepo,
+            eventRepo = eventRepo,
+            cachingEmbedding = cachingEmbedding,
+            cachingProfile = cachingProfile,
+            activeEmbeddingVersion = { EmbeddingVersion(embeddingVersionRepo.getActiveVersion() ?: "unknown") },
+        )
+    acquisitionScope.launch { profileMigrationWorker.run() }
 
     val ingestionHandler =
         IngestionHandler(
