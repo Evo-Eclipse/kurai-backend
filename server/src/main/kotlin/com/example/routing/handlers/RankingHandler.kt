@@ -40,7 +40,7 @@ data class RankingResponse(
 class RankingHandler(
     private val cachingProfile: CachingProfileAdapter,
     private val cachingEmbedding: CachingEmbeddingAdapter,
-    private val clusterService: ClusterService?,
+    private val getClusterService: () -> ClusterService?,
     private val activeEmbeddingVersion: () -> EmbeddingVersion,
 ) {
     suspend fun handleScore(call: ApplicationCall) {
@@ -88,6 +88,7 @@ class RankingHandler(
         val scored = req.candidateIds.mapNotNull { id -> vecs[id]?.let { id to Scoring.score(profile, it) } }
         val scoredMap: Map<Long, Float> = scored.toMap()
 
+        val clusterService = getClusterService()
         val finalIds: List<Long> =
             when {
                 profile.positivePrototypes.isNotEmpty() ->

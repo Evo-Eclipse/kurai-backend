@@ -54,6 +54,37 @@ class EventRepository(
                 }
         }
 
+    fun loadPositiveSince(
+        userId: Long,
+        sinceEventId: Long,
+    ): List<EventData> =
+        transaction(db) {
+            UserEvents
+                .selectAll()
+                .where {
+                    (UserEvents.userId eq userId) and
+                        (UserEvents.id greater sinceEventId) and
+                        (UserEvents.weight greater 0f)
+                }.orderBy(UserEvents.id to SortOrder.ASC)
+                .map { row ->
+                    EventData(
+                        userId = row[UserEvents.userId],
+                        itemId = row[UserEvents.itemId],
+                        weight = row[UserEvents.weight],
+                        embeddingVersion = row[UserEvents.embeddingVersion],
+                    )
+                }
+        }
+
+    fun maxEventId(userId: Long): Long =
+        transaction(db) {
+            UserEvents
+                .selectAll()
+                .where { UserEvents.userId eq userId }
+                .maxByOrNull { it[UserEvents.id] }
+                ?.get(UserEvents.id) ?: 0L
+        }
+
     fun appendBatch(events: List<EventData>): List<Long> =
         transaction(db) {
             UserEvents

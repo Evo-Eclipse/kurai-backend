@@ -26,6 +26,8 @@ import com.example.infrastructure.sqlite.EventData
 import com.example.infrastructure.sqlite.EventRepository
 import com.example.infrastructure.sqlite.ItemRepository
 import com.example.infrastructure.sqlite.ProfileRepository
+import com.example.infrastructure.sqlite.PrototypeRepository
+import com.example.infrastructure.sqlite.PrototypeType
 import com.example.infrastructure.sqlite.initSchema
 import com.example.infrastructure.storage.LocalObjectStore
 import com.example.routing.configureHealthRoutes
@@ -36,10 +38,15 @@ import com.example.routing.routes.configureAcquisitionRoutes
 import com.example.routing.routes.configureIngestionRoutes
 import com.example.routing.routes.configureRankingRoutes
 import com.example.workers.EventBatcherWorker
+import com.example.workers.KMeansScheduler
+import com.example.workers.ProfileMigrationWorker
+import com.example.workers.ProfilePersistWorker
+import com.example.workers.ProtoSplitWorker
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
+import io.ktor.server.application.ApplicationStopping
 import io.ktor.server.application.install
 import io.ktor.server.auth.Authentication
 import io.ktor.server.auth.jwt.JWTPrincipal
@@ -48,15 +55,20 @@ import io.ktor.server.plugins.calllogging.CallLogging
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.statuspages.StatusPages
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.slf4j.LoggerFactory
 import java.nio.file.Files
 
 private val log = LoggerFactory.getLogger("com.example.Application")
+private const val SHUTDOWN_DEADLINE_MS = 25_000L
 
 // ViT-B/16 (DINOv2 / CLIP-style export) node names.
 private val ONNX_INPUT_SHAPE = longArrayOf(1, 3, 224, 224)
@@ -127,6 +139,7 @@ fun Application.configure() {
 
     val profileRepo = ProfileRepository(db)
     val eventRepo = EventRepository(db)
+    val prototypeRepo = PrototypeRepository(db)
 
     val embedLookup: EmbedLookupPort = { ids ->
         ids.mapNotNull { id -> lucene.getVector(id)?.let { id to it } }.toMap()
@@ -137,12 +150,18 @@ fun Application.configure() {
         CachingProfileAdapter(
             loadProfile = { userId ->
                 profileRepo.load(userId)?.let { row ->
+                    val protos = prototypeRepo.load(userId)
                     UserProfile(
                         userId = row.userId,
                         embeddingVersion = EmbeddingVersion(row.embeddingVersion),
-                        positivePrototypes = emptyList(),
-                        negativePrototypes = emptyList(),
-                        // Prototypes are populated by worker-proto-split (wave 27).
+                        positivePrototypes =
+                            protos
+                                .filter { it.prototypeType == PrototypeType.POSITIVE }
+                                .map { Prototype(it.vector, it.weight.toFloat()) },
+                        negativePrototypes =
+                            protos
+                                .filter { it.prototypeType == PrototypeType.NEGATIVE }
+                                .map { Prototype(it.vector, it.weight.toFloat()) },
                         sessionVector = FloatArray(Prototype.VECTOR_DIM),
                         longTermVector = FloatArray(Prototype.VECTOR_DIM),
                         lastAppliedEventId = row.lastAppliedEventId,
@@ -164,9 +183,6 @@ fun Application.configure() {
                     ) to vec
                 }
             },
-            saveProfile = { profile ->
-                profileRepo.upsert(profile.userId, profile.embeddingVersion.value, profile.lastAppliedEventId)
-            },
         )
 
     val eventBatcher = EventBatcher(flush = { events -> eventRepo.appendBatch(events) })
@@ -175,6 +191,25 @@ fun Application.configure() {
             eventBatcher.enqueue(EventData(event.userId, event.itemId, event.weight, event.embeddingVersion.value))
         }
     acquisitionScope.launch { EventBatcherWorker(eventBatcher).run() }
+    val profilePersistWorker = ProfilePersistWorker(cachingProfile, profileRepo, config.profilePersistIntervalMs)
+    acquisitionScope.launch { profilePersistWorker.run() }
+    val profileMigrationWorker =
+        ProfileMigrationWorker(
+            profileRepo = profileRepo,
+            eventRepo = eventRepo,
+            cachingEmbedding = cachingEmbedding,
+            cachingProfile = cachingProfile,
+            activeEmbeddingVersion = { EmbeddingVersion(embeddingVersionRepo.getActiveVersion() ?: "unknown") },
+        )
+    acquisitionScope.launch { profileMigrationWorker.run() }
+    val protoSplitWorker =
+        ProtoSplitWorker(
+            cachingProfile = cachingProfile,
+            cachingEmbedding = cachingEmbedding,
+            prototypeRepo = prototypeRepo,
+            eventRepo = eventRepo,
+        )
+    acquisitionScope.launch { protoSplitWorker.run() }
 
     val ingestionHandler =
         IngestionHandler(
@@ -185,30 +220,57 @@ fun Application.configure() {
         )
     configureIngestionRoutes(ingestionHandler)
 
-    val clusterService: ClusterService? =
-        config.clustersPath?.let { path ->
-            runCatching { ClusterService.load(path) }
-                .onFailure { log.warn("Failed to load clusters from $path — ε-exploration disabled") }
-                .getOrNull()
-        }
+    val clusterServiceRef =
+        java.util.concurrent.atomic.AtomicReference(
+            config.clustersPath?.let { path ->
+                runCatching { ClusterService.load(path) }
+                    .onFailure { log.warn("Failed to load clusters from $path — ε-exploration disabled") }
+                    .getOrNull()
+            },
+        )
 
     val rankingHandler =
         RankingHandler(
             cachingProfile = cachingProfile,
             cachingEmbedding = cachingEmbedding,
-            clusterService = clusterService,
+            getClusterService = { clusterServiceRef.get() },
             activeEmbeddingVersion = { EmbeddingVersion(embeddingVersionRepo.getActiveVersion() ?: "unknown") },
         )
     configureRankingRoutes(rankingHandler)
 
-    Runtime.getRuntime().addShutdownHook(
-        Thread {
-            acquisitionScope.cancel()
-            lucene.close()
-            onnxAdapter.close()
-            httpClient.close()
-        },
-    )
+    if (config.clustersPath != null) {
+        val kMeansScheduler =
+            KMeansScheduler(
+                itemRepo = itemRepo,
+                luceneAdapter = lucene,
+                objectStore = objectStore,
+                clustersKey = config.clustersPath.fileName.toString(),
+                clusterServiceRef = clusterServiceRef,
+                intervalMs = config.kMeansCheckIntervalMs,
+            )
+        acquisitionScope.launch { kMeansScheduler.run() }
+    }
+
+    environment.monitor.subscribe(ApplicationStopping) {
+        runBlocking(Dispatchers.IO) {
+            withTimeout(SHUTDOWN_DEADLINE_MS) {
+                gate.markStopping()
+                acquisitionScope.cancel()
+                (acquisitionScope.coroutineContext[Job] ?: error("acquisitionScope has no Job")).join()
+                lucene.close()
+                onnxAdapter.close()
+                httpClient.close()
+            }
+        }
+    }
+
+    // Warm cache for all known users so that any events committed before a previous
+    // kill -9 are applied before the server accepts new traffic.
+    runBlocking {
+        withContext(Dispatchers.IO) { profileRepo.loadAllUserIds() }.forEach { userId ->
+            cachingProfile.getOrLoad(userId)
+        }
+    }
 
     gate.markReady()
 }

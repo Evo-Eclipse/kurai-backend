@@ -11,6 +11,8 @@ import com.example.archtest.violation.infrastructure.onnx.FakeOnnx
 import com.example.archtest.violation.routing.RoutingViolation
 import com.example.archtest.violation.routing.handlers.HandlersToInferenceViolation
 import com.example.archtest.violation.routing.handlers.RankingHandlerOnnxViolation
+import com.example.archtest.violation.workers.WorkersI7Violation
+import com.example.infrastructure.sqlite.ProfileRepository
 import com.tngtech.archunit.core.importer.ClassFileImporter
 import com.tngtech.archunit.core.importer.ImportOption
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses
@@ -114,6 +116,21 @@ class ArchUnitTest {
         assertFailsWith<AssertionError> { domainNotOnRouting().check(violationClasses) }
     }
 
+    @Test
+    fun `only workers may advance last_applied_event_id`() {
+        onlyWorkersCallProfileUpsert().check(productionClasses)
+    }
+
+    @Test
+    fun `ArchUnit catches I-7 violation from outside workers`() {
+        val violationClasses =
+            ClassFileImporter().importClasses(
+                WorkersI7Violation::class.java,
+                ProfileRepository::class.java,
+            )
+        assertFailsWith<AssertionError> { onlyWorkersCallProfileUpsert().check(violationClasses) }
+    }
+
     private fun routingNotOnInfrastructure() =
         noClasses()
             .that()
@@ -161,4 +178,17 @@ class ArchUnitTest {
             .should()
             .dependOnClassesThat()
             .resideInAPackage("..routing..")
+
+    private fun onlyWorkersCallProfileUpsert() =
+        noClasses()
+            .that()
+            .resideOutsideOfPackage("com.example.workers..")
+            .should()
+            .callMethod(
+                ProfileRepository::class.java,
+                "upsert",
+                checkNotNull(Long::class.javaPrimitiveType),
+                String::class.java,
+                checkNotNull(Long::class.javaPrimitiveType),
+            )
 }

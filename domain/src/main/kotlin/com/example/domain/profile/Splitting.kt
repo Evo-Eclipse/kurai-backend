@@ -2,13 +2,12 @@ package com.example.domain.profile
 
 import kotlin.random.Random
 
-fun splitPrototypes(
+fun kMeansCentroids(
     vectors: List<FloatArray>,
     k: Int,
     seed: Long,
-): List<Int> {
-    require(k in 2..5) { "k must be in [2, 5], got $k" }
-    if (vectors.isEmpty()) return emptyList()
+): Array<FloatArray> {
+    require(vectors.isNotEmpty()) { "vectors must not be empty" }
     val rng = Random(seed)
     val centroids = kMeansPlusPlusInit(vectors, k, rng).toMutableList()
     val batchSize = minOf(100, vectors.size)
@@ -28,7 +27,18 @@ fun splitPrototypes(
             }
         }
     }
-    return vectors.map { nearestCentroid(centroids, it) }
+    return centroids.toTypedArray()
+}
+
+fun splitPrototypes(
+    vectors: List<FloatArray>,
+    k: Int,
+    seed: Long,
+): List<Int> {
+    require(k in 2..5) { "k must be in [2, 5], got $k" }
+    if (vectors.isEmpty()) return emptyList()
+    val centroids = kMeansCentroids(vectors, k, seed)
+    return vectors.map { nearestCentroid(centroids.toList(), it) }
 }
 
 fun silhouette(
@@ -94,4 +104,6 @@ private fun kMeansPlusPlusInit(
 private fun nearestCentroid(
     centroids: List<FloatArray>,
     v: FloatArray,
-): Int = centroids.indices.maxByOrNull { Scoring.cos(centroids[it], v) }!!
+): Int =
+    centroids.indices.maxByOrNull { Scoring.cos(centroids[it], v) }
+        ?: error("centroids must not be empty")
