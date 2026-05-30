@@ -6,5 +6,5 @@ class InferenceService(
     private val preprocess: PreprocessPort,
     private val infer: InferPort,
 ) {
-    fun embed(imageBytes: ByteArray): FloatArray = Scoring.l2Normalize(infer(preprocess(imageBytes)))
+    suspend fun embed(imageBytes: ByteArray): FloatArray = Scoring.l2Normalize(infer(preprocess(imageBytes)))
 }

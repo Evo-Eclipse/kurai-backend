@@ -135,9 +135,8 @@ suspend fun Application.installCore() {
         val preprocessor = dependencies.resolve<ImagePreprocessor>()
         val onnx = dependencies.resolve<OnnxInferenceAdapter>()
         InferenceService(
-            // Ports are non-suspend; bridge via runBlocking (Wave 3 makes them suspend).
-            preprocess = { bytes -> runBlocking { preprocessor.preprocess(bytes) } },
-            infer = { tensor -> runBlocking { onnx.infer(tensor, ONNX_INPUT_SHAPE) } },
+            preprocess = { bytes -> preprocessor.preprocess(bytes) },
+            infer = { tensor -> onnx.infer(tensor, ONNX_INPUT_SHAPE) },
         )
     }
 

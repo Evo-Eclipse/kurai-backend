@@ -76,10 +76,7 @@ class AcquisitionService(
                                 )
                             }
                         if (isNew) {
-                            val vec =
-                                withContext(Dispatchers.Default) {
-                                    inferenceService.embed(image.bytes)
-                                }
+                            val vec = inferenceService.embed(image.bytes)
                             withContext(Dispatchers.IO) {
                                 luceneAdapter.write(itemId, vec)
                             }

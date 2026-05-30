@@ -4,6 +4,7 @@ import ai.onnxruntime.OnnxTensor
 import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -40,6 +41,17 @@ class OnnxInferenceAdapter(
     private val session: OrtSession
     private val mutex = Mutex()
 
+    /**
+     * Bounded pool dedicated to ONNX inference. ONNX Runtime's `run()`
+     * is a blocking JNI call; routing it through `Dispatchers.Default`
+     * would starve the shared CPU pool (a 2-core CI worker only has 2
+     * Default threads, and the intra-op threads inside `session.run()`
+     * further block). Sized at [MAX_PARALLEL_EMBEDS] so concurrent
+     * embed requests queue instead of pinning every Default thread.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val onnxDispatcher = Dispatchers.IO.limitedParallelism(MAX_PARALLEL_EMBEDS)
+
     init {
         val actual = sha256Hex(modelBytes)
         require(actual == expectedSha256) {
@@ -64,7 +76,7 @@ class OnnxInferenceAdapter(
         shape: LongArray,
     ): FloatArray =
         mutex.withLock {
-            withContext(Dispatchers.Default) {
+            withContext(onnxDispatcher) {
                 require(input.size.toLong() == shape.fold(1L, Long::times)) {
                     "Input size ${input.size} does not match shape ${shape.toList()}"
                 }
@@ -106,6 +118,8 @@ class OnnxInferenceAdapter(
     }
 
     companion object {
+        const val MAX_PARALLEL_EMBEDS = 4
+
         fun sha256Hex(bytes: ByteArray): String =
             MessageDigest
                 .getInstance("SHA-256")
