@@ -13,17 +13,21 @@ configure<org.jlleitschuh.gradle.ktlint.KtlintExtension> {
 }
 
 dependencies {
-    implementation(ktorLibs.client.cio)
-    implementation(ktorLibs.client.contentNegotiation)
-    implementation(ktorLibs.client.core)
+    // `api` for types that :server constructs via `dependencies.provide<…>`:
+    // Database, HttpClient, the CIO engine. Without `api`, server would need
+    // its own copy of these dependencies to even reference the types.
+    api(ktorLibs.client.cio)
+    api(ktorLibs.client.contentNegotiation)
+    api(ktorLibs.client.core)
+    api(libs.exposed.core)
+    api(libs.exposed.jdbc)
+
     implementation(ktorLibs.serialization.kotlinx.json)
-    implementation(libs.exposed.core)
-    implementation(libs.exposed.jdbc)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.logback.classic)
     implementation(libs.lucene.core)
     implementation(libs.onnxruntime)
-    implementation(libs.sqlite.jdbc)
+    runtimeOnly(libs.sqlite.jdbc)
 
     testImplementation(kotlin("test"))
     testImplementation(libs.kotlinx.coroutines.test)

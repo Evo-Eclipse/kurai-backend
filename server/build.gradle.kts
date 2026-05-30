@@ -50,15 +50,6 @@ dependencies {
     implementation(project(":application"))
     implementation(project(":infrastructure"))
 
-    // Application.kt currently wires HttpClient/Database directly.
-    // Wave 2 moves these into infrastructure-side providers.
-    implementation(ktorLibs.client.cio)
-    implementation(ktorLibs.client.contentNegotiation)
-    implementation(ktorLibs.client.core)
-    implementation(libs.exposed.core)
-    implementation(libs.exposed.jdbc)
-    implementation(libs.sqlite.jdbc)
-
     implementation(ktorLibs.serialization.kotlinx.json)
     implementation(ktorLibs.server.auth)
     implementation(ktorLibs.server.auth.jwt)
