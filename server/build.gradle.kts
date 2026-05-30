@@ -47,10 +47,18 @@ tasks.check {
 
 dependencies {
     implementation(project(":domain"))
+    implementation(project(":application"))
+    implementation(project(":infrastructure"))
 
+    // Application.kt currently wires HttpClient/Database directly.
+    // Wave 2 moves these into infrastructure-side providers.
     implementation(ktorLibs.client.cio)
     implementation(ktorLibs.client.contentNegotiation)
     implementation(ktorLibs.client.core)
+    implementation(libs.exposed.core)
+    implementation(libs.exposed.jdbc)
+    implementation(libs.sqlite.jdbc)
+
     implementation(ktorLibs.serialization.kotlinx.json)
     implementation(ktorLibs.server.auth)
     implementation(ktorLibs.server.auth.jwt)
@@ -64,13 +72,7 @@ dependencies {
     implementation(ktorLibs.server.forwardedHeader)
     implementation(ktorLibs.server.netty)
     implementation(ktorLibs.server.statusPages)
-    implementation(libs.caffeine)
-    implementation(libs.exposed.core)
-    implementation(libs.exposed.jdbc)
     implementation(libs.kotlinx.coroutines.core)
-    implementation(libs.lucene.core)
-    implementation(libs.onnxruntime)
-    implementation(libs.sqlite.jdbc)
     implementation(libs.logback.classic)
 
     testImplementation(kotlin("test"))

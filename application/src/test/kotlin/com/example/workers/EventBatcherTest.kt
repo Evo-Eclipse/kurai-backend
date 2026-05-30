@@ -1,6 +1,7 @@
-package com.example.infrastructure.sqlite
+package com.example.workers
 
-import com.example.workers.EventBatcherWorker
+import com.example.infrastructure.sqlite.EventBatcher
+import com.example.infrastructure.sqlite.EventData
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceTimeBy
