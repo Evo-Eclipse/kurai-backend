@@ -2,6 +2,7 @@ package com.example
 
 import com.example.application.embedding.CachingEmbeddingAdapter
 import com.example.application.profile.CachingProfileAdapter
+import com.example.application.profile.ProfilePersistWorker
 import com.example.domain.model.EmbeddingVersion
 import com.example.domain.model.UserEvent
 import com.example.domain.profile.Scoring
@@ -9,7 +10,6 @@ import com.example.infrastructure.sqlite.EventData
 import com.example.infrastructure.sqlite.EventRepository
 import com.example.infrastructure.sqlite.ProfileRepository
 import com.example.infrastructure.sqlite.initSchema
-import com.example.workers.ProfilePersistWorker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob

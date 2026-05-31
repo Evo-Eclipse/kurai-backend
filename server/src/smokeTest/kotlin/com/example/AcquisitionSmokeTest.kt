@@ -1,5 +1,7 @@
 package com.example
 
+import com.example.acquisition.AcquisitionHandler
+import com.example.acquisition.configureAcquisitionRoutes
 import com.example.application.acquisition.AcquisitionService
 import com.example.domain.inference.InferenceService
 import com.example.domain.profile.Scoring
@@ -13,8 +15,6 @@ import com.example.infrastructure.sqlite.ItemRepository
 import com.example.infrastructure.sqlite.initSchema
 import com.example.infrastructure.storage.GetResult
 import com.example.infrastructure.storage.ObjectStorePort
-import com.example.routing.handlers.AcquisitionHandler
-import com.example.routing.routes.configureAcquisitionRoutes
 import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody

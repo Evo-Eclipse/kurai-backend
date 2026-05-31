@@ -16,8 +16,8 @@ import com.example.infrastructure.sqlite.EventData
 import com.example.infrastructure.sqlite.EventRepository
 import com.example.infrastructure.sqlite.ProfileRepository
 import com.example.infrastructure.sqlite.initSchema
-import com.example.routing.handlers.IngestionHandler
-import com.example.routing.routes.configureIngestionRoutes
+import com.example.ingestion.IngestionHandler
+import com.example.ingestion.configureIngestionRoutes
 import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody

@@ -19,7 +19,7 @@ import java.util.UUID
  *  - revoke: explicit logout.
  *
  * The service is transport-agnostic: no Ktor types reach this layer.
- * JWT minting lives in the [com.example.routing.handlers.AuthHandler]
+ * JWT minting lives in the [com.example.auth.AuthHandler]
  * because the signing key is a server-side concern.
  */
 class AuthService(
