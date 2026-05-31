@@ -3,8 +3,13 @@ package com.example
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 import com.example.application.acquisition.AcquisitionService
+import com.example.application.auth.AuthService
+import com.example.application.auth.LoggingMagicLinkSender
+import com.example.application.auth.MagicLinkSender
 import com.example.application.embedding.CachingEmbeddingAdapter
 import com.example.application.profile.CachingProfileAdapter
+import com.example.auth.ChallengeIpRateLimiter
+import com.example.auth.FixedWindowRateLimiter
 import com.example.domain.cluster.ClusterService
 import com.example.domain.embedding.EmbedLookupPort
 import com.example.domain.events.EventQueue
@@ -21,21 +26,28 @@ import com.example.infrastructure.content.UnsplashContentSource
 import com.example.infrastructure.lucene.LuceneAdapter
 import com.example.infrastructure.onnx.OnnxInferenceAdapter
 import com.example.infrastructure.sqlite.AcquisitionJobRepository
+import com.example.infrastructure.sqlite.AuthIdentityRepository
+import com.example.infrastructure.sqlite.AuthSessionRepository
 import com.example.infrastructure.sqlite.EmbeddingGenerationRepository
 import com.example.infrastructure.sqlite.EventBatcher
 import com.example.infrastructure.sqlite.EventData
 import com.example.infrastructure.sqlite.EventRepository
 import com.example.infrastructure.sqlite.ItemRepository
+import com.example.infrastructure.sqlite.LoginChallengeRepository
 import com.example.infrastructure.sqlite.ProfileRepository
 import com.example.infrastructure.sqlite.PrototypeRepository
 import com.example.infrastructure.sqlite.PrototypeType
+import com.example.infrastructure.sqlite.UserRepository
 import com.example.infrastructure.sqlite.initSchema
 import com.example.infrastructure.storage.LocalObjectStore
+import com.example.routing.SessionAuthenticator
 import com.example.routing.configureHealthRoutes
 import com.example.routing.handlers.AcquisitionHandler
+import com.example.routing.handlers.AuthHandler
 import com.example.routing.handlers.IngestionHandler
 import com.example.routing.handlers.RankingHandler
 import com.example.routing.routes.configureAcquisitionRoutes
+import com.example.routing.routes.configureAuthRoutes
 import com.example.routing.routes.configureIngestionRoutes
 import com.example.routing.routes.configureRankingRoutes
 import com.example.workers.EventBatcherWorker
@@ -125,6 +137,51 @@ suspend fun Application.installCore() {
     dependencies.provide<ProfileRepository> { ProfileRepository(dependencies.resolve()) }
     dependencies.provide<EventRepository> { EventRepository(dependencies.resolve()) }
     dependencies.provide<PrototypeRepository> { PrototypeRepository(dependencies.resolve()) }
+    dependencies.provide<UserRepository> { UserRepository(dependencies.resolve()) }
+    dependencies.provide<AuthIdentityRepository> { AuthIdentityRepository(dependencies.resolve()) }
+    dependencies.provide<AuthSessionRepository> { AuthSessionRepository(dependencies.resolve()) }
+    dependencies.provide<LoginChallengeRepository> { LoginChallengeRepository(dependencies.resolve()) }
+
+    dependencies.provide<MagicLinkSender> {
+        if (config.authMailStub) {
+            LoggingMagicLinkSender()
+        } else {
+            error(
+                "No outbound mail sender configured. Set KURAI_AUTH_MAIL_STUB=true for local development.",
+            )
+        }
+    }
+    dependencies.provide<AuthService> {
+        AuthService(
+            users = dependencies.resolve(),
+            identities = dependencies.resolve(),
+            sessions = dependencies.resolve(),
+            challenges = dependencies.resolve(),
+            sender = dependencies.resolve(),
+            challengeTtlMs = config.authChallengeTtlMs,
+            sessionTtlMs = config.authSessionTtlMs,
+        )
+    }
+    dependencies.provide<SessionAuthenticator> {
+        SessionAuthenticator(authService = dependencies.resolve())
+    }
+    dependencies.provide<ChallengeIpRateLimiter> {
+        ChallengeIpRateLimiter(
+            FixedWindowRateLimiter(
+                maxPerWindow = { AuthService.DEFAULT_CHALLENGE_RATE_LIMIT_MAX },
+                windowMs = { AuthService.DEFAULT_CHALLENGE_RATE_LIMIT_WINDOW_MS },
+            ),
+        )
+    }
+    dependencies.provide<AuthHandler> {
+        AuthHandler(
+            authService = dependencies.resolve(),
+            sessionAuth = dependencies.resolve(),
+            challengeIpRateLimiter = dependencies.resolve(),
+            jwtSecret = config.jwtSecret,
+            jwtTtlMs = config.authJwtTtlMs,
+        )
+    }
 
     dependencies.provide<EmbeddingVersionLookup> {
         val repo = dependencies.resolve<EmbeddingGenerationRepository>()
@@ -276,6 +333,7 @@ suspend fun Application.installRouting() {
     configureAcquisitionRoutes(dependencies.resolve<AcquisitionHandler>())
     configureIngestionRoutes(dependencies.resolve<IngestionHandler>())
     configureRankingRoutes(dependencies.resolve<RankingHandler>())
+    configureAuthRoutes(dependencies.resolve<AuthHandler>())
 }
 
 /**

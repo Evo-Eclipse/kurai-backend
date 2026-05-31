@@ -63,6 +63,7 @@ dependencies {
     implementation(ktorLibs.server.forwardedHeader)
     implementation(ktorLibs.server.netty)
     implementation(ktorLibs.server.statusPages)
+    implementation(libs.caffeine)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.logback.classic)
 
