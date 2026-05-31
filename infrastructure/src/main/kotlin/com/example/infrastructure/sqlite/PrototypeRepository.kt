@@ -1,5 +1,6 @@
 package com.example.infrastructure.sqlite
 
+import com.example.infrastructure.sqlite.columns.VectorCodec
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.statements.api.ExposedBlob
 import org.jetbrains.exposed.v1.jdbc.Database
@@ -7,8 +8,6 @@ import org.jetbrains.exposed.v1.jdbc.batchInsert
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import java.time.Instant
 
 data class PrototypeRow(
@@ -46,7 +45,7 @@ class PrototypeRepository(
                 .map { row ->
                     PrototypeRow(
                         prototypeType = row[UserPrototypes.prototypeType],
-                        vector = row[UserPrototypes.vector].bytes.toFloatArray(),
+                        vector = VectorCodec.decode(row[UserPrototypes.vector].bytes),
                         weight = row[UserPrototypes.weight],
                         embeddingVersion = row[UserPrototypes.embeddingVersion],
                     )
@@ -64,23 +63,12 @@ class PrototypeRepository(
                 UserPrototypes.batchInsert(rows) { r ->
                     this[UserPrototypes.userId] = userId
                     this[UserPrototypes.prototypeType] = r.prototypeType
-                    this[UserPrototypes.vector] = ExposedBlob(r.vector.toByteArray())
+                    this[UserPrototypes.vector] = ExposedBlob(VectorCodec.encode(r.vector))
                     this[UserPrototypes.weight] = r.weight
                     this[UserPrototypes.embeddingVersion] = r.embeddingVersion
                     this[UserPrototypes.updatedAt] = now
                 }
             }
         }
-    }
-
-    private fun ByteArray.toFloatArray(): FloatArray {
-        val buf = ByteBuffer.wrap(this).order(ByteOrder.LITTLE_ENDIAN)
-        return FloatArray(this.size / 4) { buf.getFloat() }
-    }
-
-    private fun FloatArray.toByteArray(): ByteArray {
-        val buf = ByteBuffer.allocate(this.size * 4).order(ByteOrder.LITTLE_ENDIAN)
-        for (f in this) buf.putFloat(f)
-        return buf.array()
     }
 }

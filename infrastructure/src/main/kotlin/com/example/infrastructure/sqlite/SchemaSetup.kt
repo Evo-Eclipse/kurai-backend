@@ -16,6 +16,10 @@ private val ALL_TABLES =
         EmbeddingGenerations,
         IndexGenerations,
         AcquisitionJobs,
+        Users,
+        AuthIdentities,
+        AuthSessions,
+        LoginChallenges,
     )
 
 fun initSchema(db: Database) {
