@@ -6,6 +6,8 @@ import com.example.application.acquisition.AcquisitionService
 import com.example.application.auth.AuthService
 import com.example.application.auth.LoggingMagicLinkSender
 import com.example.application.auth.MagicLinkSender
+import com.example.application.config.ConfigKey
+import com.example.application.config.RuntimeConfig
 import com.example.application.embedding.CachingEmbeddingAdapter
 import com.example.application.profile.CachingProfileAdapter
 import com.example.auth.ChallengeIpRateLimiter
@@ -37,6 +39,7 @@ import com.example.infrastructure.sqlite.LoginChallengeRepository
 import com.example.infrastructure.sqlite.ProfileRepository
 import com.example.infrastructure.sqlite.PrototypeRepository
 import com.example.infrastructure.sqlite.PrototypeType
+import com.example.infrastructure.sqlite.RuntimeConfigRepository
 import com.example.infrastructure.sqlite.UserRepository
 import com.example.infrastructure.sqlite.initSchema
 import com.example.infrastructure.storage.LocalObjectStore
@@ -141,6 +144,17 @@ suspend fun Application.installCore() {
     dependencies.provide<AuthIdentityRepository> { AuthIdentityRepository(dependencies.resolve()) }
     dependencies.provide<AuthSessionRepository> { AuthSessionRepository(dependencies.resolve()) }
     dependencies.provide<LoginChallengeRepository> { LoginChallengeRepository(dependencies.resolve()) }
+    dependencies.provide<RuntimeConfigRepository> { RuntimeConfigRepository(dependencies.resolve()) }
+
+    dependencies.provide<RuntimeConfig> {
+        val runtime = RuntimeConfig(dependencies.resolve<RuntimeConfigRepository>())
+        // Seed bootstrap defaults so the first AuthService TTL lookup
+        // does not blow up on a fresh database. Operator-set values
+        // (if a row already exists) are preserved across restarts.
+        runtime.seedIfMissing(ConfigKey.AuthSessionTtlMs, config.authSessionTtlMs.toString())
+        runtime.seedIfMissing(ConfigKey.AuthChallengeTtlMs, config.authChallengeTtlMs.toString())
+        runtime
+    }
 
     dependencies.provide<MagicLinkSender> {
         if (config.authMailStub) {
@@ -152,14 +166,15 @@ suspend fun Application.installCore() {
         }
     }
     dependencies.provide<AuthService> {
+        val runtime = dependencies.resolve<RuntimeConfig>()
         AuthService(
             users = dependencies.resolve(),
             identities = dependencies.resolve(),
             sessions = dependencies.resolve(),
             challenges = dependencies.resolve(),
             sender = dependencies.resolve(),
-            challengeTtlMs = config.authChallengeTtlMs,
-            sessionTtlMs = config.authSessionTtlMs,
+            challengeTtlMs = { runtime.get(ConfigKey.AuthChallengeTtlMs) },
+            sessionTtlMs = { runtime.get(ConfigKey.AuthSessionTtlMs) },
         )
     }
     dependencies.provide<SessionAuthenticator> {

@@ -28,8 +28,13 @@ class AuthService(
     private val sessions: AuthSessionRepository,
     private val challenges: LoginChallengeRepository,
     private val sender: MagicLinkSender,
-    private val challengeTtlMs: Long,
-    private val sessionTtlMs: Long,
+    /**
+     * Pull-based TTL accessors so operator updates to `runtime_config`
+     * take effect on the next request without rebuilding the service.
+     * Re-evaluated per call; tests pass `{ constant }`.
+     */
+    private val challengeTtlMs: () -> Long,
+    private val sessionTtlMs: () -> Long,
     private val challengeRateLimitWindowMs: Long = DEFAULT_CHALLENGE_RATE_LIMIT_WINDOW_MS,
     private val challengeRateLimitMax: Int = DEFAULT_CHALLENGE_RATE_LIMIT_MAX,
     private val clock: () -> Long = { System.currentTimeMillis() },
@@ -47,7 +52,7 @@ class AuthService(
             id = challengeId,
             email = normalized,
             codeHash = AuthCodecs.sha256Hex(code),
-            expiresAt = now + challengeTtlMs,
+            expiresAt = now + challengeTtlMs(),
             now = now,
         )
         sender.send(normalized, challengeId, code)
@@ -85,7 +90,7 @@ class AuthService(
             userId = userId,
             deviceLabel = deviceLabel,
             refreshHash = AuthCodecs.sha256Hex(refreshToken),
-            expiresAt = now + sessionTtlMs,
+            expiresAt = now + sessionTtlMs(),
             now = now,
         )
         return VerifyChallengeResult.Ok(userId = userId, sessionId = sessionId, refreshToken = refreshToken)

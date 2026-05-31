@@ -20,6 +20,7 @@ private val ALL_TABLES =
         AuthIdentities,
         AuthSessions,
         LoginChallenges,
+        RuntimeConfigs,
     )
 
 fun initSchema(db: Database) {

@@ -68,8 +68,8 @@ class AuthFlowTest {
                 sessions = AuthSessionRepository(db),
                 challenges = LoginChallengeRepository(db),
                 sender = sender,
-                challengeTtlMs = 10 * 60 * 1000L,
-                sessionTtlMs = 30L * 24 * 60 * 60 * 1000L,
+                challengeTtlMs = { 10 * 60 * 1000L },
+                sessionTtlMs = { 30L * 24 * 60 * 60 * 1000L },
             )
         return Triple(db, sender, authService)
     }

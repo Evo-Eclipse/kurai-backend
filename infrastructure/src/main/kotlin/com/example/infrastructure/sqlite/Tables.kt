@@ -211,3 +211,16 @@ object LoginChallenges : Table("login_challenges") {
 
     override val primaryKey = PrimaryKey(id)
 }
+
+object RuntimeConfigs : Table("runtime_config") {
+    val key = text("key")
+
+    /** Discriminator: int | long | real | bool | string. See `ConfigKey.type`. */
+    val valueType = text("value_type")
+
+    /** Raw string form; decoded against `valueType` at read time. */
+    val value = text("value")
+    val updatedAt = timestampMillis("updated_at")
+
+    override val primaryKey = PrimaryKey(key)
+}
