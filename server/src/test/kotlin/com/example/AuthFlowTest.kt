@@ -94,12 +94,12 @@ class AuthFlowTest {
                     sessionAuth = sessionAuth,
                     // Small budget so one test can exhaust it; one app (hence
                     // one limiter) per testApplication, so tests don't interfere.
-                    issueRateLimiter = FixedWindowRateLimiter(maxPerWindow = 5, window = Duration.ofSeconds(60)),
+                    issueRateLimiter = FixedWindowRateLimiter(maxPerWindow = { 5 }, windowMs = { 60_000 }),
                     challengeIpRateLimiter =
                         ChallengeIpRateLimiter(
                             FixedWindowRateLimiter(
-                                maxPerWindow = AuthService.DEFAULT_CHALLENGE_RATE_LIMIT_MAX,
-                                window = Duration.ofMillis(AuthService.DEFAULT_CHALLENGE_RATE_LIMIT_WINDOW_MS),
+                                maxPerWindow = { AuthService.DEFAULT_CHALLENGE_RATE_LIMIT_MAX },
+                                windowMs = { AuthService.DEFAULT_CHALLENGE_RATE_LIMIT_WINDOW_MS },
                             ),
                         ),
                     jwtSecret = secret,

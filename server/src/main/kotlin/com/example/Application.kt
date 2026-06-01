@@ -84,7 +84,6 @@ import kotlinx.coroutines.withTimeout
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.slf4j.LoggerFactory
 import java.nio.file.Files
-import java.time.Duration
 import java.util.concurrent.atomic.AtomicReference
 
 private val log = LoggerFactory.getLogger("com.example.Application")
@@ -160,6 +159,8 @@ suspend fun Application.installCore() {
         runtime.seedIfMissing(ConfigKey.KMeansCheckIntervalMs, config.kMeansCheckIntervalMs.toString())
         runtime.seedIfMissing(ConfigKey.SessionGcIntervalMs, config.sessionGcIntervalMs.toString())
         runtime.seedIfMissing(ConfigKey.SessionGcRetentionMs, config.sessionGcRetentionMs.toString())
+        runtime.seedIfMissing(ConfigKey.KeyIssueRateLimitMax, config.keyIssueRateLimitMax.toString())
+        runtime.seedIfMissing(ConfigKey.KeyIssueRateLimitWindowMs, config.keyIssueRateLimitWindowMs.toString())
         runtime
     }
 
@@ -188,16 +189,17 @@ suspend fun Application.installCore() {
         SessionAuthenticator(authService = dependencies.resolve())
     }
     dependencies.provide<FixedWindowRateLimiter> {
+        val runtime = dependencies.resolve<RuntimeConfig>()
         FixedWindowRateLimiter(
-            maxPerWindow = config.keyIssueRateLimitMax,
-            window = Duration.ofMillis(config.keyIssueRateLimitWindowMs),
+            maxPerWindow = { runtime.get(ConfigKey.KeyIssueRateLimitMax) },
+            windowMs = { runtime.get(ConfigKey.KeyIssueRateLimitWindowMs) },
         )
     }
     dependencies.provide<ChallengeIpRateLimiter> {
         ChallengeIpRateLimiter(
             FixedWindowRateLimiter(
-                maxPerWindow = AuthService.DEFAULT_CHALLENGE_RATE_LIMIT_MAX,
-                window = Duration.ofMillis(AuthService.DEFAULT_CHALLENGE_RATE_LIMIT_WINDOW_MS),
+                maxPerWindow = { AuthService.DEFAULT_CHALLENGE_RATE_LIMIT_MAX },
+                windowMs = { AuthService.DEFAULT_CHALLENGE_RATE_LIMIT_WINDOW_MS },
             ),
         )
     }

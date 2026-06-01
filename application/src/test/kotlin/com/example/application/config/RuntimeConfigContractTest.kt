@@ -25,6 +25,13 @@ class RuntimeConfigContractTest {
     }
 
     @Test
+    fun `get returns the seeded Int value via IntKey`() {
+        val (_, runtime) = fresh()
+        assertTrue(runtime.seedIfMissing(ConfigKey.KeyIssueRateLimitMax, "10"))
+        assertEquals(10, runtime.get(ConfigKey.KeyIssueRateLimitMax))
+    }
+
+    @Test
     fun `seedIfMissing is idempotent`() {
         val (_, runtime) = fresh()
         assertTrue(runtime.seedIfMissing(ConfigKey.AuthSessionTtlMs, "1000"))

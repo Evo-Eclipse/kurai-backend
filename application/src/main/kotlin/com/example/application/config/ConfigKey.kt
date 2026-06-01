@@ -51,6 +51,13 @@ sealed class ConfigKey<T>(
         final override fun decode(raw: String): Long = raw.toLong()
     }
 
+    /** Keys whose value is stored as [ValueType.INT] and parsed with `toInt`. */
+    abstract class IntKey(
+        key: String,
+    ) : ConfigKey<Int>(key, ValueType.INT) {
+        final override fun decode(raw: String): Int = raw.toInt()
+    }
+
     /** Lifetime of an `auth_sessions` row before refresh stops working. */
     data object AuthSessionTtlMs : LongKey(key = "auth.session_ttl_ms")
 
@@ -71,4 +78,10 @@ sealed class ConfigKey<T>(
 
     /** Grace past `expires_at` before a session row is purged. */
     data object SessionGcRetentionMs : LongKey(key = "session.gc_retention_ms")
+
+    /** Max key-issuance requests allowed per client IP per window. */
+    data object KeyIssueRateLimitMax : IntKey(key = "key_issue.rate_limit_max")
+
+    /** Length of the key-issuance rate-limit window. */
+    data object KeyIssueRateLimitWindowMs : LongKey(key = "key_issue.rate_limit_window_ms")
 }

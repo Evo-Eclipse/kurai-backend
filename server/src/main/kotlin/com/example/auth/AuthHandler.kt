@@ -155,7 +155,7 @@ class AuthHandler(
         // cannot flood the users table. Behind a proxy this needs
         // ForwardedHeaders installed for `remoteHost` to be the real client.
         if (!issueRateLimiter.tryAcquire(call.request.origin.remoteHost)) {
-            call.response.headers.append(HttpHeaders.RetryAfter, issueRateLimiter.retryAfterSeconds.toString())
+            call.response.headers.append(HttpHeaders.RetryAfter, issueRateLimiter.retryAfterSeconds().toString())
             call.respond(HttpStatusCode.TooManyRequests, ErrorResponse(ErrorDetail("TOO_MANY_REQUESTS")))
             return
         }
