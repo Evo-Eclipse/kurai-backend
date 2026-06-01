@@ -58,6 +58,19 @@ class UserRepository(
             } get Users.id
         }
 
+    /**
+     * Insert a user with no e-mail and return the generated id. Used by the
+     * `legacy_key` flow, where the opaque key is the only credential and
+     * there is no verified address to record.
+     */
+    fun insertAnonymous(now: Long): Long =
+        transaction(db) {
+            Users.insert {
+                it[Users.createdAt] = now
+                it[Users.lastSeenAt] = now
+            } get Users.id
+        }
+
     fun touchLastSeen(
         userId: Long,
         now: Long,

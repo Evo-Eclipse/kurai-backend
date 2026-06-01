@@ -14,6 +14,7 @@ fun Application.configureAuthRoutes(handler: AuthHandler) {
             post("/challenge") { handler.handleChallenge(call) }
             post("/verify") { handler.handleVerify(call) }
             post("/refresh") { handler.handleRefresh(call) }
+            post("/legacy/verify") { handler.handleLegacyVerify(call) }
 
             // Authenticated: revokes the caller's own session.
             authenticate("kurai") {

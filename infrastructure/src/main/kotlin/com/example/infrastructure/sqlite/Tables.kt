@@ -68,6 +68,9 @@ object AuthProvider {
     const val EMAIL = "email"
     const val GOOGLE = "google"
     const val APPLE = "apple"
+
+    /** Opaque seed-phrase-style key issued to early (expo) users. */
+    const val LEGACY_KEY = "legacy_key"
 }
 
 object Items : Table("items") {
@@ -174,8 +177,12 @@ object AuthIdentities : Table("auth_identities") {
      * Stable identifier issued by the provider:
      *  - `email` provider — the verified e-mail address itself.
      *  - `google` / `apple` — the OIDC `sub` claim.
+     *  - `legacy_key` — SHA-256 hex of the opaque key (never the key).
      */
     val providerSubject = text("provider_subject")
+
+    /** Set to retire an identity (used to disable `legacy_key`s after expo). */
+    val disabledAt = timestampMillis("disabled_at").nullable()
     val createdAt = timestampMillisDefaultNow("created_at")
 
     override val primaryKey = PrimaryKey(id)
@@ -192,6 +199,16 @@ object AuthSessions : Table("auth_sessions") {
 
     /** SHA-256(refresh_token) as 64-char hex. The raw token never lands in the DB. */
     val refreshHash = text("refresh_hash")
+
+    /**
+     * Successor session id once this one is rotated on refresh. A non-null
+     * value means the refresh token here is superseded; presenting it again
+     * is treated as token reuse (theft) — see `AuthService.refreshSession`.
+     */
+    val replacedBy = uuidText("replaced_by").nullable()
+
+    /** Updated on each refresh (rotation), not on ordinary API calls. */
+    val lastUsedAt = timestampMillis("last_used_at")
     val expiresAt = timestampMillis("expires_at")
     val revokedAt = timestampMillis("revoked_at").nullable()
     val createdAt = timestampMillisDefaultNow("created_at")

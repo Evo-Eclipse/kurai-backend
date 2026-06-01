@@ -8,6 +8,7 @@ import com.example.application.auth.AuthService
 import com.example.application.auth.IssueChallengeResult
 import com.example.application.auth.RefreshResult
 import com.example.application.auth.VerifyChallengeResult
+import com.example.application.auth.VerifyLegacyKeyResult
 import com.example.auth.ChallengeIpRateLimiter
 import com.example.auth.SessionAuthenticator
 import io.ktor.http.HttpHeaders
@@ -53,6 +54,14 @@ data class RefreshRequest(
 @Serializable
 data class RefreshResponse(
     val jwt: String,
+    val sessionId: String,
+    val refreshToken: String,
+)
+
+@Serializable
+data class LegacyVerifyRequest(
+    val key: String,
+    val deviceLabel: String? = null,
 )
 
 /**
@@ -112,10 +121,34 @@ class AuthHandler(
         val req = call.receive<RefreshRequest>()
         when (val result = authService.refreshSession(req.sessionId, req.refreshToken)) {
             is RefreshResult.Ok ->
-                call.respond(RefreshResponse(mintJwt(result.userId, result.sessionId)))
+                call.respond(
+                    RefreshResponse(
+                        jwt = mintJwt(result.userId, result.sessionId),
+                        sessionId = result.sessionId,
+                        refreshToken = result.refreshToken,
+                    ),
+                )
 
             RefreshResult.Invalid ->
                 call.respond(HttpStatusCode.Unauthorized, ErrorResponse(ErrorDetail("INVALID_SESSION")))
+        }
+    }
+
+    suspend fun handleLegacyVerify(call: ApplicationCall) {
+        val req = call.receive<LegacyVerifyRequest>()
+        when (val result = authService.verifyLegacyKey(req.key, req.deviceLabel)) {
+            is VerifyLegacyKeyResult.Ok ->
+                call.respond(
+                    VerifyResponse(
+                        userId = result.userId,
+                        sessionId = result.sessionId,
+                        jwt = mintJwt(result.userId, result.sessionId),
+                        refreshToken = result.refreshToken,
+                    ),
+                )
+
+            VerifyLegacyKeyResult.Invalid ->
+                call.respond(HttpStatusCode.Unauthorized, ErrorResponse(ErrorDetail("INVALID_KEY")))
         }
     }
 

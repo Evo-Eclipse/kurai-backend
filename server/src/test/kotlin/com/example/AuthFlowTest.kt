@@ -7,6 +7,7 @@ import com.example.auth.ChallengeIpRateLimiter
 import com.example.auth.ChallengeRequest
 import com.example.auth.ChallengeResponse
 import com.example.auth.FixedWindowRateLimiter
+import com.example.auth.LegacyVerifyRequest
 import com.example.auth.RefreshRequest
 import com.example.auth.RefreshResponse
 import com.example.auth.SessionAuthenticator
@@ -246,6 +247,9 @@ class AuthFlowTest {
                     }.body()
             assertTrue(refreshed.jwt.isNotBlank())
             assertNotEquals(first.jwt, refreshed.jwt)
+            // Refresh rotates: a fresh session id and secret come back.
+            assertNotEquals(first.sessionId, refreshed.sessionId)
+            assertNotEquals(first.refreshToken, refreshed.refreshToken)
         }
 
     @Test
@@ -341,5 +345,95 @@ class AuthFlowTest {
                     setBody(VerifyRequest(challengeId = challengeId, code = code))
                 }
             assertEquals(HttpStatusCode.Unauthorized, locked.status)
+        }
+
+    @Test
+    fun `replaying a rotated refresh token is treated as theft and burns the chain`() =
+        testApplication {
+            val (_, sender, authService) = fresh()
+            installAuth(authService)
+            val http = jsonClient()
+
+            http
+                .post("/auth/challenge") {
+                    contentType(ContentType.Application.Json)
+                    setBody(ChallengeRequest(email = "heidi@example.com"))
+                }.body<ChallengeResponse>()
+            val (challengeId, code) = checkNotNull(sender.byEmail["heidi@example.com"])
+            val first: VerifyResponse =
+                http
+                    .post("/auth/verify") {
+                        contentType(ContentType.Application.Json)
+                        setBody(VerifyRequest(challengeId = challengeId, code = code))
+                    }.body()
+
+            // Legitimate rotation: old token -> new pair.
+            val rotated: RefreshResponse =
+                http
+                    .post("/auth/refresh") {
+                        contentType(ContentType.Application.Json)
+                        setBody(RefreshRequest(sessionId = first.sessionId, refreshToken = first.refreshToken))
+                    }.body()
+
+            // Replaying the now-superseded token is detected as reuse.
+            val replay =
+                http.post("/auth/refresh") {
+                    contentType(ContentType.Application.Json)
+                    setBody(RefreshRequest(sessionId = first.sessionId, refreshToken = first.refreshToken))
+                }
+            assertEquals(HttpStatusCode.Unauthorized, replay.status)
+
+            // …and the whole chain is burned: even the freshly rotated token dies.
+            val afterBurn =
+                http.post("/auth/refresh") {
+                    contentType(ContentType.Application.Json)
+                    setBody(RefreshRequest(sessionId = rotated.sessionId, refreshToken = rotated.refreshToken))
+                }
+            assertEquals(HttpStatusCode.Unauthorized, afterBurn.status)
+        }
+
+    @Test
+    fun `legacy key logs in and a disabled key is rejected`() =
+        testApplication {
+            val (_, _, authService) = fresh()
+            installAuth(authService)
+            val http = jsonClient()
+
+            val issued = authService.issueLegacyKey()
+
+            val login: VerifyResponse =
+                http
+                    .post("/auth/legacy/verify") {
+                        contentType(ContentType.Application.Json)
+                        setBody(LegacyVerifyRequest(key = issued.key))
+                    }.body()
+            assertEquals(issued.userId, login.userId)
+            val protectedOk =
+                http.get("/protected") { header(HttpHeaders.Authorization, "Bearer ${login.jwt}") }
+            assertEquals(HttpStatusCode.OK, protectedOk.status)
+
+            // Retire the key — subsequent logins are refused.
+            authService.disableLegacyKey(issued.key)
+            val afterDisable =
+                http.post("/auth/legacy/verify") {
+                    contentType(ContentType.Application.Json)
+                    setBody(LegacyVerifyRequest(key = issued.key))
+                }
+            assertEquals(HttpStatusCode.Unauthorized, afterDisable.status)
+        }
+
+    @Test
+    fun `unknown legacy key is rejected`() =
+        testApplication {
+            val (_, _, authService) = fresh()
+            installAuth(authService)
+            val http = jsonClient()
+
+            val resp =
+                http.post("/auth/legacy/verify") {
+                    contentType(ContentType.Application.Json)
+                    setBody(LegacyVerifyRequest(key = "00000000-0000-4000-8000-000000000000"))
+                }
+            assertEquals(HttpStatusCode.Unauthorized, resp.status)
         }
 }

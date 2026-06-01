@@ -3,6 +3,7 @@ package com.example.application.auth
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.security.SecureRandom
+import java.util.UUID
 
 /**
  * Cryptographic primitives shared by [AuthService] and friends. Kept
@@ -48,4 +49,12 @@ internal object AuthCodecs {
         rng.nextBytes(bytes)
         return bytes.joinToString("") { "%02x".format(it) }
     }
+
+    /**
+     * Opaque early-user key: a random v4 UUID in canonical 8-4-4-4-12 form
+     * (122 bits of entropy — not brute-forceable). `UUID.randomUUID` draws
+     * from a `SecureRandom`. Only SHA-256(key) is persisted; the key is
+     * shown to the operator once at issuance.
+     */
+    fun generateLegacyKey(): String = UUID.randomUUID().toString()
 }
