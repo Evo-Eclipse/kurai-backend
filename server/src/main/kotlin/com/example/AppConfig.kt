@@ -23,6 +23,8 @@ data class AppConfig(
     val authChallengeTtlMs: Long,
     /** When true, OTP/magic-link codes are logged at INFO instead of sent by mail. */
     val authMailStub: Boolean,
+    val keyIssueRateLimitMax: Int,
+    val keyIssueRateLimitWindowMs: Long,
 ) {
     init {
         require(luceneDeprecatedGcSeconds > 0) { "KURAI_LUCENE_DEPRECATED_GC_SECONDS should be positive" }
@@ -34,6 +36,8 @@ data class AppConfig(
             "KURAI_AUTH_SESSION_TTL_MS must exceed KURAI_AUTH_JWT_TTL_MS (refresh outlives JWT)"
         }
         require(authChallengeTtlMs > 0) { "KURAI_AUTH_CHALLENGE_TTL_MS should be positive" }
+        require(keyIssueRateLimitMax > 0) { "KURAI_KEY_ISSUE_RATE_LIMIT_MAX should be positive" }
+        require(keyIssueRateLimitWindowMs > 0) { "KURAI_KEY_ISSUE_RATE_LIMIT_WINDOW_MS should be positive" }
     }
 
     companion object {
@@ -46,6 +50,8 @@ data class AppConfig(
         const val DEFAULT_AUTH_JWT_TTL_MS: Long = 24L * 60L * 60L * 1000L // 1 day
         const val DEFAULT_AUTH_SESSION_TTL_MS: Long = 30L * 24L * 60L * 60L * 1000L // 30 days
         const val DEFAULT_AUTH_CHALLENGE_TTL_MS: Long = 10L * 60L * 1000L // 10 minutes
+        const val DEFAULT_KEY_ISSUE_RATE_LIMIT_MAX: Int = 10
+        const val DEFAULT_KEY_ISSUE_RATE_LIMIT_WINDOW_MS: Long = 60L * 1000L // 1 minute
 
         fun load(env: Map<String, String> = System.getenv()): AppConfig =
             AppConfig(
@@ -113,6 +119,12 @@ data class AppConfig(
                     env["KURAI_AUTH_CHALLENGE_TTL_MS"]?.toLong()
                         ?: DEFAULT_AUTH_CHALLENGE_TTL_MS,
                 authMailStub = env.parseBooleanFlag("KURAI_AUTH_MAIL_STUB"),
+                keyIssueRateLimitMax =
+                    env["KURAI_KEY_ISSUE_RATE_LIMIT_MAX"]?.toInt()
+                        ?: DEFAULT_KEY_ISSUE_RATE_LIMIT_MAX,
+                keyIssueRateLimitWindowMs =
+                    env["KURAI_KEY_ISSUE_RATE_LIMIT_WINDOW_MS"]?.toLong()
+                        ?: DEFAULT_KEY_ISSUE_RATE_LIMIT_WINDOW_MS,
             )
 
         private fun Map<String, String>.parseBooleanFlag(name: String): Boolean =

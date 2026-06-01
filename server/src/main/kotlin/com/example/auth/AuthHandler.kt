@@ -14,6 +14,7 @@ import com.example.auth.SessionAuthenticator
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
+import io.ktor.server.plugins.origin
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import kotlinx.serialization.Serializable
@@ -87,6 +88,7 @@ data class KeyVerifyRequest(
 class AuthHandler(
     private val authService: AuthService,
     private val sessionAuth: SessionAuthenticator,
+    private val issueRateLimiter: FixedWindowRateLimiter,
     private val challengeIpRateLimiter: ChallengeIpRateLimiter,
     private val jwtSecret: String,
     private val jwtTtlMs: Long,
@@ -149,6 +151,14 @@ class AuthHandler(
     }
 
     suspend fun handleKeyIssue(call: ApplicationCall) {
+        // Issuance is unauthenticated; throttle per client IP so one host
+        // cannot flood the users table. Behind a proxy this needs
+        // ForwardedHeaders installed for `remoteHost` to be the real client.
+        if (!issueRateLimiter.tryAcquire(call.request.origin.remoteHost)) {
+            call.response.headers.append(HttpHeaders.RetryAfter, issueRateLimiter.retryAfterSeconds.toString())
+            call.respond(HttpStatusCode.TooManyRequests, ErrorResponse(ErrorDetail("TOO_MANY_REQUESTS")))
+            return
+        }
         val req = call.receive<KeyIssueRequest>()
         val issued = authService.issueKey(req.deviceLabel)
         call.respond(

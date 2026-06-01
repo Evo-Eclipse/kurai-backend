@@ -83,6 +83,7 @@ import kotlinx.coroutines.withTimeout
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.slf4j.LoggerFactory
 import java.nio.file.Files
+import java.time.Duration
 import java.util.concurrent.atomic.AtomicReference
 
 private val log = LoggerFactory.getLogger("com.example.Application")
@@ -180,11 +181,17 @@ suspend fun Application.installCore() {
     dependencies.provide<SessionAuthenticator> {
         SessionAuthenticator(authService = dependencies.resolve())
     }
+    dependencies.provide<FixedWindowRateLimiter> {
+        FixedWindowRateLimiter(
+            maxPerWindow = config.keyIssueRateLimitMax,
+            window = Duration.ofMillis(config.keyIssueRateLimitWindowMs),
+        )
+    }
     dependencies.provide<ChallengeIpRateLimiter> {
         ChallengeIpRateLimiter(
             FixedWindowRateLimiter(
-                maxPerWindow = { AuthService.DEFAULT_CHALLENGE_RATE_LIMIT_MAX },
-                windowMs = { AuthService.DEFAULT_CHALLENGE_RATE_LIMIT_WINDOW_MS },
+                maxPerWindow = AuthService.DEFAULT_CHALLENGE_RATE_LIMIT_MAX,
+                window = Duration.ofMillis(AuthService.DEFAULT_CHALLENGE_RATE_LIMIT_WINDOW_MS),
             ),
         )
     }
@@ -192,6 +199,7 @@ suspend fun Application.installCore() {
         AuthHandler(
             authService = dependencies.resolve(),
             sessionAuth = dependencies.resolve(),
+            issueRateLimiter = dependencies.resolve(),
             challengeIpRateLimiter = dependencies.resolve(),
             jwtSecret = config.jwtSecret,
             jwtTtlMs = config.authJwtTtlMs,

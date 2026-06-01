@@ -92,11 +92,14 @@ class AuthFlowTest {
                 AuthHandler(
                     authService = authService,
                     sessionAuth = sessionAuth,
+                    // Small budget so one test can exhaust it; one app (hence
+                    // one limiter) per testApplication, so tests don't interfere.
+                    issueRateLimiter = FixedWindowRateLimiter(maxPerWindow = 5, window = Duration.ofSeconds(60)),
                     challengeIpRateLimiter =
                         ChallengeIpRateLimiter(
                             FixedWindowRateLimiter(
-                                maxPerWindow = { AuthService.DEFAULT_CHALLENGE_RATE_LIMIT_MAX },
-                                windowMs = { AuthService.DEFAULT_CHALLENGE_RATE_LIMIT_WINDOW_MS },
+                                maxPerWindow = AuthService.DEFAULT_CHALLENGE_RATE_LIMIT_MAX,
+                                window = Duration.ofMillis(AuthService.DEFAULT_CHALLENGE_RATE_LIMIT_WINDOW_MS),
                             ),
                         ),
                     jwtSecret = secret,
@@ -445,6 +448,30 @@ class AuthFlowTest {
                     setBody(KeyVerifyRequest(key = issued.key))
                 }
             assertEquals(HttpStatusCode.Unauthorized, afterDisable.status)
+        }
+
+    @Test
+    fun `key issuance is rate-limited per client`() =
+        testApplication {
+            val (_, _, authService) = fresh()
+            installAuth(authService)
+            val http = jsonClient()
+
+            // installAuth budgets 5 issuances per window for one client.
+            repeat(5) {
+                val ok =
+                    http.post("/auth/key/issue") {
+                        contentType(ContentType.Application.Json)
+                        setBody(KeyIssueRequest())
+                    }
+                assertEquals(HttpStatusCode.OK, ok.status)
+            }
+            val limited =
+                http.post("/auth/key/issue") {
+                    contentType(ContentType.Application.Json)
+                    setBody(KeyIssueRequest())
+                }
+            assertEquals(HttpStatusCode.TooManyRequests, limited.status)
         }
 
     @Test
