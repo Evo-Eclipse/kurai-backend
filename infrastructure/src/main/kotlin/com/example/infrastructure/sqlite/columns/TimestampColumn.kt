@@ -5,16 +5,11 @@ import org.jetbrains.exposed.v1.core.Table
 import java.time.Instant
 
 /**
- * Timestamp column policies for the kurai schema.
+ * Timestamp columns for the kurai schema.
  *
- *  - [timestampMillis] — new tables (auth_*, future runtime_config, …).
- *    Epoch millis match the JVM `System.currentTimeMillis()` /
- *    `Instant.toEpochMilli()` surface and survive sub-second comparisons.
- *  - [timestampSeconds] — already-shipped tables (items.indexed_at,
- *    user_events.ts, acquisition_jobs.created_at). Stay on seconds to
- *    avoid a breaking data migration; an explicit factory keeps the
- *    decision visible at the call site instead of hidden behind
- *    `Table.long(name)` ambiguity.
+ * Every timestamp is epoch **milliseconds** — matching
+ * `System.currentTimeMillis()` / `Instant.toEpochMilli()` — so there is a
+ * single unit across the whole schema with no per-table exceptions.
  *
  * Both factories return `Column<Long>` so existing `.clientDefault {…}` /
  * `.default(0)` chaining keeps working.
@@ -23,9 +18,6 @@ import java.time.Instant
 fun Table.timestampMillis(name: String): Column<Long> = long(name)
 
 fun Table.timestampMillisDefaultNow(name: String): Column<Long> =
-    long(name).clientDefault { Instant.now().toEpochMilli() }
-
-fun Table.timestampSeconds(name: String): Column<Long> = long(name)
-
-fun Table.timestampSecondsDefaultNow(name: String): Column<Long> =
-    long(name).clientDefault { Instant.now().epochSecond }
+    long(name).clientDefault {
+        Instant.now().toEpochMilli()
+    }

@@ -2,8 +2,6 @@ package com.example.infrastructure.sqlite
 
 import com.example.infrastructure.sqlite.columns.timestampMillis
 import com.example.infrastructure.sqlite.columns.timestampMillisDefaultNow
-import com.example.infrastructure.sqlite.columns.timestampSeconds
-import com.example.infrastructure.sqlite.columns.timestampSecondsDefaultNow
 import com.example.infrastructure.sqlite.columns.uuidText
 import org.jetbrains.exposed.v1.core.Table
 
@@ -28,9 +26,8 @@ import org.jetbrains.exposed.v1.core.Table
  * migration workflow rather than FK constraints — FK lookups would add
  * per-INSERT overhead on the hot acquisition path.
  *
- * Timestamp policy is mixed by design (see TimestampColumn.kt):
- * pre-existing tables keep epoch seconds to avoid breaking on-disk
- * data; new tables (auth_*, future runtime_config) use epoch millis.
+ * All timestamps are epoch milliseconds (see TimestampColumn.kt) —
+ * one unit across the schema, no per-table exceptions.
  */
 
 object Rating {
@@ -80,7 +77,7 @@ object Items : Table("items") {
     val origin = text("origin") // canonical post URL on the originating platform
     val rating = text("rating").nullable() // values from `Rating`
     val embeddingVersion = text("embedding_version")
-    val indexedAt = timestampSeconds("indexed_at")
+    val indexedAt = timestampMillis("indexed_at")
 
     override val primaryKey = PrimaryKey(id)
 }
@@ -96,7 +93,7 @@ object UserEvents : Table("user_events") {
      * so profile-migration replay can run without joining items.
      */
     val embeddingVersion = text("embedding_version")
-    val ts = timestampSecondsDefaultNow("ts")
+    val ts = timestampMillisDefaultNow("ts")
 
     override val primaryKey = PrimaryKey(id)
 }
@@ -105,7 +102,7 @@ object UserProfileState : Table("user_profile_state") {
     val userId = long("user_id")
     val embeddingVersion = text("embedding_version")
     val lastAppliedEventId = long("last_applied_event_id").default(0L)
-    val updatedAt = timestampSeconds("updated_at")
+    val updatedAt = timestampMillis("updated_at")
 
     override val primaryKey = PrimaryKey(userId)
 }
@@ -117,7 +114,7 @@ object UserPrototypes : Table("user_prototypes") {
     val vector = blob("vector") // float32[N], little-endian; see VectorCodec
     val weight = double("weight").default(1.0)
     val embeddingVersion = text("embedding_version")
-    val updatedAt = timestampSeconds("updated_at")
+    val updatedAt = timestampMillis("updated_at")
 
     override val primaryKey = PrimaryKey(id)
 }
@@ -161,8 +158,8 @@ object AcquisitionJobs : Table("acquisition_jobs") {
     val origin = text("origin")
     val query = text("query")
     val userId = long("user_id").nullable()
-    val createdAt = timestampSecondsDefaultNow("created_at")
-    val completedAt = timestampSeconds("completed_at").nullable()
+    val createdAt = timestampMillisDefaultNow("created_at")
+    val completedAt = timestampMillis("completed_at").nullable()
     val errorMessage = text("error_message").nullable()
 
     override val primaryKey = PrimaryKey(id)

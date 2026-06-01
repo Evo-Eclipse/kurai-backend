@@ -56,7 +56,7 @@ class AcquisitionService(
     ) {
         jobRepository.updateStatus(jobId, "running")
         if (limit == 0) {
-            jobRepository.updateStatus(jobId, "done", Instant.now().epochSecond)
+            jobRepository.updateStatus(jobId, "done", Instant.now().toEpochMilli())
             return
         }
         try {
@@ -72,7 +72,7 @@ class AcquisitionService(
                                     origin = image.originPostUrl,
                                     rating = image.rating,
                                     embeddingVersion = activeEmbeddingVersion(),
-                                    indexedAt = Instant.now().epochSecond,
+                                    indexedAt = Instant.now().toEpochMilli(),
                                 )
                             }
                         if (isNew) {
@@ -86,11 +86,11 @@ class AcquisitionService(
                     }
                 }.collect()
             luceneAdapter.refresh()
-            jobRepository.updateStatus(jobId, "done", Instant.now().epochSecond)
+            jobRepository.updateStatus(jobId, "done", Instant.now().toEpochMilli())
         } catch (e: Exception) {
             // Commit any partial Lucene writes so a retry doesn't produce duplicate index entries.
             runCatching { luceneAdapter.refresh() }
-            jobRepository.updateStatus(jobId, "failed", Instant.now().epochSecond, e.message)
+            jobRepository.updateStatus(jobId, "failed", Instant.now().toEpochMilli(), e.message)
             throw e
         }
     }

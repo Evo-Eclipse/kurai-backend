@@ -59,7 +59,7 @@ class PrototypeRepository(
         transaction(db) {
             UserPrototypes.deleteWhere { UserPrototypes.userId eq userId }
             if (rows.isNotEmpty()) {
-                val now = Instant.now().epochSecond
+                val now = Instant.now().toEpochMilli()
                 UserPrototypes.batchInsert(rows) { r ->
                     this[UserPrototypes.userId] = userId
                     this[UserPrototypes.prototypeType] = r.prototypeType

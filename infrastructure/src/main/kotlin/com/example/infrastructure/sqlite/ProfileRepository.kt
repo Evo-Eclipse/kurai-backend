@@ -29,7 +29,7 @@ class ProfileRepository(
                 it[UserProfileState.userId] = userId
                 it[UserProfileState.embeddingVersion] = embeddingVersion
                 it[UserProfileState.lastAppliedEventId] = lastAppliedEventId
-                it[UserProfileState.updatedAt] = Instant.now().epochSecond
+                it[UserProfileState.updatedAt] = Instant.now().toEpochMilli()
             }
         }
     }
