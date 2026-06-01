@@ -56,4 +56,19 @@ sealed class ConfigKey<T>(
 
     /** Lifetime of a magic-link / OTP challenge before verify rejects it. */
     data object AuthChallengeTtlMs : LongKey(key = "auth.challenge_ttl_ms")
+
+    /** Lifetime of a minted access JWT. */
+    data object AuthJwtTtlMs : LongKey(key = "auth.jwt_ttl_ms")
+
+    /** How often the profile-persist worker flushes dirty profiles. */
+    data object ProfilePersistIntervalMs : LongKey(key = "profile.persist_interval_ms")
+
+    /** How often the k-means scheduler checks whether to retrain clusters. */
+    data object KMeansCheckIntervalMs : LongKey(key = "cluster.kmeans_check_interval_ms")
+
+    /** How often expired auth sessions are swept. */
+    data object SessionGcIntervalMs : LongKey(key = "session.gc_interval_ms")
+
+    /** Grace past `expires_at` before a session row is purged. */
+    data object SessionGcRetentionMs : LongKey(key = "session.gc_retention_ms")
 }

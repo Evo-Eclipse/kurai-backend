@@ -155,6 +155,11 @@ suspend fun Application.installCore() {
         // (if a row already exists) are preserved across restarts.
         runtime.seedIfMissing(ConfigKey.AuthSessionTtlMs, config.authSessionTtlMs.toString())
         runtime.seedIfMissing(ConfigKey.AuthChallengeTtlMs, config.authChallengeTtlMs.toString())
+        runtime.seedIfMissing(ConfigKey.AuthJwtTtlMs, config.authJwtTtlMs.toString())
+        runtime.seedIfMissing(ConfigKey.ProfilePersistIntervalMs, config.profilePersistIntervalMs.toString())
+        runtime.seedIfMissing(ConfigKey.KMeansCheckIntervalMs, config.kMeansCheckIntervalMs.toString())
+        runtime.seedIfMissing(ConfigKey.SessionGcIntervalMs, config.sessionGcIntervalMs.toString())
+        runtime.seedIfMissing(ConfigKey.SessionGcRetentionMs, config.sessionGcRetentionMs.toString())
         runtime
     }
 
@@ -197,13 +202,14 @@ suspend fun Application.installCore() {
         )
     }
     dependencies.provide<AuthHandler> {
+        val runtime = dependencies.resolve<RuntimeConfig>()
         AuthHandler(
             authService = dependencies.resolve(),
             sessionAuth = dependencies.resolve(),
             issueRateLimiter = dependencies.resolve(),
             challengeIpRateLimiter = dependencies.resolve(),
             jwtSecret = config.jwtSecret,
-            jwtTtlMs = config.authJwtTtlMs,
+            jwtTtlMs = { runtime.get(ConfigKey.AuthJwtTtlMs) },
         )
     }
 
@@ -385,17 +391,22 @@ suspend fun Application.installLifecycle() {
     val clusterRef = dependencies.resolve<ClusterServiceRef>()
     val versionLookup = dependencies.resolve<EmbeddingVersionLookup>()
     val authSessionRepo = dependencies.resolve<AuthSessionRepository>()
+    val runtime = dependencies.resolve<RuntimeConfig>()
 
     acquisitionScope.launch { EventBatcherWorker(eventBatcher).run() }
     acquisitionScope.launch {
         SessionGcWorker(
             sessions = authSessionRepo,
-            intervalMs = config.sessionGcIntervalMs,
-            retentionMs = config.sessionGcRetentionMs,
+            intervalMs = { runtime.get(ConfigKey.SessionGcIntervalMs) },
+            retentionMs = { runtime.get(ConfigKey.SessionGcRetentionMs) },
         ).run()
     }
     acquisitionScope.launch {
-        ProfilePersistWorker(cachingProfile, profileRepo, config.profilePersistIntervalMs).run()
+        ProfilePersistWorker(
+            cachingProfile,
+            profileRepo,
+            intervalMs = { runtime.get(ConfigKey.ProfilePersistIntervalMs) },
+        ).run()
     }
     acquisitionScope.launch {
         ProfileMigrationWorker(
@@ -422,7 +433,7 @@ suspend fun Application.installLifecycle() {
                 objectStore = objectStore,
                 clustersKey = config.clustersPath.fileName.toString(),
                 clusterServiceRef = clusterRef.asAtomicReference(),
-                intervalMs = config.kMeansCheckIntervalMs,
+                intervalMs = { runtime.get(ConfigKey.KMeansCheckIntervalMs) },
             ).run()
         }
     }

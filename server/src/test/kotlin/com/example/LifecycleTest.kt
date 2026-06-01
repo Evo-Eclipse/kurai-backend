@@ -156,7 +156,7 @@ class LifecycleTest {
             )
 
             val scope = CoroutineScope(SupervisorJob())
-            val worker = ProfilePersistWorker(cachingProfile, profileRepo, intervalMs = 30_000)
+            val worker = ProfilePersistWorker(cachingProfile, profileRepo, intervalMs = { 30_000 })
             scope.launch { worker.run() }
             yield() // let coroutine enter try block before cancel
             scope.cancel()

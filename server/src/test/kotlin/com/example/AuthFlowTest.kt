@@ -103,7 +103,7 @@ class AuthFlowTest {
                             ),
                         ),
                     jwtSecret = secret,
-                    jwtTtlMs = 60_000L,
+                    jwtTtlMs = { 60_000L },
                 )
             configureAuthRoutes(handler)
             // A stand-in resource endpoint guarded only by `authenticate`,

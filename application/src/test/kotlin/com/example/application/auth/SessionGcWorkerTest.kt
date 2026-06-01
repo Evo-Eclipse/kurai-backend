@@ -49,7 +49,7 @@ class SessionGcWorkerTest {
         session("recent", expiresAt = now - retentionMs + 1) // expired but within grace -> kept
         session("active", expiresAt = now + 60_000) // still valid -> kept
 
-        val worker = SessionGcWorker(sessions, intervalMs = 1, retentionMs = retentionMs, clock = { now })
+        val worker = SessionGcWorker(sessions, intervalMs = { 1 }, retentionMs = { retentionMs }, clock = { now })
         val removed = worker.purgeOnce()
 
         assertEquals(1, removed)
@@ -61,7 +61,7 @@ class SessionGcWorkerTest {
     @Test
     fun `purge is a no-op when nothing is old enough`() {
         session("active", expiresAt = now + 60_000)
-        val worker = SessionGcWorker(sessions, intervalMs = 1, retentionMs = retentionMs, clock = { now })
+        val worker = SessionGcWorker(sessions, intervalMs = { 1 }, retentionMs = { retentionMs }, clock = { now })
 
         assertEquals(0, worker.purgeOnce())
         assertNotNull(sessions.findById("active"))

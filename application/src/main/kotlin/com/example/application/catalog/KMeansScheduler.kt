@@ -22,7 +22,7 @@ class KMeansScheduler(
     private val objectStore: LocalObjectStore,
     private val clustersKey: String,
     private val clusterServiceRef: AtomicReference<ClusterService?>,
-    private val intervalMs: Long,
+    private val intervalMs: () -> Long,
     private val minGrowthFactor: Double = 1.10,
     private val minAgeMs: Long = 24 * 3_600_000L,
     private val sampleLimit: Int = 50_000,
@@ -33,7 +33,7 @@ class KMeansScheduler(
     suspend fun run() {
         try {
             while (true) {
-                delay(intervalMs)
+                delay(intervalMs())
                 check()
             }
         } catch (e: CancellationException) {

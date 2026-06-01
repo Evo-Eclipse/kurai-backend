@@ -73,7 +73,7 @@ class KMeansSchedulerTest {
                     objectStore = objectStore,
                     clustersKey = "clusters.bin",
                     clusterServiceRef = ref,
-                    intervalMs = 3_600_000,
+                    intervalMs = { 3_600_000 },
                     minGrowthFactor = 1.10,
                     minAgeMs = 24 * 3_600_000L,
                 )

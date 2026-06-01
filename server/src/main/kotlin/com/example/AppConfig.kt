@@ -7,7 +7,6 @@ import java.nio.file.Path
 data class AppConfig(
     val jwtSecret: String,
     val luceneDir: Path,
-    val luceneDeprecatedGcSeconds: Long,
     val onnxIntraOpThreads: Int,
     val unsplash: UnsplashConfig,
     val e621: E621Config,
@@ -29,7 +28,6 @@ data class AppConfig(
     val sessionGcRetentionMs: Long,
 ) {
     init {
-        require(luceneDeprecatedGcSeconds > 0) { "KURAI_LUCENE_DEPRECATED_GC_SECONDS should be positive" }
         require(onnxIntraOpThreads > 0) { "KURAI_ONNX_INTRA_OP_THREADS should be positive" }
         require(profilePersistIntervalMs > 0) { "KURAI_PROFILE_PERSIST_INTERVAL_MS should be positive" }
         require(kMeansCheckIntervalMs > 0) { "KURAI_KMEANS_CHECK_INTERVAL_MS should be positive" }
@@ -45,7 +43,6 @@ data class AppConfig(
     }
 
     companion object {
-        const val DEFAULT_LUCENE_DEPRECATED_GC_SECONDS: Long = 60
         const val DEFAULT_ONNX_INTRA_OP_THREADS: Int = 2
         const val DEFAULT_UNSPLASH_BASE_URL: String = "https://api.unsplash.com"
         const val DEFAULT_E621_BASE_URL: String = "https://e621.net"
@@ -67,9 +64,6 @@ data class AppConfig(
                 luceneDir =
                     env["KURAI_LUCENE_DIR"]?.let(Path::of)
                         ?: error("Missing required environment variable: KURAI_LUCENE_DIR"),
-                luceneDeprecatedGcSeconds =
-                    env["KURAI_LUCENE_DEPRECATED_GC_SECONDS"]?.toLong()
-                        ?: DEFAULT_LUCENE_DEPRECATED_GC_SECONDS,
                 onnxIntraOpThreads =
                     env["KURAI_ONNX_INTRA_OP_THREADS"]?.toInt()
                         ?: DEFAULT_ONNX_INTRA_OP_THREADS,

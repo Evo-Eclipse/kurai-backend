@@ -13,12 +13,12 @@ private val log = LoggerFactory.getLogger(ProfilePersistWorker::class.java)
 class ProfilePersistWorker(
     private val cachingProfile: CachingProfileAdapter,
     private val profileRepo: ProfileRepository,
-    private val intervalMs: Long = 30_000,
+    private val intervalMs: () -> Long,
 ) {
     suspend fun run() {
         try {
             while (true) {
-                delay(intervalMs)
+                delay(intervalMs())
                 flush()
             }
         } catch (e: CancellationException) {

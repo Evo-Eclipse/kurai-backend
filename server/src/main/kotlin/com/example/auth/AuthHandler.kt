@@ -91,7 +91,7 @@ class AuthHandler(
     private val issueRateLimiter: FixedWindowRateLimiter,
     private val challengeIpRateLimiter: ChallengeIpRateLimiter,
     private val jwtSecret: String,
-    private val jwtTtlMs: Long,
+    private val jwtTtlMs: () -> Long,
 ) {
     suspend fun handleChallenge(call: ApplicationCall) {
         if (!challengeIpRateLimiter.tryAcquire(call.request.origin.remoteHost)) {
@@ -211,7 +211,7 @@ class AuthHandler(
             // distinct.
             .withJWTId(UUID.randomUUID().toString())
             .withIssuedAt(Date(now))
-            .withExpiresAt(Date(now + jwtTtlMs))
+            .withExpiresAt(Date(now + jwtTtlMs()))
             .sign(Algorithm.HMAC256(jwtSecret))
     }
 }

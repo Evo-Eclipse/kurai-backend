@@ -59,7 +59,7 @@ class ProfilePersistWorkerTest {
                     ),
                 itemVector = FloatArray(Prototype.VECTOR_DIM) { if (it == 0) 1f else 0f },
             )
-            val worker = ProfilePersistWorker(cache, profileRepo, intervalMs = 30_000)
+            val worker = ProfilePersistWorker(cache, profileRepo, intervalMs = { 30_000 })
             val job = launch { worker.run() }
 
             advanceTimeBy(31_000)
@@ -89,7 +89,7 @@ class ProfilePersistWorkerTest {
                     ),
                 itemVector = FloatArray(Prototype.VECTOR_DIM) { if (it == 0) 1f else 0f },
             )
-            val worker = ProfilePersistWorker(cache, profileRepo, intervalMs = 30_000)
+            val worker = ProfilePersistWorker(cache, profileRepo, intervalMs = { 30_000 })
 
             worker.flush()
             assertNotNull(profileRepo.load(1L), "first flush should persist")
@@ -116,7 +116,7 @@ class ProfilePersistWorkerTest {
                     ),
                 itemVector = FloatArray(Prototype.VECTOR_DIM) { if (it == 0) 1f else 0f },
             )
-            val worker = ProfilePersistWorker(cache, profileRepo, intervalMs = 60_000)
+            val worker = ProfilePersistWorker(cache, profileRepo, intervalMs = { 60_000 })
             val job = launch { worker.run() }
 
             // Let the worker start and enter the try block (reach the first delay).
@@ -134,7 +134,7 @@ class ProfilePersistWorkerTest {
     fun `no upsert when cache has no dirty profiles`() =
         runTest {
             val cache = adapter()
-            val worker = ProfilePersistWorker(cache, profileRepo, intervalMs = 30_000)
+            val worker = ProfilePersistWorker(cache, profileRepo, intervalMs = { 30_000 })
             val job = launch { worker.run() }
 
             advanceTimeBy(31_000)
@@ -167,7 +167,7 @@ class ProfilePersistWorkerTest {
                     itemVector = vec,
                 )
             }
-            val worker = ProfilePersistWorker(cache, profileRepo, intervalMs = 30_000)
+            val worker = ProfilePersistWorker(cache, profileRepo, intervalMs = { 30_000 })
             val job = launch { worker.run() }
             advanceTimeBy(31_000)
 
