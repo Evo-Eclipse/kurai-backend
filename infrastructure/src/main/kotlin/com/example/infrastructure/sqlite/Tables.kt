@@ -61,6 +61,11 @@ object EmailKind {
     const val RELAY = "relay"
 }
 
+object Cohort {
+    /** Default A/B group until the experiment engine lands (a later wave). */
+    const val CONTROL = "control"
+}
+
 object AuthProvider {
     const val EMAIL = "email"
     const val GOOGLE = "google"
@@ -95,6 +100,9 @@ object UserEvents : Table("user_events") {
      * so profile-migration replay can run without joining items.
      */
     val embeddingVersion = text("embedding_version")
+
+    /** Snapshot of the user's A/B cohort at event time, for fair offline analysis. */
+    val cohort = text("cohort").default(Cohort.CONTROL)
     val schemaVer = integer("schema_ver").default(1)
     val ts = timestampMillisDefaultNow("ts")
 
@@ -115,8 +123,16 @@ object EventWeights : Table("event_weights") {
 
 object UserProfileState : Table("user_profile_state") {
     val userId = long("user_id")
-    val embeddingVersion = text("embedding_version")
+
+    /** Embedding version this user is served on (cf. `system_state.default_embedding_version`). */
+    val assignedEmbeddingVersion = text("assigned_embedding_version")
+
+    /** A/B group; until the experiment engine lands every user is `control`. */
+    val cohort = text("cohort").default(Cohort.CONTROL)
     val lastAppliedEventId = long("last_applied_event_id").default(0L)
+
+    /** Desired prototype count; reconciled against `runtime_config` in a later wave. */
+    val prototypesTarget = integer("prototypes_target").default(5)
     val updatedAt = timestampMillis("updated_at")
 
     override val primaryKey = PrimaryKey(userId)

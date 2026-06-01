@@ -27,7 +27,7 @@ class ProfileRepository(
         transaction(db) {
             UserProfileState.upsert {
                 it[UserProfileState.userId] = userId
-                it[UserProfileState.embeddingVersion] = embeddingVersion
+                it[UserProfileState.assignedEmbeddingVersion] = embeddingVersion
                 it[UserProfileState.lastAppliedEventId] = lastAppliedEventId
                 it[UserProfileState.updatedAt] = Instant.now().toEpochMilli()
             }
@@ -43,7 +43,7 @@ class ProfileRepository(
                 ?.let { row ->
                     ProfileRow(
                         userId = row[UserProfileState.userId],
-                        embeddingVersion = row[UserProfileState.embeddingVersion],
+                        embeddingVersion = row[UserProfileState.assignedEmbeddingVersion],
                         lastAppliedEventId = row[UserProfileState.lastAppliedEventId],
                         updatedAt = row[UserProfileState.updatedAt],
                     )
@@ -54,7 +54,7 @@ class ProfileRepository(
         transaction(db) {
             UserProfileState
                 .selectAll()
-                .where { UserProfileState.embeddingVersion neq activeVersion }
+                .where { UserProfileState.assignedEmbeddingVersion neq activeVersion }
                 .orderBy(UserProfileState.updatedAt to SortOrder.ASC)
                 .map { it[UserProfileState.userId] }
         }
