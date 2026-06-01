@@ -3,7 +3,9 @@ package com.example.infrastructure.sqlite
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.isNull
+import org.jetbrains.exposed.v1.core.less
 import org.jetbrains.exposed.v1.jdbc.Database
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
@@ -117,6 +119,18 @@ class AuthSessionRepository(
             }) {
                 it[AuthSessions.revokedAt] = now
             }
+        }
+
+    /**
+     * Deletes sessions whose `expires_at` is strictly before [cutoff].
+     * Superseded/revoked rows that are still unexpired are left alone so
+     * refresh-reuse detection keeps working within a token's lifetime;
+     * past expiry the token is rejected anyway, so the row is safe to drop.
+     * Returns the number of rows removed.
+     */
+    fun deleteExpiredBefore(cutoff: Long): Int =
+        transaction(db) {
+            AuthSessions.deleteWhere { AuthSessions.expiresAt less cutoff }
         }
 
     private fun rowToSession(row: org.jetbrains.exposed.v1.core.ResultRow): AuthSessionRow =

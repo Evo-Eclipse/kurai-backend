@@ -25,6 +25,8 @@ data class AppConfig(
     val authMailStub: Boolean,
     val keyIssueRateLimitMax: Int,
     val keyIssueRateLimitWindowMs: Long,
+    val sessionGcIntervalMs: Long,
+    val sessionGcRetentionMs: Long,
 ) {
     init {
         require(luceneDeprecatedGcSeconds > 0) { "KURAI_LUCENE_DEPRECATED_GC_SECONDS should be positive" }
@@ -38,6 +40,8 @@ data class AppConfig(
         require(authChallengeTtlMs > 0) { "KURAI_AUTH_CHALLENGE_TTL_MS should be positive" }
         require(keyIssueRateLimitMax > 0) { "KURAI_KEY_ISSUE_RATE_LIMIT_MAX should be positive" }
         require(keyIssueRateLimitWindowMs > 0) { "KURAI_KEY_ISSUE_RATE_LIMIT_WINDOW_MS should be positive" }
+        require(sessionGcIntervalMs > 0) { "KURAI_SESSION_GC_INTERVAL_MS should be positive" }
+        require(sessionGcRetentionMs > 0) { "KURAI_SESSION_GC_RETENTION_MS should be positive" }
     }
 
     companion object {
@@ -52,6 +56,8 @@ data class AppConfig(
         const val DEFAULT_AUTH_CHALLENGE_TTL_MS: Long = 10L * 60L * 1000L // 10 minutes
         const val DEFAULT_KEY_ISSUE_RATE_LIMIT_MAX: Int = 10
         const val DEFAULT_KEY_ISSUE_RATE_LIMIT_WINDOW_MS: Long = 60L * 1000L // 1 minute
+        const val DEFAULT_SESSION_GC_INTERVAL_MS: Long = 60L * 60L * 1000L // 1 hour
+        const val DEFAULT_SESSION_GC_RETENTION_MS: Long = 24L * 60L * 60L * 1000L // 1 day past expiry
 
         fun load(env: Map<String, String> = System.getenv()): AppConfig =
             AppConfig(
@@ -125,6 +131,12 @@ data class AppConfig(
                 keyIssueRateLimitWindowMs =
                     env["KURAI_KEY_ISSUE_RATE_LIMIT_WINDOW_MS"]?.toLong()
                         ?: DEFAULT_KEY_ISSUE_RATE_LIMIT_WINDOW_MS,
+                sessionGcIntervalMs =
+                    env["KURAI_SESSION_GC_INTERVAL_MS"]?.toLong()
+                        ?: DEFAULT_SESSION_GC_INTERVAL_MS,
+                sessionGcRetentionMs =
+                    env["KURAI_SESSION_GC_RETENTION_MS"]?.toLong()
+                        ?: DEFAULT_SESSION_GC_RETENTION_MS,
             )
 
         private fun Map<String, String>.parseBooleanFlag(name: String): Boolean =

@@ -8,6 +8,7 @@ import com.example.application.acquisition.AcquisitionService
 import com.example.application.auth.AuthService
 import com.example.application.auth.LoggingMagicLinkSender
 import com.example.application.auth.MagicLinkSender
+import com.example.application.auth.SessionGcWorker
 import com.example.application.catalog.KMeansScheduler
 import com.example.application.config.ConfigKey
 import com.example.application.config.RuntimeConfig
@@ -383,8 +384,16 @@ suspend fun Application.installLifecycle() {
     val httpClient = dependencies.resolve<HttpClient>()
     val clusterRef = dependencies.resolve<ClusterServiceRef>()
     val versionLookup = dependencies.resolve<EmbeddingVersionLookup>()
+    val authSessionRepo = dependencies.resolve<AuthSessionRepository>()
 
     acquisitionScope.launch { EventBatcherWorker(eventBatcher).run() }
+    acquisitionScope.launch {
+        SessionGcWorker(
+            sessions = authSessionRepo,
+            intervalMs = config.sessionGcIntervalMs,
+            retentionMs = config.sessionGcRetentionMs,
+        ).run()
+    }
     acquisitionScope.launch {
         ProfilePersistWorker(cachingProfile, profileRepo, config.profilePersistIntervalMs).run()
     }
