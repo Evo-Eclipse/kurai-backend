@@ -77,6 +77,23 @@ class SystemStateRepositoryTest {
     }
 
     @Test
+    fun `activateCluster flips status and repoints atomically`() {
+        repo.seedIfMissing(now = 0L)
+        val clusters = ClusterGenerationRepository(db)
+        val c1 = clusters.createBuilding("v1", clusterCount = 23, catalogSizeAtBuild = 100, centroidsPath = "c1.bin")
+        val c2 = clusters.createBuilding("v1", clusterCount = 23, catalogSizeAtBuild = 110, centroidsPath = "c2.bin")
+
+        repo.activateCluster(c1, now = 10L)
+        assertEquals(c1, repo.read().activeClusterId)
+        assertEquals(GenerationStatus.ACTIVE, clusters.findById(c1)?.status)
+
+        repo.activateCluster(c2, now = 20L)
+        assertEquals(c2, repo.read().activeClusterId)
+        assertEquals(GenerationStatus.ACTIVE, clusters.findById(c2)?.status)
+        assertEquals(GenerationStatus.DEPRECATED, clusters.findById(c1)?.status)
+    }
+
+    @Test
     fun `setCounts updates catalog counters`() {
         repo.seedIfMissing(now = 0L)
         repo.setCounts(totalItems = 1_000L, embeddedItems = 980L, now = 5L)

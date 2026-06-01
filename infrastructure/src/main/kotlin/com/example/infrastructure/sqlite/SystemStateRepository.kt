@@ -91,6 +91,30 @@ class SystemStateRepository(
         }
     }
 
+    /**
+     * Atomic cluster switchover: activate [clusterId], demote the currently-
+     * active cluster generation, and repoint `active_cluster_id` — all in one
+     * transaction.
+     */
+    fun activateCluster(
+        clusterId: Long,
+        now: Long,
+    ) {
+        transaction(db) {
+            ClusterGenerations.update({ ClusterGenerations.status eq GenerationStatus.ACTIVE }) {
+                it[status] = GenerationStatus.DEPRECATED
+            }
+            ClusterGenerations.update({ ClusterGenerations.id eq clusterId }) {
+                it[status] = GenerationStatus.ACTIVE
+                it[activatedAt] = now
+            }
+            SystemState.update({ SystemState.id eq SINGLE_ROW_ID }) {
+                it[activeClusterId] = clusterId
+                it[updatedAt] = now
+            }
+        }
+    }
+
     /** Updates the catalog counters. Wired to a real source in a later wave. */
     fun setCounts(
         totalItems: Long,

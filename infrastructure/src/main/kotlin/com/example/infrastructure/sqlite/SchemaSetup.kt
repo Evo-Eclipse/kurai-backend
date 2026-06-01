@@ -14,6 +14,7 @@ private val ALL_TABLES =
         UserProfileState,
         UserPrototypes,
         EmbeddingGenerations,
+        ClusterGenerations,
         IndexGenerations,
         AcquisitionJobs,
         Users,

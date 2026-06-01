@@ -126,11 +126,23 @@ object EmbeddingGenerations : Table("embedding_generations") {
     val version = text("version")
     val status = text("status") // values from `GenerationStatus`
     val onnxSha256 = text("onnx_sha256")
-    val clusterCount = integer("cluster_count").nullable()
-    val clusterUpdatedAt = timestampSeconds("cluster_updated_at").nullable()
     val activatedAt = timestampSeconds("activated_at").nullable()
 
     override val primaryKey = PrimaryKey(version)
+}
+
+object ClusterGenerations : Table("cluster_generations") {
+    val id = long("id").autoIncrement()
+    val embeddingVersion = text("embedding_version")
+    val status = text("status") // values from `GenerationStatus`
+    val clusterCount = integer("cluster_count")
+
+    /** Catalog size when this generation was built; drives the rebuild trigger. */
+    val catalogSizeAtBuild = long("catalog_size_at_build")
+    val centroidsPath = text("centroids_path")
+    val activatedAt = timestampMillis("activated_at").nullable()
+
+    override val primaryKey = PrimaryKey(id)
 }
 
 object IndexGenerations : Table("index_generations") {
