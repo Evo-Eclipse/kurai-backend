@@ -4,6 +4,7 @@ import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greaterEq
 import org.jetbrains.exposed.v1.core.isNull
+import org.jetbrains.exposed.v1.core.plus
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -16,6 +17,7 @@ data class LoginChallengeRow(
     val codeHash: String,
     val expiresAt: Long,
     val consumedAt: Long?,
+    val attempts: Int,
     val createdAt: Long,
 )
 
@@ -53,9 +55,22 @@ class LoginChallengeRepository(
                         codeHash = it[LoginChallenges.codeHash],
                         expiresAt = it[LoginChallenges.expiresAt],
                         consumedAt = it[LoginChallenges.consumedAt],
+                        attempts = it[LoginChallenges.attempts],
                         createdAt = it[LoginChallenges.createdAt],
                     )
                 }
+        }
+
+    /**
+     * Atomically bumps the failed-attempt counter for a challenge. Run
+     * on every wrong code so the per-challenge brute-force budget is
+     * enforced without a read-modify-write race.
+     */
+    fun incrementAttempts(id: String): Int =
+        transaction(db) {
+            LoginChallenges.update({ LoginChallenges.id eq id }) {
+                it[LoginChallenges.attempts] = LoginChallenges.attempts + 1
+            }
         }
 
     /**
@@ -76,11 +91,12 @@ class LoginChallengeRepository(
         }
 
     /**
-     * Counts non-expired, non-consumed challenges for an e-mail issued
-     * since [sinceMillis]. Powers the per-email rate-limit on
-     * `POST /auth/challenge`.
+     * Counts challenges issued for an e-mail since [sinceMillis],
+     * regardless of consumed/expired state. Powers the per-email
+     * rate-limit on `POST /auth/challenge`, which throttles the act
+     * of requesting a code, not the pool of usable codes.
      */
-    fun countActiveSince(
+    fun countCreatedSince(
         email: String,
         sinceMillis: Long,
     ): Long =

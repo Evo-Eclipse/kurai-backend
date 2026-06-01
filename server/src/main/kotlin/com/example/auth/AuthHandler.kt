@@ -17,6 +17,7 @@ import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import kotlinx.serialization.Serializable
 import java.util.Date
+import java.util.UUID
 
 @Serializable
 data class ChallengeRequest(
@@ -134,6 +135,10 @@ class AuthHandler(
             .create()
             .withSubject(userId.toString())
             .withClaim("sid", sessionId)
+            // `iat`/`exp` are second-resolution; a `jti` nonce keeps two
+            // tokens minted within the same second (e.g. rapid refresh)
+            // distinct.
+            .withJWTId(UUID.randomUUID().toString())
             .withIssuedAt(Date(now))
             .withExpiresAt(Date(now + jwtTtlMs))
             .sign(Algorithm.HMAC256(jwtSecret))

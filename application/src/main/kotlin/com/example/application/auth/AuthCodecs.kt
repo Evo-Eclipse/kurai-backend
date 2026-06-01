@@ -20,6 +20,21 @@ internal object AuthCodecs {
             .digest(input.toByteArray(StandardCharsets.UTF_8))
             .joinToString("") { "%02x".format(it) }
 
+    /**
+     * Constant-time comparison of two hex digests. Both arguments are
+     * SHA-256 hex (always 64 chars), so [MessageDigest.isEqual] runs in
+     * time independent of where the first mismatch falls — no early-exit
+     * timing signal on code/token checks.
+     */
+    fun constantTimeEquals(
+        a: String,
+        b: String,
+    ): Boolean =
+        MessageDigest.isEqual(
+            a.toByteArray(StandardCharsets.UTF_8),
+            b.toByteArray(StandardCharsets.UTF_8),
+        )
+
     /** 6-digit numeric OTP, zero-padded. */
     fun generateOtp(): String = "%06d".format(rng.nextInt(1_000_000))
 

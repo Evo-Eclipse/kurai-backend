@@ -43,8 +43,8 @@ class AuthService(
         val normalized = email.trim().lowercase()
         if (!isPlausibleEmail(normalized)) return IssueChallengeResult.InvalidEmail
         val now = clock()
-        val activeCount = challenges.countActiveSince(normalized, now - challengeRateLimitWindowMs)
-        if (activeCount >= challengeRateLimitMax) return IssueChallengeResult.RateLimited
+        val recentCount = challenges.countCreatedSince(normalized, now - challengeRateLimitWindowMs)
+        if (recentCount >= challengeRateLimitMax) return IssueChallengeResult.RateLimited
 
         val challengeId = UUID.randomUUID().toString()
         val code = AuthCodecs.generateOtp()
@@ -68,7 +68,14 @@ class AuthService(
         val challenge = challenges.findById(challengeId) ?: return VerifyChallengeResult.Invalid
         if (challenge.consumedAt != null) return VerifyChallengeResult.Invalid
         if (challenge.expiresAt <= now) return VerifyChallengeResult.Invalid
-        if (challenge.codeHash != AuthCodecs.sha256Hex(code)) return VerifyChallengeResult.Invalid
+        // Lock the challenge once the guess budget is spent — even a
+        // correct code is rejected past this point, so a known challengeId
+        // cannot be brute-forced through the 10^6 OTP space.
+        if (challenge.attempts >= MAX_VERIFY_ATTEMPTS) return VerifyChallengeResult.Invalid
+        if (!AuthCodecs.constantTimeEquals(challenge.codeHash, AuthCodecs.sha256Hex(code))) {
+            challenges.incrementAttempts(challengeId)
+            return VerifyChallengeResult.Invalid
+        }
 
         val claimed = challenges.markConsumedIfPending(challengeId, now)
         if (claimed == 0) return VerifyChallengeResult.Invalid
@@ -103,7 +110,9 @@ class AuthService(
         val now = clock()
         val session = sessions.findById(sessionId) ?: return RefreshResult.Invalid
         if (!session.isActive(now)) return RefreshResult.Invalid
-        if (session.refreshHash != AuthCodecs.sha256Hex(refreshToken)) return RefreshResult.Invalid
+        if (!AuthCodecs.constantTimeEquals(session.refreshHash, AuthCodecs.sha256Hex(refreshToken))) {
+            return RefreshResult.Invalid
+        }
         users.touchLastSeen(session.userId, now)
         return RefreshResult.Ok(userId = session.userId, sessionId = sessionId)
     }
@@ -131,6 +140,9 @@ class AuthService(
     companion object {
         const val DEFAULT_CHALLENGE_RATE_LIMIT_WINDOW_MS: Long = 60_000
         const val DEFAULT_CHALLENGE_RATE_LIMIT_MAX: Int = 5
+
+        /** Failed verify guesses allowed per challenge before it locks. */
+        const val MAX_VERIFY_ATTEMPTS: Int = 5
     }
 }
 

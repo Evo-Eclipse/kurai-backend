@@ -207,6 +207,13 @@ object LoginChallenges : Table("login_challenges") {
     val codeHash = text("code_hash")
     val expiresAt = timestampMillis("expires_at")
     val consumedAt = timestampMillis("consumed_at").nullable()
+
+    /**
+     * Count of failed verify attempts. Once it reaches the policy cap
+     * (`AuthService.MAX_VERIFY_ATTEMPTS`) the challenge is dead even for
+     * the correct code — caps OTP brute-force to that many guesses.
+     */
+    val attempts = integer("attempts").default(0)
     val createdAt = timestampMillisDefaultNow("created_at")
 
     override val primaryKey = PrimaryKey(id)

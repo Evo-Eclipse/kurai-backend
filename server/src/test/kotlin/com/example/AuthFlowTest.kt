@@ -19,6 +19,7 @@ import com.example.infrastructure.sqlite.LoginChallengeRepository
 import com.example.infrastructure.sqlite.UserRepository
 import com.example.infrastructure.sqlite.initSchema
 import io.ktor.client.call.body
+import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
@@ -27,6 +28,10 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
+import io.ktor.server.auth.authenticate
+import io.ktor.server.response.respond
+import io.ktor.server.routing.get
+import io.ktor.server.routing.routing
 import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
 import org.jetbrains.exposed.v1.jdbc.Database
@@ -76,8 +81,10 @@ class AuthFlowTest {
 
     private fun ApplicationTestBuilder.installAuth(authService: AuthService) {
         application {
-            configure(ReadinessGate().also { it.markReady() }, secret)
+            // 1 ms cache TTL so the central revocation check reflects DB
+            // state immediately (no stale window masking logout in tests).
             val sessionAuth = SessionAuthenticator(authService, cacheTtl = Duration.ofMillis(1))
+            configure(ReadinessGate().also { it.markReady() }, secret) { sessionAuth.isActive(it) }
             val handler =
                 AuthHandler(
                     authService = authService,
@@ -93,6 +100,14 @@ class AuthFlowTest {
                     jwtTtlMs = 60_000L,
                 )
             configureAuthRoutes(handler)
+            // A stand-in resource endpoint guarded only by `authenticate`,
+            // to prove revocation reaches routes that never call the
+            // SessionAuthenticator themselves.
+            routing {
+                authenticate("kurai") {
+                    get("/protected") { call.respond(HttpStatusCode.OK) }
+                }
+            }
         }
     }
 
@@ -223,8 +238,6 @@ class AuthFlowTest {
                         setBody(VerifyRequest(challengeId = challengeId, code = code))
                     }.body()
 
-            // Sleep just enough so the issuedAt second of the new JWT differs.
-            Thread.sleep(1_100)
             val refreshed: RefreshResponse =
                 http
                     .post("/auth/refresh") {
@@ -261,5 +274,72 @@ class AuthFlowTest {
                     setBody(RefreshRequest(sessionId = first.sessionId, refreshToken = "deadbeef"))
                 }
             assertEquals(HttpStatusCode.Unauthorized, resp.status)
+        }
+
+    @Test
+    fun `logout revokes access to a protected resource route, not just logout itself`() =
+        testApplication {
+            val (_, sender, authService) = fresh()
+            installAuth(authService)
+            val http = jsonClient()
+
+            http
+                .post("/auth/challenge") {
+                    contentType(ContentType.Application.Json)
+                    setBody(ChallengeRequest(email = "frank@example.com"))
+                }.body<ChallengeResponse>()
+            val (challengeId, code) = checkNotNull(sender.byEmail["frank@example.com"])
+            val verify: VerifyResponse =
+                http
+                    .post("/auth/verify") {
+                        contentType(ContentType.Application.Json)
+                        setBody(VerifyRequest(challengeId = challengeId, code = code))
+                    }.body()
+
+            // The JWT works on a resource route before logout …
+            val before =
+                http.get("/protected") { header(HttpHeaders.Authorization, "Bearer ${verify.jwt}") }
+            assertEquals(HttpStatusCode.OK, before.status)
+
+            http.post("/auth/logout") { header(HttpHeaders.Authorization, "Bearer ${verify.jwt}") }
+
+            // … and the same JWT is rejected after, even though /protected
+            // never calls the SessionAuthenticator itself.
+            val after =
+                http.get("/protected") { header(HttpHeaders.Authorization, "Bearer ${verify.jwt}") }
+            assertEquals(HttpStatusCode.Unauthorized, after.status)
+        }
+
+    @Test
+    fun `too many wrong codes lock the challenge even for the correct code`() =
+        testApplication {
+            val (_, sender, authService) = fresh()
+            installAuth(authService)
+            val http = jsonClient()
+
+            http
+                .post("/auth/challenge") {
+                    contentType(ContentType.Application.Json)
+                    setBody(ChallengeRequest(email = "grace@example.com"))
+                }.body<ChallengeResponse>()
+            val (challengeId, code) = checkNotNull(sender.byEmail["grace@example.com"])
+            val wrong = if (code == "000000") "000001" else "000000"
+
+            repeat(AuthService.MAX_VERIFY_ATTEMPTS) {
+                val resp =
+                    http.post("/auth/verify") {
+                        contentType(ContentType.Application.Json)
+                        setBody(VerifyRequest(challengeId = challengeId, code = wrong))
+                    }
+                assertEquals(HttpStatusCode.Unauthorized, resp.status)
+            }
+
+            // Budget spent — the correct code no longer works.
+            val locked =
+                http.post("/auth/verify") {
+                    contentType(ContentType.Application.Json)
+                    setBody(VerifyRequest(challengeId = challengeId, code = code))
+                }
+            assertEquals(HttpStatusCode.Unauthorized, locked.status)
         }
 }

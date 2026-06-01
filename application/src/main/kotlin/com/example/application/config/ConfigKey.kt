@@ -17,12 +17,20 @@ enum class ValueType(
 }
 
 /**
- * Typed key for a [RuntimeConfig] entry. The [type] discriminator
- * must match the row's stored `value_type`; if they drift, [RuntimeConfig.get]
- * fails fast with a message that names both sides.
+ * Typed key for a [RuntimeConfig] entry.
+ *
+ * The discriminator [type] and the [decode] parser are bound together by
+ * the typed base classes ([LongKey] and its siblings): a key cannot
+ * declare a `value_type` that disagrees with its parser, because choosing
+ * a base class fixes both at once. That removes the last hand-maintained
+ * pairing — there is no longer a separate `type` field and `decode` lambda
+ * to keep in sync. [RuntimeConfig.get] still cross-checks [type] against
+ * the stored row, so a value that drifted in the DB fails fast.
  *
  * Adding a new operator-tunable parameter means:
- *  1. Append a new `object` here with key, type, and decoder.
+ *  1. Append a `data object` below, extending the base class for its
+ *     type (add the base class — `IntKey`, `RealKey`, … — if this is the
+ *     first key of that type; each binds one [ValueType] to its parser).
  *  2. Seed a default at startup (Application.kt) so the first
  *     `get` does not blow up on a fresh database.
  *
@@ -33,19 +41,19 @@ enum class ValueType(
 sealed class ConfigKey<T>(
     val key: String,
     val type: ValueType,
-    val decode: (String) -> T,
 ) {
+    abstract fun decode(raw: String): T
+
+    /** Keys whose value is stored as [ValueType.LONG] and parsed with `toLong`. */
+    abstract class LongKey(
+        key: String,
+    ) : ConfigKey<Long>(key, ValueType.LONG) {
+        final override fun decode(raw: String): Long = raw.toLong()
+    }
+
     /** Lifetime of an `auth_sessions` row before refresh stops working. */
-    data object AuthSessionTtlMs : ConfigKey<Long>(
-        key = "auth.session_ttl_ms",
-        type = ValueType.LONG,
-        decode = String::toLong,
-    )
+    data object AuthSessionTtlMs : LongKey(key = "auth.session_ttl_ms")
 
     /** Lifetime of a magic-link / OTP challenge before verify rejects it. */
-    data object AuthChallengeTtlMs : ConfigKey<Long>(
-        key = "auth.challenge_ttl_ms",
-        type = ValueType.LONG,
-        decode = String::toLong,
-    )
+    data object AuthChallengeTtlMs : LongKey(key = "auth.challenge_ttl_ms")
 }

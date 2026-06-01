@@ -337,7 +337,8 @@ suspend fun Application.installCore() {
 suspend fun Application.installPlugins() {
     val config = dependencies.resolve<AppConfig>()
     val gate = dependencies.resolve<ReadinessGate>()
-    configure(gate, config.jwtSecret)
+    val sessionAuth = dependencies.resolve<SessionAuthenticator>()
+    configure(gate, config.jwtSecret) { sessionId -> sessionAuth.isActive(sessionId) }
 }
 
 /**
@@ -433,10 +434,18 @@ suspend fun Application.installLifecycle() {
  * Testable entry point — caller controls readiness state and JWT secret.
  * Pass an empty jwtSecret to skip JWT auth (only safe in test scope where
  * no authenticate("kurai") routes are installed).
+ *
+ * [isSessionActive] is consulted for every token that carries a `sid`
+ * claim, so a revoked or expired session is rejected on *all*
+ * `authenticate("kurai")` routes — not only the ones that re-check the
+ * session in their handler. The default accepts every session, which
+ * suits tests that mint bare `sub`-only tokens; production wires the
+ * real check in [installPlugins].
  */
 fun Application.configure(
     readinessGate: ReadinessGate,
     jwtSecret: String = "",
+    isSessionActive: (sessionId: String) -> Boolean = { true },
 ) {
     install(ContentNegotiation) { json() }
     // Default CallLogging format: logs method + URI + status, not headers.
@@ -452,11 +461,13 @@ fun Application.configure(
                     .build(),
             )
             validate { credential ->
-                credential.payload
-                    .getClaim("sub")
-                    .asString()
-                    .takeIf { !it.isNullOrBlank() }
-                    ?.let { JWTPrincipal(credential.payload) }
+                val sub = credential.payload.getClaim("sub").asString()
+                if (sub.isNullOrBlank()) return@validate null
+                // Tokens minted by AuthHandler always carry `sid`; reject
+                // the principal if that session has been revoked or expired.
+                val sid = credential.payload.getClaim("sid").asString()
+                if (!sid.isNullOrBlank() && !isSessionActive(sid)) return@validate null
+                JWTPrincipal(credential.payload)
             }
         }
     }

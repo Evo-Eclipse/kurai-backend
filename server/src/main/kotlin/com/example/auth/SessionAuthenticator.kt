@@ -63,13 +63,20 @@ class SessionAuthenticator(
             call.respond(HttpStatusCode.Unauthorized, ErrorResponse(ErrorDetail("UNAUTHORIZED")))
             return null
         }
-        val active = activeSessionCache.get(sid) { authService.isSessionActive(sid) }
-        if (active != true) {
+        if (!isActive(sid)) {
             call.respond(HttpStatusCode.Unauthorized, ErrorResponse(ErrorDetail("INVALID_SESSION")))
             return null
         }
         return CallerIdentity(userId = sub, sessionId = sid)
     }
+
+    /**
+     * Cached active/revoked verdict for a session id. Backs the JWT
+     * `validate` block in `Application.configure`, so the revocation
+     * check applies to every `authenticate("kurai")` route — not just
+     * the ones that call [requireAuthenticatedSession] directly.
+     */
+    fun isActive(sessionId: String): Boolean = activeSessionCache.get(sessionId) { authService.isSessionActive(it) }
 
     /** Invalidate the cache entry immediately on revoke. */
     fun invalidate(sessionId: String) {
