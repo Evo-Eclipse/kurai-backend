@@ -13,7 +13,7 @@ import kotlin.test.assertEquals
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class EventBatcherTest {
-    private fun event(i: Int) = EventData(userId = 1L, itemId = i.toLong(), weight = 1.0f, embeddingVersion = "v1")
+    private fun event(i: Int) = EventData(userId = 1L, itemId = i.toLong(), sourceTag = "t", embeddingVersion = "v1")
 
     @Test
     fun `size flush fires when buffer reaches flushSize`() =
@@ -81,7 +81,7 @@ class EventBatcherTest {
                                 EventData(
                                     userId = i.toLong(),
                                     itemId = j.toLong(),
-                                    weight = 1.0f,
+                                    sourceTag = "t",
                                     embeddingVersion = "v1",
                                 ),
                             )

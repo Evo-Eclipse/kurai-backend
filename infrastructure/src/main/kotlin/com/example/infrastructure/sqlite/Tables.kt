@@ -86,16 +86,31 @@ object UserEvents : Table("user_events") {
     val id = long("id").autoIncrement()
     val userId = long("user_id")
     val itemId = long("item_id")
-    val weight = float("weight") // [-1.0, 1.0]; positive = affinity, negative = aversion
+
+    /** Opaque client label; the numeric weight is resolved live via `event_weights`. */
+    val sourceTag = text("source_tag")
 
     /**
      * Snapshot of the active embedding version at event time. Kept denormalized
      * so profile-migration replay can run without joining items.
      */
     val embeddingVersion = text("embedding_version")
+    val schemaVer = integer("schema_ver").default(1)
     val ts = timestampMillisDefaultNow("ts")
 
     override val primaryKey = PrimaryKey(id)
+}
+
+object EventWeights : Table("event_weights") {
+    /** Opaque client tag; the dictionary key. */
+    val sourceTag = text("source_tag")
+
+    /** Server-resolved weight in [-1.0, 1.0]; positive = affinity, negative = aversion. */
+    val weight = double("weight")
+    val schemaVer = integer("schema_ver").default(1)
+    val updatedAt = timestampMillis("updated_at")
+
+    override val primaryKey = PrimaryKey(sourceTag)
 }
 
 object UserProfileState : Table("user_profile_state") {

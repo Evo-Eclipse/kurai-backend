@@ -8,6 +8,7 @@ import com.example.domain.model.UserProfile
 import com.example.domain.profile.Scoring
 import com.example.infrastructure.sqlite.EventData
 import com.example.infrastructure.sqlite.EventRepository
+import com.example.infrastructure.sqlite.EventWeightRepository
 import com.example.infrastructure.sqlite.ProfileRepository
 import com.example.infrastructure.sqlite.PrototypeRepository
 import com.example.infrastructure.sqlite.initSchema
@@ -35,6 +36,8 @@ class ProtoSplitWorkerTest {
         profileRepo = ProfileRepository(db)
         eventRepo = EventRepository(db)
         prototypeRepo = PrototypeRepository(db)
+        // Resolve "like" to a positive weight so loadPositiveSince returns the events.
+        EventWeightRepository(db).upsert("like", 1.0, now = 0L)
     }
 
     // Builds a normalized vector dominated by dimension `axis` with slight variation from `offset`.
@@ -75,7 +78,7 @@ class ProtoSplitWorkerTest {
         profileRepo.upsert(userId = userId, embeddingVersion = "v1", lastAppliedEventId = 0L)
         val events =
             positiveItemIds.map { itemId ->
-                EventData(userId = userId, itemId = itemId, weight = 1.0f, embeddingVersion = "v1")
+                EventData(userId = userId, itemId = itemId, sourceTag = "like", embeddingVersion = "v1")
             }
         eventRepo.appendBatch(events)
 

@@ -8,6 +8,7 @@ import com.example.domain.model.UserEvent
 import com.example.domain.profile.Scoring
 import com.example.infrastructure.sqlite.EventData
 import com.example.infrastructure.sqlite.EventRepository
+import com.example.infrastructure.sqlite.EventWeightRepository
 import com.example.infrastructure.sqlite.ProfileRepository
 import com.example.infrastructure.sqlite.initSchema
 import kotlinx.coroutines.CoroutineScope
@@ -40,6 +41,7 @@ class LifecycleTest {
         initSchema(db)
         profileRepo = ProfileRepository(db)
         eventRepo = EventRepository(db)
+        EventWeightRepository(db).upsert("like", 1.0, now = 0L)
     }
 
     private fun normalizedVec(seed: Int): FloatArray {
@@ -57,7 +59,7 @@ class LifecycleTest {
             val vec = normalizedVec(1)
             val events =
                 (1..5).map { i ->
-                    EventData(userId = userId, itemId = i.toLong(), weight = 1.0f, embeddingVersion = "v1")
+                    EventData(userId = userId, itemId = i.toLong(), sourceTag = "like", embeddingVersion = "v1")
                 }
             eventRepo.appendBatch(events)
 

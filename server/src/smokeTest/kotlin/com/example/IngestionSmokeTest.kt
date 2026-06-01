@@ -97,13 +97,16 @@ class IngestionSmokeTest {
         val eventBatcher = EventBatcher(flush = { events -> eventRepo.appendBatch(events) })
         val eventQueue: EventQueue =
             EventQueue { event ->
-                eventBatcher.enqueue(EventData(event.userId, event.itemId, event.weight, event.embeddingVersion.value))
+                eventBatcher.enqueue(
+                    EventData(event.userId, event.itemId, event.sourceTag, event.embeddingVersion.value),
+                )
             }
         return IngestionHandler(
             cachingProfile = cachingProfile,
             cachingEmbedding = cachingEmbedding,
             eventQueue = eventQueue,
             activeEmbeddingVersion = { EmbeddingVersion("v1") },
+            resolveWeight = { 0.8f },
         )
     }
 
@@ -129,7 +132,7 @@ class IngestionSmokeTest {
                 client.post("/ingestion/events") {
                     header(HttpHeaders.Authorization, "Bearer ${token("99")}")
                     contentType(ContentType.Application.Json)
-                    setBody("""{"userId":1,"itemId":$ITEM_ID,"weight":0.8}""")
+                    setBody("""{"userId":1,"itemId":$ITEM_ID,"sourceTag":"like"}""")
                 }
             assertEquals(HttpStatusCode.Forbidden, response.status)
         }
@@ -141,7 +144,7 @@ class IngestionSmokeTest {
                 client.post("/ingestion/events") {
                     header(HttpHeaders.Authorization, "Bearer ${token("1")}")
                     contentType(ContentType.Application.Json)
-                    setBody("""{"userId":1,"itemId":$ITEM_ID,"weight":0.8}""")
+                    setBody("""{"userId":1,"itemId":$ITEM_ID,"sourceTag":"like"}""")
                 }
             assertEquals(HttpStatusCode.NoContent, response.status)
         }
@@ -153,21 +156,9 @@ class IngestionSmokeTest {
                 client.post("/ingestion/events") {
                     header(HttpHeaders.Authorization, "Bearer ${token("1")}")
                     contentType(ContentType.Application.Json)
-                    setBody("""{"userId":1,"itemId":9999,"weight":0.8}""")
+                    setBody("""{"userId":1,"itemId":9999,"sourceTag":"like"}""")
                 }
             assertEquals(HttpStatusCode.UnprocessableEntity, response.status)
-        }
-
-    @Test
-    fun `weight out of range returns 400`() =
-        setup {
-            val response =
-                client.post("/ingestion/events") {
-                    header(HttpHeaders.Authorization, "Bearer ${token("1")}")
-                    contentType(ContentType.Application.Json)
-                    setBody("""{"userId":1,"itemId":$ITEM_ID,"weight":1.5}""")
-                }
-            assertEquals(HttpStatusCode.BadRequest, response.status)
         }
 
     companion object {

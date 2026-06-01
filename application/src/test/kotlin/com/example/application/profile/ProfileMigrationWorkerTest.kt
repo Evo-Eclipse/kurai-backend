@@ -8,6 +8,7 @@ import com.example.domain.model.UserProfile
 import com.example.domain.profile.Scoring
 import com.example.infrastructure.sqlite.EventData
 import com.example.infrastructure.sqlite.EventRepository
+import com.example.infrastructure.sqlite.EventWeightRepository
 import com.example.infrastructure.sqlite.ProfileRepository
 import com.example.infrastructure.sqlite.initSchema
 import kotlinx.coroutines.test.runTest
@@ -34,6 +35,7 @@ class ProfileMigrationWorkerTest {
         initSchema(db)
         profileRepo = ProfileRepository(db)
         eventRepo = EventRepository(db)
+        EventWeightRepository(db).upsert("like", 1.0, now = 0L)
     }
 
     private fun normalizedVec(seed: Int): FloatArray {
@@ -75,7 +77,7 @@ class ProfileMigrationWorkerTest {
             profileRepo.upsert(userId = 1L, embeddingVersion = "v1", lastAppliedEventId = 0L)
             // Insert a positive event
             eventRepo.appendBatch(
-                listOf(EventData(userId = 1L, itemId = 10L, weight = 1.0f, embeddingVersion = "v1")),
+                listOf(EventData(userId = 1L, itemId = 10L, sourceTag = "like", embeddingVersion = "v1")),
             )
             val vec = normalizedVec(1)
 
@@ -138,8 +140,8 @@ class ProfileMigrationWorkerTest {
             profileRepo.upsert(userId = 3L, embeddingVersion = "v1", lastAppliedEventId = 0L)
             val events =
                 listOf(
-                    EventData(userId = 3L, itemId = 1L, weight = 1.0f, embeddingVersion = "v1"),
-                    EventData(userId = 3L, itemId = 2L, weight = 0.5f, embeddingVersion = "v1"),
+                    EventData(userId = 3L, itemId = 1L, sourceTag = "like", embeddingVersion = "v1"),
+                    EventData(userId = 3L, itemId = 2L, sourceTag = "like", embeddingVersion = "v1"),
                 )
             val ids = eventRepo.appendBatch(events)
             val maxId = ids.max()

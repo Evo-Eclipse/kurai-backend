@@ -5,6 +5,7 @@ import com.example.ErrorResponse
 import com.example.application.embedding.CachingEmbeddingAdapter
 import com.example.application.profile.CachingProfileAdapter
 import com.example.domain.events.EventQueue
+import com.example.domain.events.RawEvent
 import com.example.domain.model.EmbeddingVersion
 import com.example.domain.model.UserEvent
 import io.ktor.http.HttpStatusCode
@@ -20,7 +21,7 @@ import kotlinx.serialization.Serializable
 data class IngestionRequest(
     val userId: Long,
     val itemId: Long,
-    val weight: Float,
+    val sourceTag: String,
 )
 
 class IngestionHandler(
@@ -28,6 +29,8 @@ class IngestionHandler(
     private val cachingEmbedding: CachingEmbeddingAdapter,
     private val eventQueue: EventQueue,
     private val activeEmbeddingVersion: () -> EmbeddingVersion,
+    /** Resolves an opaque source tag to its numeric weight (dictionary + default). */
+    private val resolveWeight: (String) -> Float,
 ) {
     suspend fun handleIngest(call: ApplicationCall) {
         val principal =
@@ -64,22 +67,32 @@ class IngestionHandler(
                     return
                 }
 
+        val activeVersion = activeEmbeddingVersion()
         val event =
             try {
                 UserEvent(
                     id = 0L,
                     userId = req.userId,
                     itemId = req.itemId,
-                    weight = req.weight,
-                    embeddingVersion = activeEmbeddingVersion(),
+                    weight = resolveWeight(req.sourceTag),
+                    embeddingVersion = activeVersion,
                     ts = System.currentTimeMillis(),
                 )
             } catch (e: IllegalArgumentException) {
                 throw BadRequestException(e.message ?: "Invalid request")
             }
 
+        // Live update uses the resolved weight; storage keeps the raw tag so a
+        // later weight backfill is reflected on the next full recompute.
         cachingProfile.update(req.userId, event, vector)
-        eventQueue.enqueue(event)
+        eventQueue.enqueue(
+            RawEvent(
+                userId = req.userId,
+                itemId = req.itemId,
+                sourceTag = req.sourceTag,
+                embeddingVersion = activeVersion,
+            ),
+        )
 
         call.respond(HttpStatusCode.NoContent)
     }

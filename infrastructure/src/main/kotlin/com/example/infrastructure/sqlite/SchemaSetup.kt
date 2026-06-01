@@ -11,6 +11,7 @@ private val ALL_TABLES =
     arrayOf(
         Items,
         UserEvents,
+        EventWeights,
         UserProfileState,
         UserPrototypes,
         EmbeddingGenerations,
@@ -77,12 +78,13 @@ private fun JdbcTransaction.applySqliteTriggersAndIndices() {
         END
         """.trimIndent(),
     )
-    // Covers migration replay (ORDER BY id) and proto-split positive-event scans.
+    // Covers migration replay and proto-split scans (per-user, ordered by id).
+    // Weight is no longer stored on user_events (resolved live from
+    // event_weights), so the index can no longer be partial on weight.
     exec(
         """
-        CREATE INDEX IF NOT EXISTS idx_user_events_positive
+        CREATE INDEX IF NOT EXISTS idx_user_events_user
         ON user_events(user_id, id)
-        WHERE weight > 0
         """.trimIndent(),
     )
 }

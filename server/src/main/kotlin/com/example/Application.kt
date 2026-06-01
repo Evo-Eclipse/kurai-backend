@@ -45,6 +45,7 @@ import com.example.infrastructure.sqlite.AuthSessionRepository
 import com.example.infrastructure.sqlite.EventBatcher
 import com.example.infrastructure.sqlite.EventData
 import com.example.infrastructure.sqlite.EventRepository
+import com.example.infrastructure.sqlite.EventWeightRepository
 import com.example.infrastructure.sqlite.ItemRepository
 import com.example.infrastructure.sqlite.LoginChallengeRepository
 import com.example.infrastructure.sqlite.ProfileRepository
@@ -142,6 +143,7 @@ suspend fun Application.installCore() {
     }
     dependencies.provide<ProfileRepository> { ProfileRepository(dependencies.resolve()) }
     dependencies.provide<EventRepository> { EventRepository(dependencies.resolve()) }
+    dependencies.provide<EventWeightRepository> { EventWeightRepository(dependencies.resolve()) }
     dependencies.provide<PrototypeRepository> { PrototypeRepository(dependencies.resolve()) }
     dependencies.provide<UserRepository> { UserRepository(dependencies.resolve()) }
     dependencies.provide<AuthIdentityRepository> { AuthIdentityRepository(dependencies.resolve()) }
@@ -316,16 +318,20 @@ suspend fun Application.installCore() {
     dependencies.provide<EventQueue> {
         val batcher = dependencies.resolve<EventBatcher>()
         EventQueue { event ->
-            batcher.enqueue(EventData(event.userId, event.itemId, event.weight, event.embeddingVersion.value))
+            batcher.enqueue(EventData(event.userId, event.itemId, event.sourceTag, event.embeddingVersion.value))
         }
     }
 
     dependencies.provide<IngestionHandler> {
+        val eventWeights = dependencies.resolve<EventWeightRepository>()
         IngestionHandler(
             cachingProfile = dependencies.resolve(),
             cachingEmbedding = dependencies.resolve(),
             eventQueue = dependencies.resolve(),
             activeEmbeddingVersion = dependencies.resolve<EmbeddingVersionLookup>().asEmbeddingVersionLookup(),
+            resolveWeight = { tag ->
+                (eventWeights.resolve(tag) ?: EventWeightRepository.DEFAULT_EVENT_WEIGHT).toFloat()
+            },
         )
     }
 
