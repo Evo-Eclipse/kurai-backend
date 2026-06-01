@@ -236,6 +236,27 @@ object LoginChallenges : Table("login_challenges") {
     override val primaryKey = PrimaryKey(id)
 }
 
+object SystemState : Table("system_state") {
+    /** Always [SystemStateRepository.SINGLE_ROW_ID]; single-row invariant upheld in Kotlin. */
+    val id = integer("id")
+
+    /** Embedding version served to new users; the system-wide default. */
+    val defaultEmbeddingVersion = text("default_embedding_version").nullable()
+
+    /** Pointer to the active row in `cluster_generations`. */
+    val activeClusterId = long("active_cluster_id").nullable()
+
+    /** Pointer to the active row in `index_generations`. */
+    val activeIndexId = long("active_index_id").nullable()
+
+    /** System-written catalog counters (wired in a later wave). */
+    val totalItems = long("total_items").default(0L)
+    val embeddedItems = long("embedded_items").default(0L)
+    val updatedAt = timestampMillis("updated_at")
+
+    override val primaryKey = PrimaryKey(id)
+}
+
 object RuntimeConfigs : Table("runtime_config") {
     val key = text("key")
 

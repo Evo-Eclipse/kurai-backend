@@ -42,7 +42,6 @@ import com.example.infrastructure.onnx.OnnxInferenceAdapter
 import com.example.infrastructure.sqlite.AcquisitionJobRepository
 import com.example.infrastructure.sqlite.AuthIdentityRepository
 import com.example.infrastructure.sqlite.AuthSessionRepository
-import com.example.infrastructure.sqlite.EmbeddingGenerationRepository
 import com.example.infrastructure.sqlite.EventBatcher
 import com.example.infrastructure.sqlite.EventData
 import com.example.infrastructure.sqlite.EventRepository
@@ -52,6 +51,7 @@ import com.example.infrastructure.sqlite.ProfileRepository
 import com.example.infrastructure.sqlite.PrototypeRepository
 import com.example.infrastructure.sqlite.PrototypeType
 import com.example.infrastructure.sqlite.RuntimeConfigRepository
+import com.example.infrastructure.sqlite.SystemStateRepository
 import com.example.infrastructure.sqlite.UserRepository
 import com.example.infrastructure.sqlite.initSchema
 import com.example.infrastructure.storage.LocalObjectStore
@@ -137,7 +137,9 @@ suspend fun Application.installCore() {
 
     dependencies.provide<AcquisitionJobRepository> { AcquisitionJobRepository(dependencies.resolve()) }
     dependencies.provide<ItemRepository> { ItemRepository(dependencies.resolve()) }
-    dependencies.provide<EmbeddingGenerationRepository> { EmbeddingGenerationRepository(dependencies.resolve()) }
+    dependencies.provide<SystemStateRepository> {
+        SystemStateRepository(dependencies.resolve()).also { it.seedIfMissing(System.currentTimeMillis()) }
+    }
     dependencies.provide<ProfileRepository> { ProfileRepository(dependencies.resolve()) }
     dependencies.provide<EventRepository> { EventRepository(dependencies.resolve()) }
     dependencies.provide<PrototypeRepository> { PrototypeRepository(dependencies.resolve()) }
@@ -216,8 +218,8 @@ suspend fun Application.installCore() {
     }
 
     dependencies.provide<EmbeddingVersionLookup> {
-        val repo = dependencies.resolve<EmbeddingGenerationRepository>()
-        EmbeddingVersionLookup { repo.getActiveVersion() ?: "unknown" }
+        val systemState = dependencies.resolve<SystemStateRepository>()
+        EmbeddingVersionLookup { systemState.read().defaultEmbeddingVersion ?: "unknown" }
     }
 
     dependencies.provide<InferenceService> {
