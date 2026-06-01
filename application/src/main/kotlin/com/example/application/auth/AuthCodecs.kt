@@ -51,10 +51,10 @@ internal object AuthCodecs {
     }
 
     /**
-     * Opaque early-user key: a random v4 UUID in canonical 8-4-4-4-12 form
-     * (122 bits of entropy — not brute-forceable). `UUID.randomUUID` draws
-     * from a `SecureRandom`. Only SHA-256(key) is persisted; the key is
-     * shown to the operator once at issuance.
+     * Opaque self-issued login key: a random v4 UUID in canonical 8-4-4-4-12
+     * form (122 bits of entropy — not brute-forceable). `UUID.randomUUID`
+     * draws from a `SecureRandom`. Only SHA-256(key) is persisted; the raw
+     * key is shown to the user once at issuance (seed-phrase semantics).
      */
-    fun generateLegacyKey(): String = UUID.randomUUID().toString()
+    fun generateKey(): String = UUID.randomUUID().toString()
 }

@@ -14,7 +14,11 @@ fun Application.configureAuthRoutes(handler: AuthHandler) {
             post("/challenge") { handler.handleChallenge(call) }
             post("/verify") { handler.handleVerify(call) }
             post("/refresh") { handler.handleRefresh(call) }
-            post("/legacy/verify") { handler.handleLegacyVerify(call) }
+            // Self-service key onboarding (expo). Issuance is unauthenticated
+            // by design — frictionless sign-up — so it creates a user on every
+            // call. TODO: add a per-IP rate limit before this is abuse-exposed.
+            post("/key/issue") { handler.handleKeyIssue(call) }
+            post("/key/verify") { handler.handleKeyVerify(call) }
 
             // Authenticated: revokes the caller's own session.
             authenticate("kurai") {

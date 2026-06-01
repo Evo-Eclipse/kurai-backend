@@ -69,8 +69,8 @@ object AuthProvider {
     const val GOOGLE = "google"
     const val APPLE = "apple"
 
-    /** Opaque seed-phrase-style key issued to early (expo) users. */
-    const val LEGACY_KEY = "legacy_key"
+    /** Opaque, self-issued seed-phrase-style login key. */
+    const val KEY = "key"
 }
 
 object Items : Table("items") {
@@ -177,11 +177,11 @@ object AuthIdentities : Table("auth_identities") {
      * Stable identifier issued by the provider:
      *  - `email` provider — the verified e-mail address itself.
      *  - `google` / `apple` — the OIDC `sub` claim.
-     *  - `legacy_key` — SHA-256 hex of the opaque key (never the key).
+     *  - `key` — SHA-256 hex of the opaque key (never the key).
      */
     val providerSubject = text("provider_subject")
 
-    /** Set to retire an identity (used to disable `legacy_key`s after expo). */
+    /** Set to disable an identity (revoke a compromised or banned key). */
     val disabledAt = timestampMillis("disabled_at").nullable()
     val createdAt = timestampMillisDefaultNow("created_at")
 

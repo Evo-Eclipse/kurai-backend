@@ -16,7 +16,7 @@ import java.util.UUID
  *  - challenge: per-email rate limit + OTP hashing + persistence;
  *  - verify: code check, find-or-create user, session+refresh issuance;
  *  - refresh: rotating refresh token with reuse detection;
- *  - legacy key: issue/verify opaque early-user keys;
+ *  - key: issue/verify/disable opaque self-issued login keys;
  *  - revoke: explicit logout.
  *
  * The service is transport-agnostic: no Ktor types reach this layer.
@@ -145,41 +145,50 @@ class AuthService(
     }
 
     /**
-     * Issue an opaque `legacy_key` for an early user: creates an
-     * e-mail-less user, stores only the key's hash, and returns the raw key
-     * once. Operator-driven (no public endpoint); the caller is responsible
-     * for delivering the key out of band.
+     * Self-service key issuance: creates an e-mail-less user, stores only
+     * the key's hash, and logs the user straight in. Returns the raw key
+     * (shown once — seed-phrase semantics) together with a fresh session so
+     * the caller is authenticated immediately and keeps the key for later.
+     *
+     * The HTTP surface for this is public; callers must rate-limit it (see
+     * the abuse note on `configureAuthRoutes`).
      */
-    fun issueLegacyKey(): LegacyKeyIssued {
+    fun issueKey(deviceLabel: String?): KeyIssued {
         val now = clock()
         val userId = users.insertAnonymous(now)
-        val rawKey = AuthCodecs.generateLegacyKey()
-        identities.insert(userId, AuthProvider.LEGACY_KEY, AuthCodecs.sha256Hex(rawKey), now)
-        return LegacyKeyIssued(userId = userId, key = rawKey)
+        val rawKey = AuthCodecs.generateKey()
+        identities.insert(userId, AuthProvider.KEY, AuthCodecs.sha256Hex(rawKey), now)
+        val (sessionId, refreshToken) = issueSession(userId, deviceLabel, now)
+        return KeyIssued(
+            userId = userId,
+            key = rawKey,
+            sessionId = sessionId,
+            refreshToken = refreshToken,
+        )
     }
 
-    /** Exchange a `legacy_key` for a session, unless the identity is disabled. */
-    fun verifyLegacyKey(
+    /** Exchange a key for a session, unless its identity is disabled. */
+    fun verifyKey(
         rawKey: String,
         deviceLabel: String?,
-    ): VerifyLegacyKeyResult {
+    ): VerifyKeyResult {
         val now = clock()
         val identity =
-            identities.findBySubject(AuthProvider.LEGACY_KEY, AuthCodecs.sha256Hex(rawKey))
-                ?: return VerifyLegacyKeyResult.Invalid
-        if (identity.disabledAt != null) return VerifyLegacyKeyResult.Invalid
+            identities.findBySubject(AuthProvider.KEY, AuthCodecs.sha256Hex(rawKey))
+                ?: return VerifyKeyResult.Invalid
+        if (identity.disabledAt != null) return VerifyKeyResult.Invalid
         users.touchLastSeen(identity.userId, now)
         val (sessionId, refreshToken) = issueSession(identity.userId, deviceLabel, now)
-        return VerifyLegacyKeyResult.Ok(
+        return VerifyKeyResult.Ok(
             userId = identity.userId,
             sessionId = sessionId,
             refreshToken = refreshToken,
         )
     }
 
-    /** Operator action: retire a `legacy_key` so it can no longer log in. */
-    fun disableLegacyKey(rawKey: String): Boolean =
-        identities.disable(AuthProvider.LEGACY_KEY, AuthCodecs.sha256Hex(rawKey), clock()) > 0
+    /** Operator action: retire a key so it can no longer log in. */
+    fun disableKey(rawKey: String): Boolean =
+        identities.disable(AuthProvider.KEY, AuthCodecs.sha256Hex(rawKey), clock()) > 0
 
     /** Mint a fresh session + refresh secret; returns (sessionId, rawRefreshToken). */
     private fun issueSession(
@@ -260,17 +269,19 @@ sealed interface RefreshResult {
     data object Invalid : RefreshResult
 }
 
-data class LegacyKeyIssued(
+data class KeyIssued(
     val userId: Long,
     val key: String,
+    val sessionId: String,
+    val refreshToken: String,
 )
 
-sealed interface VerifyLegacyKeyResult {
+sealed interface VerifyKeyResult {
     data class Ok(
         val userId: Long,
         val sessionId: String,
         val refreshToken: String,
-    ) : VerifyLegacyKeyResult
+    ) : VerifyKeyResult
 
-    data object Invalid : VerifyLegacyKeyResult
+    data object Invalid : VerifyKeyResult
 }

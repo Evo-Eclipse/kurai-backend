@@ -8,7 +8,7 @@ import com.example.application.auth.AuthService
 import com.example.application.auth.IssueChallengeResult
 import com.example.application.auth.RefreshResult
 import com.example.application.auth.VerifyChallengeResult
-import com.example.application.auth.VerifyLegacyKeyResult
+import com.example.application.auth.VerifyKeyResult
 import com.example.auth.ChallengeIpRateLimiter
 import com.example.auth.SessionAuthenticator
 import io.ktor.http.HttpHeaders
@@ -59,7 +59,21 @@ data class RefreshResponse(
 )
 
 @Serializable
-data class LegacyVerifyRequest(
+data class KeyIssueRequest(
+    val deviceLabel: String? = null,
+)
+
+@Serializable
+data class KeyIssueResponse(
+    val userId: Long,
+    val key: String,
+    val jwt: String,
+    val sessionId: String,
+    val refreshToken: String,
+)
+
+@Serializable
+data class KeyVerifyRequest(
     val key: String,
     val deviceLabel: String? = null,
 )
@@ -134,10 +148,24 @@ class AuthHandler(
         }
     }
 
-    suspend fun handleLegacyVerify(call: ApplicationCall) {
-        val req = call.receive<LegacyVerifyRequest>()
-        when (val result = authService.verifyLegacyKey(req.key, req.deviceLabel)) {
-            is VerifyLegacyKeyResult.Ok ->
+    suspend fun handleKeyIssue(call: ApplicationCall) {
+        val req = call.receive<KeyIssueRequest>()
+        val issued = authService.issueKey(req.deviceLabel)
+        call.respond(
+            KeyIssueResponse(
+                userId = issued.userId,
+                key = issued.key,
+                jwt = mintJwt(issued.userId, issued.sessionId),
+                sessionId = issued.sessionId,
+                refreshToken = issued.refreshToken,
+            ),
+        )
+    }
+
+    suspend fun handleKeyVerify(call: ApplicationCall) {
+        val req = call.receive<KeyVerifyRequest>()
+        when (val result = authService.verifyKey(req.key, req.deviceLabel)) {
+            is VerifyKeyResult.Ok ->
                 call.respond(
                     VerifyResponse(
                         userId = result.userId,
@@ -147,7 +175,7 @@ class AuthHandler(
                     ),
                 )
 
-            VerifyLegacyKeyResult.Invalid ->
+            VerifyKeyResult.Invalid ->
                 call.respond(HttpStatusCode.Unauthorized, ErrorResponse(ErrorDetail("INVALID_KEY")))
         }
     }

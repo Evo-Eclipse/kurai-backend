@@ -7,7 +7,9 @@ import com.example.auth.ChallengeIpRateLimiter
 import com.example.auth.ChallengeRequest
 import com.example.auth.ChallengeResponse
 import com.example.auth.FixedWindowRateLimiter
-import com.example.auth.LegacyVerifyRequest
+import com.example.auth.KeyIssueRequest
+import com.example.auth.KeyIssueResponse
+import com.example.auth.KeyVerifyRequest
 import com.example.auth.RefreshRequest
 import com.example.auth.RefreshResponse
 import com.example.auth.SessionAuthenticator
@@ -393,46 +395,69 @@ class AuthFlowTest {
         }
 
     @Test
-    fun `legacy key logs in and a disabled key is rejected`() =
+    fun `issuing a key logs the user in and the key works again on another device`() =
         testApplication {
             val (_, _, authService) = fresh()
             installAuth(authService)
             val http = jsonClient()
 
-            val issued = authService.issueLegacyKey()
-
-            val login: VerifyResponse =
+            // Get a key — issuance is self-service and logs you straight in.
+            val issued: KeyIssueResponse =
                 http
-                    .post("/auth/legacy/verify") {
+                    .post("/auth/key/issue") {
                         contentType(ContentType.Application.Json)
-                        setBody(LegacyVerifyRequest(key = issued.key))
+                        setBody(KeyIssueRequest())
                     }.body()
-            assertEquals(issued.userId, login.userId)
-            val protectedOk =
-                http.get("/protected") { header(HttpHeaders.Authorization, "Bearer ${login.jwt}") }
-            assertEquals(HttpStatusCode.OK, protectedOk.status)
+            assertTrue(issued.key.isNotBlank())
+            val firstDevice =
+                http.get("/protected") { header(HttpHeaders.Authorization, "Bearer ${issued.jwt}") }
+            assertEquals(HttpStatusCode.OK, firstDevice.status)
 
-            // Retire the key — subsequent logins are refused.
-            authService.disableLegacyKey(issued.key)
+            // Enter the key elsewhere — same user, fresh session.
+            val second: VerifyResponse =
+                http
+                    .post("/auth/key/verify") {
+                        contentType(ContentType.Application.Json)
+                        setBody(KeyVerifyRequest(key = issued.key))
+                    }.body()
+            assertEquals(issued.userId, second.userId)
+            assertNotEquals(issued.sessionId, second.sessionId)
+        }
+
+    @Test
+    fun `a disabled key is rejected`() =
+        testApplication {
+            val (_, _, authService) = fresh()
+            installAuth(authService)
+            val http = jsonClient()
+
+            val issued: KeyIssueResponse =
+                http
+                    .post("/auth/key/issue") {
+                        contentType(ContentType.Application.Json)
+                        setBody(KeyIssueRequest())
+                    }.body()
+
+            authService.disableKey(issued.key)
             val afterDisable =
-                http.post("/auth/legacy/verify") {
+                http.post("/auth/key/verify") {
                     contentType(ContentType.Application.Json)
-                    setBody(LegacyVerifyRequest(key = issued.key))
+                    setBody(KeyVerifyRequest(key = issued.key))
                 }
             assertEquals(HttpStatusCode.Unauthorized, afterDisable.status)
         }
 
     @Test
-    fun `unknown legacy key is rejected`() =
+    fun `unknown key is rejected`() =
         testApplication {
             val (_, _, authService) = fresh()
             installAuth(authService)
             val http = jsonClient()
 
             val resp =
-                http.post("/auth/legacy/verify") {
+                http.post("/auth/key/verify") {
                     contentType(ContentType.Application.Json)
-                    setBody(LegacyVerifyRequest(key = "00000000-0000-4000-8000-000000000000"))
+                    setBody(KeyVerifyRequest(key = "00000000-0000-4000-8000-000000000000"))
                 }
             assertEquals(HttpStatusCode.Unauthorized, resp.status)
         }

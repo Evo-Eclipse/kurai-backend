@@ -62,7 +62,7 @@ class AuthIdentityRepository(
 
     /**
      * Retires an identity by stamping `disabled_at` (only if not already
-     * set). Used to turn off a `legacy_key` after the expo period.
+     * set). Used to turn off a compromised or banned `key`.
      */
     fun disable(
         provider: String,
