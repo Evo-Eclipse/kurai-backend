@@ -1,6 +1,7 @@
 package com.example.infrastructure.lucene
 
 import com.example.infrastructure.sqlite.IndexGenerations
+import com.example.infrastructure.sqlite.SystemStateRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -13,12 +14,10 @@ import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.jetbrains.exposed.v1.jdbc.update
 import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
-import java.time.Instant
 import java.util.concurrent.atomic.AtomicReference
 
 /**
@@ -42,6 +41,7 @@ import java.util.concurrent.atomic.AtomicReference
  */
 class IndexGenerationManager(
     private val db: Database,
+    private val systemState: SystemStateRepository,
     private val rootDir: Path,
     private val deprecatedGracePeriodSeconds: Long,
     /**
@@ -58,26 +58,30 @@ class IndexGenerationManager(
     }
 
     /**
-     * Loads the generation marked `active` in `index_generations`, opening
-     * its directory. Returns `null` if no active generation exists yet
+     * Loads the generation pointed at by `system_state.active_index_id`,
+     * opening its directory. Returns `null` if no index is active yet
      * (cold-start before the first acquisition).
      */
     fun openActive(): LuceneAdapter? {
+        val activeId = systemState.read().activeIndexId
+        if (activeId == null) {
+            activeRef.set(null)
+            return null
+        }
         val row =
             transaction(db) {
                 IndexGenerations
                     .selectAll()
-                    .where { IndexGenerations.status eq "active" }
+                    .where { IndexGenerations.id eq activeId }
                     .singleOrNull()
             }
         if (row == null) {
             activeRef.set(null)
             return null
         }
-        val id = row[IndexGenerations.id]
         val path = Path.of(row[IndexGenerations.indexPath])
         val adapter = LuceneAdapter(path)
-        activeRef.set(ActiveGeneration(id, adapter))
+        activeRef.set(ActiveGeneration(activeId, adapter))
         return adapter
     }
 
@@ -117,18 +121,9 @@ class IndexGenerationManager(
     fun activate(building: BuildingGeneration) {
         building.adapter.refresh()
         val previous = activeRef.get()
-        val now = Instant.now().epochSecond
-        transaction(db) {
-            previous?.let { prev ->
-                IndexGenerations.update({ IndexGenerations.id eq prev.id }) {
-                    it[status] = "deprecated"
-                }
-            }
-            IndexGenerations.update({ IndexGenerations.id eq building.id }) {
-                it[status] = "active"
-                it[activatedAt] = now
-            }
-        }
+        // One transaction flips index_generations statuses and repoints
+        // system_state.active_index_id; readers see a consistent active set.
+        systemState.activateIndex(building.id, System.currentTimeMillis())
         activeRef.set(ActiveGeneration(building.id, building.adapter))
         previous?.let { scheduleGc(it) }
     }

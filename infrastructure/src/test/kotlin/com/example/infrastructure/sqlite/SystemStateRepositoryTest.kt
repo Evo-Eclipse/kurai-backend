@@ -46,6 +46,26 @@ class SystemStateRepositoryTest {
                 .single()[EmbeddingGenerations.status]
         }
 
+    private fun insertIndexGeneration(
+        embeddingVersion: String,
+        status: String,
+    ): Long =
+        transaction(db) {
+            IndexGenerations.insert {
+                it[IndexGenerations.embeddingVersion] = embeddingVersion
+                it[IndexGenerations.status] = status
+                it[indexPath] = "idx/$embeddingVersion"
+            }[IndexGenerations.id]
+        }
+
+    private fun indexStatusOf(id: Long): String =
+        transaction(db) {
+            IndexGenerations
+                .selectAll()
+                .where { IndexGenerations.id eq id }
+                .single()[IndexGenerations.status]
+        }
+
     @Test
     fun `seed is idempotent and read returns empty defaults`() {
         repo.seedIfMissing(now = 1L)
@@ -74,6 +94,21 @@ class SystemStateRepositoryTest {
         assertEquals("v2", repo.read().defaultEmbeddingVersion)
         assertEquals(GenerationStatus.ACTIVE, statusOf("v2"))
         assertEquals(GenerationStatus.DEPRECATED, statusOf("v1"))
+    }
+
+    @Test
+    fun `activateIndex flips status and repoints atomically`() {
+        repo.seedIfMissing(now = 0L)
+        val i1 = insertIndexGeneration("idx/v1", GenerationStatus.BUILDING)
+        val i2 = insertIndexGeneration("idx/v2", GenerationStatus.BUILDING)
+
+        repo.activateIndex(i1, now = 10L)
+        assertEquals(i1, repo.read().activeIndexId)
+
+        repo.activateIndex(i2, now = 20L)
+        assertEquals(i2, repo.read().activeIndexId)
+        assertEquals(GenerationStatus.ACTIVE, indexStatusOf(i2))
+        assertEquals(GenerationStatus.DEPRECATED, indexStatusOf(i1))
     }
 
     @Test

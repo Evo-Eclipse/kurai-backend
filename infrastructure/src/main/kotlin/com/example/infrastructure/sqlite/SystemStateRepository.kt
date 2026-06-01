@@ -115,6 +115,30 @@ class SystemStateRepository(
         }
     }
 
+    /**
+     * Atomic index switchover: activate [indexId], demote the currently-
+     * active index generation, and repoint `active_index_id` — all in one
+     * transaction.
+     */
+    fun activateIndex(
+        indexId: Long,
+        now: Long,
+    ) {
+        transaction(db) {
+            IndexGenerations.update({ IndexGenerations.status eq GenerationStatus.ACTIVE }) {
+                it[status] = GenerationStatus.DEPRECATED
+            }
+            IndexGenerations.update({ IndexGenerations.id eq indexId }) {
+                it[status] = GenerationStatus.ACTIVE
+                it[activatedAt] = now
+            }
+            SystemState.update({ SystemState.id eq SINGLE_ROW_ID }) {
+                it[activeIndexId] = indexId
+                it[updatedAt] = now
+            }
+        }
+    }
+
     /** Updates the catalog counters. Wired to a real source in a later wave. */
     fun setCounts(
         totalItems: Long,

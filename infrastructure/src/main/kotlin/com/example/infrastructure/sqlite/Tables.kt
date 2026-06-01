@@ -126,7 +126,7 @@ object EmbeddingGenerations : Table("embedding_generations") {
     val version = text("version")
     val status = text("status") // values from `GenerationStatus`
     val onnxSha256 = text("onnx_sha256")
-    val activatedAt = timestampSeconds("activated_at").nullable()
+    val activatedAt = timestampMillis("activated_at").nullable()
 
     override val primaryKey = PrimaryKey(version)
 }
@@ -150,7 +150,7 @@ object IndexGenerations : Table("index_generations") {
     val embeddingVersion = text("embedding_version")
     val status = text("status") // values from `GenerationStatus`
     val indexPath = text("index_path")
-    val activatedAt = timestampSeconds("activated_at").nullable()
+    val activatedAt = timestampMillis("activated_at").nullable()
 
     override val primaryKey = PrimaryKey(id)
 }

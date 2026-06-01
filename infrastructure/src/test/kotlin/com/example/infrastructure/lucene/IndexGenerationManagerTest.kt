@@ -1,6 +1,7 @@
 package com.example.infrastructure.lucene
 
 import com.example.infrastructure.sqlite.IndexGenerations
+import com.example.infrastructure.sqlite.SystemStateRepository
 import com.example.infrastructure.sqlite.initSchema
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -29,6 +30,7 @@ import kotlin.test.assertTrue
 class IndexGenerationManagerTest {
     private lateinit var rootDir: Path
     private lateinit var db: Database
+    private lateinit var systemState: SystemStateRepository
     private lateinit var gcScope: CoroutineScope
 
     @BeforeTest
@@ -40,6 +42,7 @@ class IndexGenerationManagerTest {
                 "org.h2.Driver",
             )
         initSchema(db)
+        systemState = SystemStateRepository(db).also { it.seedIfMissing(0L) }
         gcScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     }
 
@@ -157,6 +160,7 @@ class IndexGenerationManagerTest {
     private fun newManager(graceSeconds: Long): IndexGenerationManager =
         IndexGenerationManager(
             db = db,
+            systemState = systemState,
             rootDir = rootDir,
             deprecatedGracePeriodSeconds = graceSeconds,
             gcScope = gcScope,
