@@ -9,11 +9,10 @@ import com.example.domain.model.EmbeddingVersion
 import com.example.domain.model.UserProfile
 import com.example.domain.profile.Scoring
 import com.example.domain.profile.mmr
+import com.example.requireAuthenticatedUserId
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
-import io.ktor.server.auth.jwt.JWTPrincipal
-import io.ktor.server.auth.principal
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import kotlinx.serialization.Serializable
@@ -43,23 +42,7 @@ class RankingHandler(
     private val activeEmbeddingVersion: () -> EmbeddingVersion,
 ) {
     suspend fun handleScore(call: ApplicationCall) {
-        val principal =
-            call.principal<JWTPrincipal>()
-                ?: run {
-                    call.respond(HttpStatusCode.Unauthorized, ErrorResponse(ErrorDetail("UNAUTHORIZED")))
-                    return
-                }
-
-        val sub =
-            principal.payload
-                .getClaim("sub")
-                .asString()
-                .toLongOrNull()
-                ?: run {
-                    call.respond(HttpStatusCode.Unauthorized, ErrorResponse(ErrorDetail("UNAUTHORIZED")))
-                    return
-                }
-
+        val sub = call.requireAuthenticatedUserId() ?: return
         val req = call.receive<RankingRequest>()
         if (sub != req.userId) {
             call.respond(HttpStatusCode.Forbidden, ErrorResponse(ErrorDetail("FORBIDDEN")))
@@ -70,7 +53,7 @@ class RankingHandler(
             call.respond(HttpStatusCode.UnprocessableEntity, ErrorResponse(ErrorDetail("INVALID_CANDIDATE_IDS")))
             return
         }
-        if (req.topK < 1 || req.topK > MAX_TOP_K) {
+        if (req.topK !in 1..MAX_TOP_K) {
             call.respond(HttpStatusCode.UnprocessableEntity, ErrorResponse(ErrorDetail("INVALID_TOP_K")))
             return
         }

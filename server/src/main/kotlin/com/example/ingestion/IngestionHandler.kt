@@ -8,10 +8,9 @@ import com.example.domain.events.EventQueue
 import com.example.domain.events.RawEvent
 import com.example.domain.model.EmbeddingVersion
 import com.example.domain.model.UserEvent
+import com.example.requireAuthenticatedUserId
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
-import io.ktor.server.auth.jwt.JWTPrincipal
-import io.ktor.server.auth.principal
 import io.ktor.server.plugins.BadRequestException
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
@@ -33,23 +32,7 @@ class IngestionHandler(
     private val resolveWeight: (String) -> Float,
 ) {
     suspend fun handleIngest(call: ApplicationCall) {
-        val principal =
-            call.principal<JWTPrincipal>()
-                ?: run {
-                    call.respond(HttpStatusCode.Unauthorized, ErrorResponse(ErrorDetail("UNAUTHORIZED")))
-                    return
-                }
-
-        val sub =
-            principal.payload
-                .getClaim("sub")
-                .asString()
-                .toLongOrNull()
-                ?: run {
-                    call.respond(HttpStatusCode.Unauthorized, ErrorResponse(ErrorDetail("UNAUTHORIZED")))
-                    return
-                }
-
+        val sub = call.requireAuthenticatedUserId() ?: return
         val req = call.receive<IngestionRequest>()
         if (sub != req.userId) {
             call.respond(HttpStatusCode.Forbidden, ErrorResponse(ErrorDetail("FORBIDDEN")))
