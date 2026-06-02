@@ -20,15 +20,6 @@ data class UserRow(
 class UserRepository(
     private val db: Database,
 ) {
-    fun findByEmail(email: String): UserRow? =
-        transaction(db) {
-            Users
-                .selectAll()
-                .where { Users.email eq email }
-                .firstOrNull()
-                ?.let(::rowToUser)
-        }
-
     fun findById(id: Long): UserRow? =
         transaction(db) {
             Users

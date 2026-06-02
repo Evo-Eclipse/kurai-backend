@@ -11,7 +11,6 @@ import com.example.domain.model.EmbeddingVersion
 import com.example.domain.model.Prototype
 import com.example.domain.model.UserProfile
 import com.example.domain.profile.Scoring
-import com.example.profile.configureRankingRoutes
 import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody

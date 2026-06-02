@@ -55,11 +55,6 @@ class CachingProfileAdapter(
         return drained
     }
 
-    fun invalidate(userId: Long) {
-        cache.invalidate(userId)
-        dirtyMap.remove(userId)
-    }
-
     fun cachedUserIds(): Set<Long> = cache.asMap().keys.toSet()
 
     suspend fun forceUpdate(

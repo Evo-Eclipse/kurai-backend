@@ -1,6 +1,5 @@
 package com.example
 
-import com.example.application.embedding.CachingEmbeddingAdapter
 import com.example.application.profile.CachingProfileAdapter
 import com.example.application.profile.ProfilePersistWorker
 import com.example.domain.model.EmbeddingVersion

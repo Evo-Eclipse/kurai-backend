@@ -1,6 +1,5 @@
 package com.example.profile
 
-import com.example.profile.RankingHandler
 import io.ktor.server.application.Application
 import io.ktor.server.auth.authenticate
 import io.ktor.server.routing.post

@@ -9,8 +9,6 @@ import com.example.application.auth.IssueChallengeResult
 import com.example.application.auth.RefreshResult
 import com.example.application.auth.VerifyChallengeResult
 import com.example.application.auth.VerifyKeyResult
-import com.example.auth.ChallengeIpRateLimiter
-import com.example.auth.SessionAuthenticator
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall

@@ -1,10 +1,8 @@
 package com.example.application.profile
 
 import com.example.application.embedding.CachingEmbeddingAdapter
-import com.example.application.profile.CachingProfileAdapter
 import com.example.domain.model.EmbeddingVersion
 import com.example.domain.model.Prototype
-import com.example.domain.model.UserProfile
 import com.example.domain.profile.Scoring
 import com.example.infrastructure.sqlite.EventData
 import com.example.infrastructure.sqlite.EventRepository
@@ -112,7 +110,6 @@ class ProfileMigrationWorkerTest {
             Thread.sleep(50) // ensure different timestamps
             profileRepo.upsert(userId = 20L, embeddingVersion = "v1", lastAppliedEventId = 0L)
 
-            val migratedOrder = mutableListOf<Long>()
             val adapter =
                 CachingProfileAdapter(
                     loadProfile = { null },

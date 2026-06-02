@@ -1,10 +1,8 @@
 package com.example.application.profile
 
-import com.example.application.profile.CachingProfileAdapter
 import com.example.domain.model.EmbeddingVersion
 import com.example.domain.model.Prototype
 import com.example.domain.model.UserEvent
-import com.example.domain.model.UserProfile
 import com.example.infrastructure.sqlite.ProfileRepository
 import com.example.infrastructure.sqlite.initSchema
 import kotlinx.coroutines.ExperimentalCoroutinesApi
