@@ -30,9 +30,6 @@ class KMeansScheduler(
     private val minAgeMs: Long = 24 * 3_600_000L,
     private val sampleLimit: Int = 50_000,
 ) {
-    private var lastKnownCount: Long = 0L
-    private var lastRetrainedAt: Long = 0L
-
     suspend fun run() {
         try {
             while (true) {
@@ -47,19 +44,29 @@ class KMeansScheduler(
     }
 
     internal suspend fun check() {
-        val currentCount = withContext(Dispatchers.IO) { itemRepo.countAll() }
         val now = System.currentTimeMillis()
-        val growthMet = lastKnownCount == 0L || currentCount >= (lastKnownCount * minGrowthFactor).toLong()
-        val ageMet = (now - lastRetrainedAt) >= minAgeMs
+        val totalItems = withContext(Dispatchers.IO) { itemRepo.countAll() }
+        val embeddedItems = luceneAdapter.numDocs().toLong()
+        // Catalog counters are system-written facts; refresh them every cycle.
+        systemState.setCounts(totalItems = totalItems, embeddedItems = embeddedItems, now = now)
+
+        // The rebuild trigger is persisted: compare the catalog against the
+        // active generation's catalog_size_at_build, so it survives restarts.
+        val state = systemState.read()
+        val active = state.activeClusterId?.let { clusterGenerations.findById(it) }
+        val baseline = active?.catalogSizeAtBuild ?: 0L
+        val lastActivatedAt = active?.activatedAt ?: 0L
+        val growthMet = active == null || totalItems >= (baseline * minGrowthFactor).toLong()
+        val ageMet = (now - lastActivatedAt) >= minAgeMs
         if (!growthMet || !ageMet) return
 
-        val embeddingVersion = systemState.read().defaultEmbeddingVersion
+        val embeddingVersion = state.defaultEmbeddingVersion
         if (embeddingVersion == null) {
             log.warn("KMeansScheduler: no active embedding version — skipping cluster build")
             return
         }
 
-        log.info("KMeansScheduler: triggering retraining (count=$currentCount, prev=$lastKnownCount)")
+        log.info("KMeansScheduler: triggering retraining (total=$totalItems, baseline=$baseline)")
         val sampleIds = withContext(Dispatchers.IO) { itemRepo.loadSample(sampleLimit) }
         val vectors = sampleIds.mapNotNull { luceneAdapter.getVector(it) }
         if (vectors.size < 2) {
@@ -79,14 +86,11 @@ class KMeansScheduler(
             clusterGenerations.createBuilding(
                 embeddingVersion = embeddingVersion,
                 clusterCount = centroids.size,
-                catalogSizeAtBuild = currentCount,
+                catalogSizeAtBuild = totalItems,
                 centroidsPath = centroidsKey,
             )
         systemState.activateCluster(clusterId, now)
         clusterServiceRef.set(ClusterService.fromCentroids(centroids))
-
-        lastKnownCount = currentCount
-        lastRetrainedAt = now
         log.info("KMeansScheduler: activated cluster generation id=$clusterId (k=${centroids.size})")
     }
 

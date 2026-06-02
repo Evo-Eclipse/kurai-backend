@@ -101,6 +101,9 @@ class LuceneAdapter(
         current.close()
     }
 
+    /** Number of indexed (embedded) documents in the current reader view. */
+    fun numDocs(): Int = readerRef.get().numDocs()
+
     /**
      * Returns up to [k] nearest item ids by cosine similarity. Empty index
      * returns an empty list. Concurrent-safe with [refresh].
