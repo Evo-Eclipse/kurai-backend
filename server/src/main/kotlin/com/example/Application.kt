@@ -42,6 +42,7 @@ import com.example.infrastructure.onnx.OnnxInferenceAdapter
 import com.example.infrastructure.sqlite.AcquisitionJobRepository
 import com.example.infrastructure.sqlite.AuthIdentityRepository
 import com.example.infrastructure.sqlite.AuthSessionRepository
+import com.example.infrastructure.sqlite.ClusterGenerationRepository
 import com.example.infrastructure.sqlite.EventBatcher
 import com.example.infrastructure.sqlite.EventData
 import com.example.infrastructure.sqlite.EventRepository
@@ -55,6 +56,7 @@ import com.example.infrastructure.sqlite.RuntimeConfigRepository
 import com.example.infrastructure.sqlite.SystemStateRepository
 import com.example.infrastructure.sqlite.UserRepository
 import com.example.infrastructure.sqlite.initSchema
+import com.example.infrastructure.storage.GetResult
 import com.example.infrastructure.storage.LocalObjectStore
 import com.example.ingestion.IngestionHandler
 import com.example.ingestion.configureIngestionRoutes
@@ -141,6 +143,7 @@ suspend fun Application.installCore() {
     dependencies.provide<SystemStateRepository> {
         SystemStateRepository(dependencies.resolve()).also { it.seedIfMissing(System.currentTimeMillis()) }
     }
+    dependencies.provide<ClusterGenerationRepository> { ClusterGenerationRepository(dependencies.resolve()) }
     dependencies.provide<ProfileRepository> { ProfileRepository(dependencies.resolve()) }
     dependencies.provide<EventRepository> { EventRepository(dependencies.resolve()) }
     dependencies.provide<EventWeightRepository> { EventWeightRepository(dependencies.resolve()) }
@@ -336,13 +339,24 @@ suspend fun Application.installCore() {
     }
 
     dependencies.provide<ClusterServiceRef> {
-        ClusterServiceRef(
-            config.clustersPath?.let { path ->
-                runCatching { ClusterService.load(path) }
-                    .onFailure { log.warn("Failed to load clusters from $path — ε-exploration disabled") }
-                    .getOrNull()
-            },
-        )
+        // Load whichever cluster generation system_state currently points at.
+        val systemState = dependencies.resolve<SystemStateRepository>()
+        val clusterGenerations = dependencies.resolve<ClusterGenerationRepository>()
+        val store = dependencies.resolve<LocalObjectStore>()
+        val active = systemState.read().activeClusterId?.let { clusterGenerations.findById(it) }
+        val clusters =
+            active?.let { gen ->
+                when (val result = runBlocking { store.get(gen.centroidsPath) }) {
+                    is GetResult.Found -> ClusterService.fromBytes(result.bytes)
+                    GetResult.NotFound -> {
+                        log.warn(
+                            "Active cluster ${gen.id} centroids missing at ${gen.centroidsPath} — ε-exploration disabled",
+                        )
+                        null
+                    }
+                }
+            }
+        ClusterServiceRef(clusters)
     }
     dependencies.provide<RankingHandler> {
         val ref = dependencies.resolve<ClusterServiceRef>()
@@ -435,17 +449,16 @@ suspend fun Application.installLifecycle() {
             eventRepo = eventRepo,
         ).run()
     }
-    if (config.clustersPath != null) {
-        acquisitionScope.launch {
-            KMeansScheduler(
-                itemRepo = itemRepo,
-                luceneAdapter = lucene,
-                objectStore = objectStore,
-                clustersKey = config.clustersPath.fileName.toString(),
-                clusterServiceRef = clusterRef.asAtomicReference(),
-                intervalMs = { runtime.get(ConfigKey.KMeansCheckIntervalMs) },
-            ).run()
-        }
+    acquisitionScope.launch {
+        KMeansScheduler(
+            itemRepo = itemRepo,
+            luceneAdapter = lucene,
+            objectStore = objectStore,
+            clusterGenerations = dependencies.resolve<ClusterGenerationRepository>(),
+            systemState = dependencies.resolve<SystemStateRepository>(),
+            clusterServiceRef = clusterRef.asAtomicReference(),
+            intervalMs = { runtime.get(ConfigKey.KMeansCheckIntervalMs) },
+        ).run()
     }
 
     monitor.subscribe(ApplicationStopping) {

@@ -14,7 +14,6 @@ data class AppConfig(
     val objectStoreDir: Path,
     val onnxModelPath: Path,
     val onnxModelSha256: String,
-    val clustersPath: Path?,
     val profilePersistIntervalMs: Long,
     val kMeansCheckIntervalMs: Long,
     val authJwtTtlMs: Long,
@@ -102,7 +101,6 @@ data class AppConfig(
                 onnxModelSha256 =
                     env["KURAI_ONNX_MODEL_SHA256"]
                         ?: error("Missing required environment variable: KURAI_ONNX_MODEL_SHA256"),
-                clustersPath = env["KURAI_CLUSTERS_PATH"]?.let(Path::of),
                 profilePersistIntervalMs =
                     env["KURAI_PROFILE_PERSIST_INTERVAL_MS"]?.toLong()
                         ?: DEFAULT_PROFILE_PERSIST_INTERVAL_MS,

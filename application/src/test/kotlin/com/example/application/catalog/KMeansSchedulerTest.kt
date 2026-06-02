@@ -3,7 +3,10 @@ package com.example.application.catalog
 import com.example.domain.cluster.ClusterService
 import com.example.domain.profile.Scoring
 import com.example.infrastructure.lucene.LuceneAdapter
+import com.example.infrastructure.sqlite.ClusterGenerationRepository
+import com.example.infrastructure.sqlite.GenerationStatus
 import com.example.infrastructure.sqlite.ItemRepository
+import com.example.infrastructure.sqlite.SystemStateRepository
 import com.example.infrastructure.sqlite.initSchema
 import com.example.infrastructure.storage.LocalObjectStore
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -27,6 +30,8 @@ class KMeansSchedulerTest {
     private lateinit var objectStoreDir: java.nio.file.Path
     private lateinit var lucene: LuceneAdapter
     private lateinit var objectStore: LocalObjectStore
+    private lateinit var clusterGenerations: ClusterGenerationRepository
+    private lateinit var systemState: SystemStateRepository
 
     @BeforeTest
     fun setUp() {
@@ -41,6 +46,8 @@ class KMeansSchedulerTest {
         objectStoreDir = Files.createTempDirectory("objstore-kmeans-test")
         lucene = LuceneAdapter(luceneDir)
         objectStore = LocalObjectStore(objectStoreDir)
+        clusterGenerations = ClusterGenerationRepository(db)
+        systemState = SystemStateRepository(db).also { it.seedIfMissing(0L) }
     }
 
     private fun normalizedVec(vararg values: Float): FloatArray {
@@ -71,7 +78,8 @@ class KMeansSchedulerTest {
                     itemRepo = itemRepo,
                     luceneAdapter = lucene,
                     objectStore = objectStore,
-                    clustersKey = "clusters.bin",
+                    clusterGenerations = clusterGenerations,
+                    systemState = systemState,
                     clusterServiceRef = ref,
                     intervalMs = { 3_600_000 },
                     minGrowthFactor = 1.10,
@@ -85,6 +93,40 @@ class KMeansSchedulerTest {
             assertNull(ref.get(), "Should not update when there are no vectors to train on")
             job.cancel()
             job.join()
+        }
+
+    @Test
+    fun `retrain records and activates a cluster generation`() =
+        runTest {
+            systemState.setDefaultEmbeddingVersion("v1", now = 0L)
+            // Three indexed items with vectors so the sample has >= 2 vectors.
+            listOf(normalizedVec(1f), normalizedVec(0f, 1f), normalizedVec(0f, 0f, 1f))
+                .forEachIndexed { i, vec ->
+                    val id = insertItem("md5-$i")
+                    lucene.write(id, vec)
+                }
+            lucene.refresh()
+
+            val ref = AtomicReference<ClusterService?>(null)
+            val scheduler =
+                KMeansScheduler(
+                    itemRepo = itemRepo,
+                    luceneAdapter = lucene,
+                    objectStore = objectStore,
+                    clusterGenerations = clusterGenerations,
+                    systemState = systemState,
+                    clusterServiceRef = ref,
+                    intervalMs = { 3_600_000 },
+                    minGrowthFactor = 1.10,
+                    minAgeMs = 0L,
+                )
+            scheduler.check()
+
+            val activeId = assertNotNull(systemState.read().activeClusterId, "active cluster pointer must be set")
+            val gen = assertNotNull(clusterGenerations.findById(activeId))
+            assertEquals(GenerationStatus.ACTIVE, gen.status)
+            assertEquals("v1", gen.embeddingVersion)
+            assertNotNull(ref.get(), "in-memory cluster reference must be swapped in")
         }
 
     @Test

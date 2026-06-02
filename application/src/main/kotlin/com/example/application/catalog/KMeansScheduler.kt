@@ -3,7 +3,9 @@ package com.example.application.catalog
 import com.example.domain.cluster.ClusterService
 import com.example.domain.profile.kMeansCentroids
 import com.example.infrastructure.lucene.LuceneAdapter
+import com.example.infrastructure.sqlite.ClusterGenerationRepository
 import com.example.infrastructure.sqlite.ItemRepository
+import com.example.infrastructure.sqlite.SystemStateRepository
 import com.example.infrastructure.storage.LocalObjectStore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -20,7 +22,8 @@ class KMeansScheduler(
     private val itemRepo: ItemRepository,
     private val luceneAdapter: LuceneAdapter,
     private val objectStore: LocalObjectStore,
-    private val clustersKey: String,
+    private val clusterGenerations: ClusterGenerationRepository,
+    private val systemState: SystemStateRepository,
     private val clusterServiceRef: AtomicReference<ClusterService?>,
     private val intervalMs: () -> Long,
     private val minGrowthFactor: Double = 1.10,
@@ -43,12 +46,18 @@ class KMeansScheduler(
         }
     }
 
-    private suspend fun check() {
+    internal suspend fun check() {
         val currentCount = withContext(Dispatchers.IO) { itemRepo.countAll() }
         val now = System.currentTimeMillis()
         val growthMet = lastKnownCount == 0L || currentCount >= (lastKnownCount * minGrowthFactor).toLong()
         val ageMet = (now - lastRetrainedAt) >= minAgeMs
         if (!growthMet || !ageMet) return
+
+        val embeddingVersion = systemState.read().defaultEmbeddingVersion
+        if (embeddingVersion == null) {
+            log.warn("KMeansScheduler: no active embedding version — skipping cluster build")
+            return
+        }
 
         log.info("KMeansScheduler: triggering retraining (count=$currentCount, prev=$lastKnownCount)")
         val sampleIds = withContext(Dispatchers.IO) { itemRepo.loadSample(sampleLimit) }
@@ -60,14 +69,25 @@ class KMeansScheduler(
 
         val k = clusterServiceRef.get()?.size?.takeIf { it >= 2 } ?: DEFAULT_K
         val centroids = trainKMeans(vectors, k = minOf(k, vectors.size), seed = now)
-        val bytes = serializeCentroids(centroids)
 
-        objectStore.put(clustersKey, bytes)
+        // Persist the centroids under a per-generation key, register the build,
+        // and flip system_state.active_cluster_id atomically; then swap the
+        // in-memory reference so live readers pick up the new clusters.
+        val centroidsKey = "clusters/${embeddingVersion}_$now.bin"
+        withContext(Dispatchers.IO) { objectStore.put(centroidsKey, serializeCentroids(centroids)) }
+        val clusterId =
+            clusterGenerations.createBuilding(
+                embeddingVersion = embeddingVersion,
+                clusterCount = centroids.size,
+                catalogSizeAtBuild = currentCount,
+                centroidsPath = centroidsKey,
+            )
+        systemState.activateCluster(clusterId, now)
         clusterServiceRef.set(ClusterService.fromCentroids(centroids))
 
         lastKnownCount = currentCount
         lastRetrainedAt = now
-        log.info("KMeansScheduler: retraining complete (k=${centroids.size})")
+        log.info("KMeansScheduler: activated cluster generation id=$clusterId (k=${centroids.size})")
     }
 
     companion object {
