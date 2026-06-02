@@ -1,7 +1,6 @@
 package com.example.application.profile
 
 import com.example.application.embedding.CachingEmbeddingAdapter
-import com.example.application.profile.CachingProfileAdapter
 import com.example.domain.model.EmbeddingVersion
 import com.example.domain.model.UserEvent
 import com.example.domain.model.UserProfile

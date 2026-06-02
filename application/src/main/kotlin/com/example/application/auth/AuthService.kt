@@ -6,6 +6,8 @@ import com.example.infrastructure.sqlite.AuthSessionRepository
 import com.example.infrastructure.sqlite.EmailKind
 import com.example.infrastructure.sqlite.LoginChallengeRepository
 import com.example.infrastructure.sqlite.UserRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.util.UUID
 
 /**
@@ -115,7 +117,18 @@ class AuthService(
 
         if (session.replacedBy != null) {
             if (AuthCodecs.constantTimeEquals(session.refreshHash, presentedHash)) {
-                sessions.revokeAllForUser(session.userId, now)
+                // Only treat as theft (revoke chain) if this superseded token was *not*
+                // the direct predecessor of a still-active successor. This prevents
+                // legitimate concurrent/retried refreshes from self-revoking the fresh
+                // session (false positive "reuse").
+                val successor = session.replacedBy?.let { sessions.findById(it) }
+                val isImmediatePredecessor =
+                    successor != null &&
+                        successor.replacedBy == null &&
+                        successor.isActive(now)
+                if (!isImmediatePredecessor) {
+                    sessions.revokeAllForUser(session.userId, now)
+                }
             }
             return RefreshResult.Invalid
         }
@@ -153,42 +166,46 @@ class AuthService(
      * The HTTP surface for this is public; callers must rate-limit it (see
      * the abuse note on `configureAuthRoutes`).
      */
-    fun issueKey(deviceLabel: String?): KeyIssued {
-        val now = clock()
-        val userId = users.insertAnonymous(now)
-        val rawKey = AuthCodecs.generateKey()
-        identities.insert(userId, AuthProvider.KEY, AuthCodecs.sha256Hex(rawKey), now)
-        val (sessionId, refreshToken) = issueSession(userId, deviceLabel, now)
-        return KeyIssued(
-            userId = userId,
-            key = rawKey,
-            sessionId = sessionId,
-            refreshToken = refreshToken,
-        )
-    }
+    suspend fun issueKey(deviceLabel: String?): KeyIssued =
+        withContext(Dispatchers.IO) {
+            val now = clock()
+            val userId = users.insertAnonymous(now)
+            val rawKey = AuthCodecs.generateKey()
+            identities.insert(userId, AuthProvider.KEY, AuthCodecs.sha256Hex(rawKey), now)
+            val (sessionId, refreshToken) = issueSession(userId, deviceLabel, now)
+            KeyIssued(
+                userId = userId,
+                key = rawKey,
+                sessionId = sessionId,
+                refreshToken = refreshToken,
+            )
+        }
 
     /** Exchange a key for a session, unless its identity is disabled. */
-    fun verifyKey(
+    suspend fun verifyKey(
         rawKey: String,
         deviceLabel: String?,
-    ): VerifyKeyResult {
-        val now = clock()
-        val identity =
-            identities.findBySubject(AuthProvider.KEY, AuthCodecs.sha256Hex(rawKey))
-                ?: return VerifyKeyResult.Invalid
-        if (identity.disabledAt != null) return VerifyKeyResult.Invalid
-        users.touchLastSeen(identity.userId, now)
-        val (sessionId, refreshToken) = issueSession(identity.userId, deviceLabel, now)
-        return VerifyKeyResult.Ok(
-            userId = identity.userId,
-            sessionId = sessionId,
-            refreshToken = refreshToken,
-        )
-    }
+    ): VerifyKeyResult =
+        withContext(Dispatchers.IO) {
+            val now = clock()
+            val identity =
+                identities.findBySubject(AuthProvider.KEY, AuthCodecs.sha256Hex(rawKey))
+                    ?: return@withContext VerifyKeyResult.Invalid
+            if (identity.disabledAt != null) return@withContext VerifyKeyResult.Invalid
+            users.touchLastSeen(identity.userId, now)
+            val (sessionId, refreshToken) = issueSession(identity.userId, deviceLabel, now)
+            VerifyKeyResult.Ok(
+                userId = identity.userId,
+                sessionId = sessionId,
+                refreshToken = refreshToken,
+            )
+        }
 
     /** Operator action: retire a key so it can no longer log in. */
-    fun disableKey(rawKey: String): Boolean =
-        identities.disable(AuthProvider.KEY, AuthCodecs.sha256Hex(rawKey), clock()) > 0
+    suspend fun disableKey(rawKey: String): Boolean =
+        withContext(Dispatchers.IO) {
+            identities.disable(AuthProvider.KEY, AuthCodecs.sha256Hex(rawKey), clock()) > 0
+        }
 
     /** Mint a fresh session + refresh secret; returns (sessionId, rawRefreshToken). */
     private fun issueSession(

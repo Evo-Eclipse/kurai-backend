@@ -74,6 +74,7 @@ import io.ktor.server.auth.jwt.jwt
 import io.ktor.server.plugins.calllogging.CallLogging
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.di.dependencies
+import io.ktor.server.plugins.forwardedheaders.XForwardedHeaders
 import io.ktor.server.plugins.statuspages.StatusPages
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -111,7 +112,13 @@ suspend fun Application.installCore() {
     val config = AppConfig.load()
     dependencies.provide<AppConfig> { config }
     dependencies.provide<ReadinessGate> { ReadinessGate() }
-    dependencies.provide<AcquisitionScope> { AcquisitionScope(CoroutineScope(SupervisorJob())) }
+    dependencies.provide<AcquisitionScope> {
+        AcquisitionScope(
+            CoroutineScope(
+                SupervisorJob() + Dispatchers.IO.limitedParallelism(8),
+            ),
+        )
+    }
 
     dependencies.provide<Database> {
         withContext(Dispatchers.IO) {
@@ -164,6 +171,7 @@ suspend fun Application.installCore() {
         runtime.seedIfMissing(ConfigKey.AuthJwtTtlMs, config.authJwtTtlMs.toString())
         runtime.seedIfMissing(ConfigKey.ProfilePersistIntervalMs, config.profilePersistIntervalMs.toString())
         runtime.seedIfMissing(ConfigKey.KMeansCheckIntervalMs, config.kMeansCheckIntervalMs.toString())
+        runtime.seedIfMissing(ConfigKey.ProtoSplitIntervalMs, 3_600_000L.toString())
         runtime.seedIfMissing(ConfigKey.SessionGcIntervalMs, config.sessionGcIntervalMs.toString())
         runtime.seedIfMissing(ConfigKey.SessionGcRetentionMs, config.sessionGcRetentionMs.toString())
         runtime.seedIfMissing(ConfigKey.KeyIssueRateLimitMax, config.keyIssueRateLimitMax.toString())
@@ -346,7 +354,7 @@ suspend fun Application.installCore() {
         val active = systemState.read().activeClusterId?.let { clusterGenerations.findById(it) }
         val clusters =
             active?.let { gen ->
-                when (val result = runBlocking { store.get(gen.centroidsPath) }) {
+                when (val result = store.get(gen.centroidsPath)) {
                     is GetResult.Found -> ClusterService.fromBytes(result.bytes)
                     GetResult.NotFound -> {
                         log.warn(
@@ -398,7 +406,6 @@ suspend fun Application.installRouting() {
  * resolved its share of the DI graph.
  */
 suspend fun Application.installLifecycle() {
-    val config = dependencies.resolve<AppConfig>()
     val gate = dependencies.resolve<ReadinessGate>()
     val acquisitionScope = dependencies.resolve<AcquisitionScope>().scope
     val cachingProfile = dependencies.resolve<CachingProfileAdapter>()
@@ -447,6 +454,7 @@ suspend fun Application.installLifecycle() {
             cachingEmbedding = cachingEmbedding,
             prototypeRepo = prototypeRepo,
             eventRepo = eventRepo,
+            intervalMs = { runtime.get(ConfigKey.ProtoSplitIntervalMs) },
         ).run()
     }
     acquisitionScope.launch {
@@ -499,6 +507,7 @@ fun Application.configure(
     isSessionActive: (sessionId: String) -> Boolean = { true },
 ) {
     install(ContentNegotiation) { json() }
+    install(XForwardedHeaders)
     // Default CallLogging format: logs method + URI + status, not headers.
     // Authorization header values never appear in log output.
     install(CallLogging)

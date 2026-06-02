@@ -84,4 +84,7 @@ sealed class ConfigKey<T>(
 
     /** Length of the key-issuance rate-limit window. */
     data object KeyIssueRateLimitWindowMs : LongKey(key = "key_issue.rate_limit_window_ms")
+
+    /** Interval between prototype split runs (worker). */
+    data object ProtoSplitIntervalMs : LongKey(key = "proto_split.interval_ms")
 }

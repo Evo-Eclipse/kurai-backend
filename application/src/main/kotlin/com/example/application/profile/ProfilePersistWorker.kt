@@ -1,6 +1,5 @@
 package com.example.application.profile
 
-import com.example.application.profile.CachingProfileAdapter
 import com.example.infrastructure.sqlite.ProfileRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable

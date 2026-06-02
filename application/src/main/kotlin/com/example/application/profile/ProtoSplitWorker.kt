@@ -1,7 +1,6 @@
 package com.example.application.profile
 
 import com.example.application.embedding.CachingEmbeddingAdapter
-import com.example.application.profile.CachingProfileAdapter
 import com.example.domain.model.Prototype
 import com.example.domain.profile.Scoring
 import com.example.domain.profile.silhouette
@@ -23,12 +22,12 @@ class ProtoSplitWorker(
     private val cachingEmbedding: CachingEmbeddingAdapter,
     private val prototypeRepo: PrototypeRepository,
     private val eventRepo: EventRepository,
-    private val intervalMs: Long = 3_600_000,
+    private val intervalMs: () -> Long,
 ) {
     suspend fun run() {
         try {
             while (true) {
-                delay(intervalMs)
+                delay(intervalMs())
                 sweep()
             }
         } catch (e: CancellationException) {

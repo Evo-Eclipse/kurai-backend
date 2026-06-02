@@ -1,6 +1,5 @@
 package com.example.auth
 
-import com.example.auth.AuthHandler
 import io.ktor.server.application.Application
 import io.ktor.server.auth.authenticate
 import io.ktor.server.routing.post
@@ -16,7 +15,10 @@ fun Application.configureAuthRoutes(handler: AuthHandler) {
             post("/refresh") { handler.handleRefresh(call) }
             // Self-service key onboarding (expo). Issuance is unauthenticated
             // by design — frictionless sign-up — so it creates a user on every
-            // call. TODO: add a per-IP rate limit before this is abuse-exposed.
+            // call. Protected by live-configurable per-IP rate limit (see
+            // FixedWindowRateLimiter + ConfigKey.KeyIssue*). Note: behind a
+            // proxy, ForwardedHeaders must be installed for remoteHost to be
+            // the real client (otherwise all clients share the proxy IP).
             post("/key/issue") { handler.handleKeyIssue(call) }
             post("/key/verify") { handler.handleKeyVerify(call) }
 
