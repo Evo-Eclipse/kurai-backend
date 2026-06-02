@@ -40,7 +40,7 @@ class ImagePreprocessor {
     suspend fun preprocess(imageBytes: ByteArray): FloatArray =
         withContext(Dispatchers.IO) {
             val decoded = decode(imageBytes)
-            val resized = lanczos3Resize(decoded, TARGET_SIZE, TARGET_SIZE)
+            val resized = lanczos3Resize(decoded)
             normalizeToChw(resized)
         }
 
@@ -103,11 +103,9 @@ class ImagePreprocessor {
      * fixed-point for SIMD; double-precision matches it within the same
      * rounding rules).
      */
-    private fun lanczos3Resize(
-        src: BufferedImage,
-        dstW: Int,
-        dstH: Int,
-    ): ResampledImage {
+    private fun lanczos3Resize(src: BufferedImage): ResampledImage {
+        val dstW = TARGET_SIZE
+        val dstH = TARGET_SIZE
         val srcW = src.width
         val srcH = src.height
         val srcPixels = src.getRGB(0, 0, srcW, srcH, null, 0, srcW)

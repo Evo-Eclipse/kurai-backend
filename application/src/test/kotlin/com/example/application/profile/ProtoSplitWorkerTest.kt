@@ -1,7 +1,6 @@
 package com.example.application.profile
 
 import com.example.application.embedding.CachingEmbeddingAdapter
-import com.example.application.profile.CachingProfileAdapter
 import com.example.domain.model.EmbeddingVersion
 import com.example.domain.model.Prototype
 import com.example.domain.model.UserProfile
@@ -65,6 +64,7 @@ class ProtoSplitWorkerTest {
             cachingEmbedding = cachingEmbedding,
             prototypeRepo = prototypeRepo,
             eventRepo = eventRepo,
+            intervalMs = { 1000L },
         )
     }
 
@@ -114,6 +114,7 @@ class ProtoSplitWorkerTest {
                 cachingEmbedding = cachingEmbedding,
                 prototypeRepo = prototypeRepo,
                 eventRepo = eventRepo,
+                intervalMs = { 1000L },
             )
         worker.sweep()
     }

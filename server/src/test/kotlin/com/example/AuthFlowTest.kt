@@ -372,15 +372,23 @@ class AuthFlowTest {
                         setBody(VerifyRequest(challengeId = challengeId, code = code))
                     }.body()
 
-            // Legitimate rotation: old token -> new pair.
-            val rotated: RefreshResponse =
+            // Legitimate rotation 1: old -> rotated1
+            val rotated1: RefreshResponse =
                 http
                     .post("/auth/refresh") {
                         contentType(ContentType.Application.Json)
                         setBody(RefreshRequest(sessionId = first.sessionId, refreshToken = first.refreshToken))
                     }.body()
 
-            // Replaying the now-superseded token is detected as reuse.
+            // Legitimate rotation 2 using rotated1 -> rotated2 (so the original superseded is no longer immediate predecessor)
+            val rotated2: RefreshResponse =
+                http
+                    .post("/auth/refresh") {
+                        contentType(ContentType.Application.Json)
+                        setBody(RefreshRequest(sessionId = rotated1.sessionId, refreshToken = rotated1.refreshToken))
+                    }.body()
+
+            // Replaying a now-older superseded token (not the immediate one) is detected as reuse/theft.
             val replay =
                 http.post("/auth/refresh") {
                     contentType(ContentType.Application.Json)
@@ -388,13 +396,60 @@ class AuthFlowTest {
                 }
             assertEquals(HttpStatusCode.Unauthorized, replay.status)
 
-            // …and the whole chain is burned: even the freshly rotated token dies.
+            // The whole chain is burned: even the latest rotated token dies.
             val afterBurn =
                 http.post("/auth/refresh") {
                     contentType(ContentType.Application.Json)
-                    setBody(RefreshRequest(sessionId = rotated.sessionId, refreshToken = rotated.refreshToken))
+                    setBody(RefreshRequest(sessionId = rotated2.sessionId, refreshToken = rotated2.refreshToken))
                 }
             assertEquals(HttpStatusCode.Unauthorized, afterBurn.status)
+        }
+
+    @Test
+    fun `concurrent retry of just-rotated refresh token does not self-revoke the fresh session`() =
+        testApplication {
+            val (_, sender, authService) = fresh()
+            installAuth(authService)
+            val http = jsonClient()
+
+            http
+                .post("/auth/challenge") {
+                    contentType(ContentType.Application.Json)
+                    setBody(ChallengeRequest(email = "concurrent@example.com"))
+                }.body<ChallengeResponse>()
+            val (challengeId, code) = checkNotNull(sender.byEmail["concurrent@example.com"])
+            val first: VerifyResponse =
+                http
+                    .post("/auth/verify") {
+                        contentType(ContentType.Application.Json)
+                        setBody(VerifyRequest(challengeId = challengeId, code = code))
+                    }.body()
+
+            // Legitimate first refresh.
+            val rotated: RefreshResponse =
+                http
+                    .post("/auth/refresh") {
+                        contentType(ContentType.Application.Json)
+                        setBody(RefreshRequest(sessionId = first.sessionId, refreshToken = first.refreshToken))
+                    }.body()
+
+            // Simulate concurrent/retry with the *same old* token (immediate predecessor).
+            // Should be rejected, but MUST NOT revoke the fresh rotated session.
+            val replay1 =
+                http.post("/auth/refresh") {
+                    contentType(ContentType.Application.Json)
+                    setBody(RefreshRequest(sessionId = first.sessionId, refreshToken = first.refreshToken))
+                }
+            assertEquals(HttpStatusCode.Unauthorized, replay1.status)
+
+            // The fresh token from the first rotation must still work (no self-revoke).
+            val replay2: RefreshResponse =
+                http
+                    .post("/auth/refresh") {
+                        contentType(ContentType.Application.Json)
+                        setBody(RefreshRequest(sessionId = rotated.sessionId, refreshToken = rotated.refreshToken))
+                    }.body()
+            assertNotEquals(rotated.refreshToken, replay2.refreshToken)
         }
 
     @Test

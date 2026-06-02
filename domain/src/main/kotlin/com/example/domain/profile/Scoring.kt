@@ -90,7 +90,7 @@ object Scoring {
         itemVector: FloatArray,
     ): List<Prototype> {
         if (prototypes.isEmpty()) return prototypes
-        val idx = prototypes.indices.maxByOrNull { cos(prototypes[it].vector, itemVector) }!!
+        val idx = prototypes.indices.maxBy { cos(prototypes[it].vector, itemVector) }
         val proto = prototypes[idx]
         val blended = l2Normalize(blend(proto.vector, itemVector, ALPHA_LONG_TERM))
         return prototypes

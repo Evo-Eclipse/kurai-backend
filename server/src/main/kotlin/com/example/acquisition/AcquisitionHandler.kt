@@ -41,7 +41,7 @@ class AcquisitionHandler(
         if (req.source !in acquisitionService.knownSources()) {
             throw BadRequestException("Unknown source: ${req.source}")
         }
-        if (req.limit < 0 || req.limit > MAX_LIMIT) {
+        if (req.limit !in 0..MAX_LIMIT) {
             throw BadRequestException("limit must be between 0 and $MAX_LIMIT")
         }
         if (req.tags.size > MAX_TAGS) {

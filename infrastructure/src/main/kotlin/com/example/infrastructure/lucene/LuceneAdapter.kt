@@ -154,15 +154,9 @@ class LuceneAdapter(
     }
 
     override fun close() {
-        try {
-            writer.close()
-        } finally {
-            try {
-                readerRef.get()?.close()
-            } finally {
-                directory.close()
-            }
-        }
+        writer.close()
+        readerRef.get()?.close()
+        directory.close()
     }
 
     private fun assertNormalized(vector: FloatArray) {
