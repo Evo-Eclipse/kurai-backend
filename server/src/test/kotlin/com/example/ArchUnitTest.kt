@@ -1,24 +1,28 @@
 package com.example
 
-import com.example.archtest.violation.domain.DomainToRoutingViolation
-import com.example.archtest.violation.domain.FakeDomain
-import com.example.archtest.violation.domain.embedding.FakeEmbedding
-import com.example.archtest.violation.domain.inference.FakeInference
-import com.example.archtest.violation.domain.profile.ProfileToEmbeddingViolation
-import com.example.archtest.violation.infrastructure.FakeInfrastructure
-import com.example.archtest.violation.infrastructure.InfrastructureToDomainViolation
-import com.example.archtest.violation.infrastructure.onnx.FakeOnnx
-import com.example.archtest.violation.routing.RoutingViolation
-import com.example.archtest.violation.routing.handlers.HandlersToInferenceViolation
-import com.example.archtest.violation.routing.handlers.RankingHandlerOnnxViolation
-import com.example.archtest.violation.workers.WorkersI7Violation
 import com.example.infrastructure.sqlite.ProfileRepository
 import com.tngtech.archunit.core.importer.ClassFileImporter
 import com.tngtech.archunit.core.importer.ImportOption
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses
+import com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices
 import kotlin.test.Test
-import kotlin.test.assertFailsWith
 
+/**
+ * Codifies the hexagonal layering and bounded-context isolation
+ * established in Wave 1 and refined in Wave 6.
+ *
+ * Layer ladder (outer → inner allowed only):
+ *   :server (com.example.{auth,profile,acquisition,ingestion,health} + top-level wiring)
+ *     ↓
+ *   :application (com.example.application.*)
+ *     ↓
+ *   :infrastructure (com.example.infrastructure.*) → :domain
+ *   :domain (com.example.domain.*)
+ *
+ * Each bounded context is a leaf folder; sibling folders may not
+ * depend on each other — the wiring layer (Application.kt) is the
+ * single composition root.
+ */
 class ArchUnitTest {
     private val productionClasses =
         ClassFileImporter()
@@ -26,163 +30,106 @@ class ArchUnitTest {
             .importPackages("com.example")
 
     @Test
-    fun `domain does not depend on routing`() {
-        domainNotOnRouting().check(productionClasses)
-    }
-
-    @Test
-    fun `routing does not depend on infrastructure`() {
-        routingNotOnInfrastructure().check(productionClasses)
-    }
-
-    @Test
-    fun `infrastructure does not depend on domain`() {
-        infrastructureNotOnDomain().check(productionClasses)
-    }
-
-    @Test
-    fun `ArchUnit catches routing-to-infrastructure violations`() {
-        val violationClasses =
-            ClassFileImporter().importClasses(
-                RoutingViolation::class.java,
-                FakeInfrastructure::class.java,
-            )
-        assertFailsWith<AssertionError> { routingNotOnInfrastructure().check(violationClasses) }
-    }
-
-    @Test
-    fun `ArchUnit catches infrastructure-to-domain violations`() {
-        val violationClasses =
-            ClassFileImporter().importClasses(
-                InfrastructureToDomainViolation::class.java,
-                FakeDomain::class.java,
-            )
-        assertFailsWith<AssertionError> { infrastructureNotOnDomain().check(violationClasses) }
-    }
-
-    @Test
-    fun `domain profile does not depend on domain embedding`() {
-        profileNotOnEmbedding().check(productionClasses)
-    }
-
-    @Test
-    fun `routing handlers do not depend on domain inference`() {
-        handlersNotOnInference().check(productionClasses)
-    }
-
-    @Test
-    fun `routing handlers do not depend on infrastructure onnx`() {
-        handlersNotOnOnnx().check(productionClasses)
-    }
-
-    @Test
-    fun `ArchUnit catches handlers-to-inference violations`() {
-        val violationClasses =
-            ClassFileImporter().importClasses(
-                HandlersToInferenceViolation::class.java,
-                FakeInference::class.java,
-            )
-        assertFailsWith<AssertionError> { handlersNotOnInference().check(violationClasses) }
-    }
-
-    @Test
-    fun `ArchUnit catches handlers-to-onnx violations`() {
-        val violationClasses =
-            ClassFileImporter().importClasses(
-                RankingHandlerOnnxViolation::class.java,
-                FakeOnnx::class.java,
-            )
-        assertFailsWith<AssertionError> { handlersNotOnOnnx().check(violationClasses) }
-    }
-
-    @Test
-    fun `ArchUnit catches profile-to-embedding violations`() {
-        val violationClasses =
-            ClassFileImporter().importClasses(
-                ProfileToEmbeddingViolation::class.java,
-                FakeEmbedding::class.java,
-            )
-        assertFailsWith<AssertionError> { profileNotOnEmbedding().check(violationClasses) }
-    }
-
-    @Test
-    fun `ArchUnit catches domain-to-routing violations`() {
-        val violationClasses =
-            ClassFileImporter().importClasses(
-                DomainToRoutingViolation::class.java,
-                RoutingViolation::class.java,
-                FakeInfrastructure::class.java,
-            )
-        assertFailsWith<AssertionError> { domainNotOnRouting().check(violationClasses) }
-    }
-
-    @Test
-    fun `only workers may advance last_applied_event_id`() {
-        onlyWorkersCallProfileUpsert().check(productionClasses)
-    }
-
-    @Test
-    fun `ArchUnit catches I-7 violation from outside workers`() {
-        val violationClasses =
-            ClassFileImporter().importClasses(
-                WorkersI7Violation::class.java,
-                ProfileRepository::class.java,
-            )
-        assertFailsWith<AssertionError> { onlyWorkersCallProfileUpsert().check(violationClasses) }
-    }
-
-    private fun routingNotOnInfrastructure() =
-        noClasses()
-            .that()
-            .resideInAPackage("..routing..")
-            .should()
-            .dependOnClassesThat()
-            .resideInAPackage("..infrastructure..")
-
-    private fun infrastructureNotOnDomain() =
-        noClasses()
-            .that()
-            .resideInAPackage("..infrastructure..")
-            .should()
-            .dependOnClassesThat()
-            .resideInAPackage("..domain..")
-
-    private fun handlersNotOnInference() =
-        noClasses()
-            .that()
-            .resideInAPackage("..routing.handlers..")
-            .should()
-            .dependOnClassesThat()
-            .resideInAPackage("..domain.inference..")
-
-    private fun handlersNotOnOnnx() =
-        noClasses()
-            .that()
-            .resideInAPackage("..routing.handlers..")
-            .should()
-            .dependOnClassesThat()
-            .resideInAPackage("..infrastructure.onnx..")
-
-    private fun profileNotOnEmbedding() =
-        noClasses()
-            .that()
-            .resideInAPackage("..domain.profile..")
-            .should()
-            .dependOnClassesThat()
-            .resideInAPackage("..domain.embedding..")
-
-    private fun domainNotOnRouting() =
+    fun `domain depends on nothing else inside com_example`() {
         noClasses()
             .that()
             .resideInAPackage("..domain..")
             .should()
             .dependOnClassesThat()
-            .resideInAPackage("..routing..")
+            .resideInAnyPackage(
+                "com.example.application..",
+                "com.example.infrastructure..",
+                "com.example.auth..",
+                "com.example.profile..",
+                "com.example.acquisition..",
+                "com.example.ingestion..",
+                "com.example.health..",
+            ).check(productionClasses)
+    }
 
-    private fun onlyWorkersCallProfileUpsert() =
+    @Test
+    fun `infrastructure does not import application types`() {
         noClasses()
             .that()
-            .resideOutsideOfPackage("com.example.workers..")
+            .resideInAPackage("..infrastructure..")
+            .should()
+            .dependOnClassesThat()
+            .resideInAPackage("com.example.application..")
+            .check(productionClasses)
+    }
+
+    @Test
+    fun `infrastructure depends on domain only within com_example`() {
+        noClasses()
+            .that()
+            .resideInAPackage("..infrastructure..")
+            .should()
+            .dependOnClassesThat()
+            .resideInAnyPackage(
+                "com.example.application..",
+                "com.example.auth..",
+                "com.example.profile..",
+                "com.example.acquisition..",
+                "com.example.ingestion..",
+                "com.example.health..",
+            ).check(productionClasses)
+    }
+
+    @Test
+    fun `application does not import infrastructure`() {
+        noClasses()
+            .that()
+            .resideInAPackage("com.example.application..")
+            .should()
+            .dependOnClassesThat()
+            .resideInAPackage("..infrastructure..")
+            .check(productionClasses)
+    }
+
+    @Test
+    fun `application has no dependency on Ktor server`() {
+        noClasses()
+            .that()
+            .resideInAPackage("com.example.application..")
+            .should()
+            .dependOnClassesThat()
+            .resideInAnyPackage("io.ktor.server..")
+            .check(productionClasses)
+    }
+
+    @Test
+    fun `server handlers do not reach into infrastructure directly`() {
+        noClasses()
+            .that()
+            .resideInAnyPackage(
+                "com.example.auth..",
+                "com.example.profile..",
+                "com.example.acquisition..",
+                "com.example.ingestion..",
+            ).should()
+            .dependOnClassesThat()
+            .resideInAPackage("com.example.infrastructure..")
+            .check(productionClasses)
+    }
+
+    @Test
+    fun `bounded contexts do not cross-depend at the server layer`() {
+        slices()
+            .matching("com.example.(auth|profile|acquisition|ingestion|health)..")
+            .should()
+            .notDependOnEachOther()
+            .check(productionClasses)
+    }
+
+    @Test
+    fun `only profile workers may advance last_applied_event_id`() {
+        // ProfileRepository.upsert is the one method that writes
+        // last_applied_event_id; SPEC §I-7 restricts that write to
+        // the persistence worker so live request handlers cannot
+        // race ahead of the migration log.
+        noClasses()
+            .that()
+            .resideOutsideOfPackage("com.example.application.profile..")
             .should()
             .callMethod(
                 ProfileRepository::class.java,
@@ -190,5 +137,6 @@ class ArchUnitTest {
                 checkNotNull(Long::class.javaPrimitiveType),
                 String::class.java,
                 checkNotNull(Long::class.javaPrimitiveType),
-            )
+            ).check(productionClasses)
+    }
 }

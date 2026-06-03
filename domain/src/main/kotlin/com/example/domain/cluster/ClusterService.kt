@@ -2,6 +2,7 @@ package com.example.domain.cluster
 
 import com.example.domain.model.UserProfile
 import com.example.domain.profile.Scoring
+import java.io.ByteArrayInputStream
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.random.Random
@@ -48,6 +49,9 @@ class ClusterService private constructor(
 
     companion object {
         fun load(path: Path): ClusterService = ClusterService(loadCentroids(Files.newInputStream(path)))
+
+        /** Loads from the serialized centroid blob (the form stored in the object store). */
+        fun fromBytes(bytes: ByteArray): ClusterService = ClusterService(loadCentroids(ByteArrayInputStream(bytes)))
 
         fun fromCentroids(centroids: Array<FloatArray>): ClusterService = ClusterService(centroids)
     }

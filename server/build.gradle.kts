@@ -47,10 +47,9 @@ tasks.check {
 
 dependencies {
     implementation(project(":domain"))
+    implementation(project(":application"))
+    implementation(project(":infrastructure"))
 
-    implementation(ktorLibs.client.cio)
-    implementation(ktorLibs.client.contentNegotiation)
-    implementation(ktorLibs.client.core)
     implementation(ktorLibs.serialization.kotlinx.json)
     implementation(ktorLibs.server.auth)
     implementation(ktorLibs.server.auth.jwt)
@@ -65,12 +64,7 @@ dependencies {
     implementation(ktorLibs.server.netty)
     implementation(ktorLibs.server.statusPages)
     implementation(libs.caffeine)
-    implementation(libs.exposed.core)
-    implementation(libs.exposed.jdbc)
     implementation(libs.kotlinx.coroutines.core)
-    implementation(libs.lucene.core)
-    implementation(libs.onnxruntime)
-    implementation(libs.sqlite.jdbc)
     implementation(libs.logback.classic)
 
     testImplementation(kotlin("test"))

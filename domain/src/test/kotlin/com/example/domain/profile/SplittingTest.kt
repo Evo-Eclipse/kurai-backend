@@ -40,7 +40,6 @@ class SplittingTest {
 
     @Test
     fun `same seed and vectors produce identical assignments`() {
-        val base = FloatArray(128).also { it[0] = 1f }
         val vecs = (0 until 20).map { Scoring.l2Normalize(FloatArray(128) { rng.nextFloat() * 2f - 1f }) }
         val a1 = splitPrototypes(vecs, k = 3, seed = 99L)
         val a2 = splitPrototypes(vecs, k = 3, seed = 99L)

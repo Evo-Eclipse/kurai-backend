@@ -2,5 +2,9 @@ ktor:
   deployment:
     port: 8080
   application:
+    startup: sequential
     modules:
-      - com.example.ApplicationKt.configure
+      - com.example.ApplicationKt.installCore
+      - com.example.ApplicationKt.installPlugins
+      - com.example.ApplicationKt.installRouting
+      - com.example.ApplicationKt.installLifecycle

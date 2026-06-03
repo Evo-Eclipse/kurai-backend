@@ -12,7 +12,7 @@ fun List<Pair<Long, Float>>.mmr(
 
     while (selected.size < limit && remaining.isNotEmpty()) {
         val best =
-            remaining.maxByOrNull { (id, score) ->
+            remaining.maxBy { (id, score) ->
                 val relevance = lambda * score
                 val diversity =
                     if (selected.isEmpty()) {
@@ -29,7 +29,7 @@ fun List<Pair<Long, Float>>.mmr(
                         }
                     }
                 relevance - (1f - lambda) * diversity
-            }!!
+            }
         selected.add(best.first)
         remaining.remove(best)
     }

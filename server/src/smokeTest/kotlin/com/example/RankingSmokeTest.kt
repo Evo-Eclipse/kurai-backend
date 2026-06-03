@@ -9,8 +9,8 @@ import com.example.domain.model.Prototype
 import com.example.domain.model.UserProfile
 import com.example.infrastructure.sqlite.ProfileRepository
 import com.example.infrastructure.sqlite.initSchema
-import com.example.routing.handlers.RankingHandler
-import com.example.routing.routes.configureRankingRoutes
+import com.example.profile.RankingHandler
+import com.example.profile.configureRankingRoutes
 import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody

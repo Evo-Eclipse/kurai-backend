@@ -12,5 +12,8 @@ configure<org.jlleitschuh.gradle.ktlint.KtlintExtension> {
 }
 
 dependencies {
+    api(libs.kotlinx.coroutines.core)
+
     testImplementation(kotlin("test"))
+    testImplementation(libs.kotlinx.coroutines.test)
 }

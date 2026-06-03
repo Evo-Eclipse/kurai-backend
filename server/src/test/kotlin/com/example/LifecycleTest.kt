@@ -1,15 +1,15 @@
 package com.example
 
-import com.example.application.embedding.CachingEmbeddingAdapter
 import com.example.application.profile.CachingProfileAdapter
+import com.example.application.profile.ProfilePersistWorker
 import com.example.domain.model.EmbeddingVersion
 import com.example.domain.model.UserEvent
+import com.example.domain.profile.PendingUserEvent
 import com.example.domain.profile.Scoring
-import com.example.infrastructure.sqlite.EventData
 import com.example.infrastructure.sqlite.EventRepository
+import com.example.infrastructure.sqlite.EventWeightRepository
 import com.example.infrastructure.sqlite.ProfileRepository
 import com.example.infrastructure.sqlite.initSchema
-import com.example.workers.ProfilePersistWorker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -40,6 +40,7 @@ class LifecycleTest {
         initSchema(db)
         profileRepo = ProfileRepository(db)
         eventRepo = EventRepository(db)
+        EventWeightRepository(db).upsert("like", 1.0, now = 0L)
     }
 
     private fun normalizedVec(seed: Int): FloatArray {
@@ -57,7 +58,7 @@ class LifecycleTest {
             val vec = normalizedVec(1)
             val events =
                 (1..5).map { i ->
-                    EventData(userId = userId, itemId = i.toLong(), weight = 1.0f, embeddingVersion = "v1")
+                    PendingUserEvent(userId = userId, itemId = i.toLong(), sourceTag = "like", embeddingVersion = "v1")
                 }
             eventRepo.appendBatch(events)
 
@@ -156,7 +157,7 @@ class LifecycleTest {
             )
 
             val scope = CoroutineScope(SupervisorJob())
-            val worker = ProfilePersistWorker(cachingProfile, profileRepo, intervalMs = 30_000)
+            val worker = ProfilePersistWorker(cachingProfile, profileRepo, intervalMs = { 30_000 })
             scope.launch { worker.run() }
             yield() // let coroutine enter try block before cancel
             scope.cancel()
