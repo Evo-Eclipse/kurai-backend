@@ -247,7 +247,7 @@ suspend fun Application.installCore() {
     }
 
     dependencies.provide<EmbeddingVersionLookup> {
-        val systemState = dependencies.resolve<SystemStateRepository>()
+        val systemState = dependencies.resolve<SystemStatePort>()
         EmbeddingVersionLookup { systemState.read().defaultEmbeddingVersion ?: "unknown" }
     }
 
