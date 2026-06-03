@@ -1,5 +1,6 @@
 package com.example.infrastructure.sqlite
 import com.example.domain.profile.PendingUserEvent
+import kotlinx.coroutines.runBlocking
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -26,28 +27,30 @@ class ProfileStateDefaultsTest {
     }
 
     @Test
-    fun `a freshly upserted profile defaults to the control cohort`() {
-        ProfileRepository(db).upsert(userId = 1L, embeddingVersion = "v1", lastAppliedEventId = 0L)
+    fun `a freshly upserted profile defaults to the control cohort`() =
+        runBlocking {
+            ProfileRepository(db).upsert(userId = 1L, embeddingVersion = "v1", lastAppliedEventId = 0L)
 
-        val row =
-            transaction(db) {
-                UserProfileState.selectAll().where { UserProfileState.userId eq 1L }.single()
-            }
-        assertEquals("v1", row[UserProfileState.assignedEmbeddingVersion])
-        assertEquals(Cohort.CONTROL, row[UserProfileState.cohort])
-        assertEquals(5, row[UserProfileState.prototypesTarget])
-    }
+            val row =
+                transaction(db) {
+                    UserProfileState.selectAll().where { UserProfileState.userId eq 1L }.single()
+                }
+            assertEquals("v1", row[UserProfileState.assignedEmbeddingVersion])
+            assertEquals(Cohort.CONTROL, row[UserProfileState.cohort])
+            assertEquals(5, row[UserProfileState.prototypesTarget])
+        }
 
     @Test
-    fun `an appended event snapshots the control cohort by default`() {
-        EventRepository(db).appendBatch(
-            listOf(PendingUserEvent(userId = 1L, itemId = 10L, sourceTag = "like", embeddingVersion = "v1")),
-        )
+    fun `an appended event snapshots the control cohort by default`() =
+        runBlocking {
+            EventRepository(db).appendBatch(
+                listOf(PendingUserEvent(userId = 1L, itemId = 10L, sourceTag = "like", embeddingVersion = "v1")),
+            )
 
-        val cohort =
-            transaction(db) {
-                UserEvents.selectAll().where { UserEvents.userId eq 1L }.single()[UserEvents.cohort]
-            }
-        assertEquals(Cohort.CONTROL, cohort)
-    }
+            val cohort =
+                transaction(db) {
+                    UserEvents.selectAll().where { UserEvents.userId eq 1L }.single()[UserEvents.cohort]
+                }
+            assertEquals(Cohort.CONTROL, cohort)
+        }
 }

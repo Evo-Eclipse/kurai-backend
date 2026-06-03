@@ -8,9 +8,9 @@ data class RuntimeConfigEntry(
 )
 
 interface RuntimeConfigPort {
-    fun load(key: String): RuntimeConfigEntry?
+    suspend fun load(key: String): RuntimeConfigEntry?
 
-    fun upsert(
+    suspend fun upsert(
         key: String,
         valueType: String,
         value: String,

@@ -1,5 +1,5 @@
 package com.example.infrastructure.sqlite
-import com.example.domain.profile.PendingUserEvent
+import kotlinx.coroutines.runBlocking
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.insert
@@ -67,82 +67,100 @@ class SystemStateRepositoryTest {
         }
 
     @Test
-    fun `seed is idempotent and read returns empty defaults`() {
-        repo.seedIfMissing(now = 1L)
-        repo.seedIfMissing(now = 2L) // no-op
+    fun `seed is idempotent and read returns empty defaults`() =
+        runBlocking {
+            repo.seedIfMissing(now = 1L)
+            repo.seedIfMissing(now = 2L) // no-op
 
-        val state = repo.read()
-        assertNull(state.defaultEmbeddingVersion)
-        assertNull(state.activeIndexId)
-        assertNull(state.activeClusterId)
-        assertEquals(0L, state.totalItems)
-        assertEquals(0L, state.embeddedItems)
+            val state = repo.read()
+            assertNull(state.defaultEmbeddingVersion)
+            assertNull(state.activeIndexId)
+            assertNull(state.activeClusterId)
+            assertEquals(0L, state.totalItems)
+            assertEquals(0L, state.embeddedItems)
 
-        // Exactly one row.
-        val count = transaction(db) { SystemState.selectAll().count() }
-        assertEquals(1L, count)
-    }
-
-    @Test
-    fun `setDefaultEmbeddingVersion flips status and repoints atomically`() {
-        repo.seedIfMissing(now = 0L)
-        insertEmbeddingGeneration("v1", GenerationStatus.ACTIVE)
-        insertEmbeddingGeneration("v2", GenerationStatus.BUILDING)
-
-        repo.setDefaultEmbeddingVersion("v2", now = 100L)
-
-        assertEquals("v2", repo.read().defaultEmbeddingVersion)
-        assertEquals(GenerationStatus.ACTIVE, statusOf("v2"))
-        assertEquals(GenerationStatus.DEPRECATED, statusOf("v1"))
-    }
+            // Exactly one row.
+            val count = transaction(db) { SystemState.selectAll().count() }
+            assertEquals(1L, count)
+        }
 
     @Test
-    fun `activateIndex flips status and repoints atomically`() {
-        repo.seedIfMissing(now = 0L)
-        val i1 = insertIndexGeneration("idx/v1", GenerationStatus.BUILDING)
-        val i2 = insertIndexGeneration("idx/v2", GenerationStatus.BUILDING)
+    fun `setDefaultEmbeddingVersion flips status and repoints atomically`() =
+        runBlocking {
+            repo.seedIfMissing(now = 0L)
+            insertEmbeddingGeneration("v1", GenerationStatus.ACTIVE)
+            insertEmbeddingGeneration("v2", GenerationStatus.BUILDING)
 
-        repo.activateIndex(i1, now = 10L)
-        assertEquals(i1, repo.read().activeIndexId)
+            repo.setDefaultEmbeddingVersion("v2", now = 100L)
 
-        repo.activateIndex(i2, now = 20L)
-        assertEquals(i2, repo.read().activeIndexId)
-        assertEquals(GenerationStatus.ACTIVE, indexStatusOf(i2))
-        assertEquals(GenerationStatus.DEPRECATED, indexStatusOf(i1))
-    }
-
-    @Test
-    fun `activateCluster flips status and repoints atomically`() {
-        repo.seedIfMissing(now = 0L)
-        val clusters = ClusterGenerationRepository(db)
-        val c1 = clusters.createBuilding("v1", clusterCount = 23, catalogSizeAtBuild = 100, centroidsPath = "c1.bin")
-        val c2 = clusters.createBuilding("v1", clusterCount = 23, catalogSizeAtBuild = 110, centroidsPath = "c2.bin")
-
-        repo.activateCluster(c1, now = 10L)
-        assertEquals(c1, repo.read().activeClusterId)
-        assertEquals(GenerationStatus.ACTIVE, clusters.findById(c1)?.status)
-
-        repo.activateCluster(c2, now = 20L)
-        assertEquals(c2, repo.read().activeClusterId)
-        assertEquals(GenerationStatus.ACTIVE, clusters.findById(c2)?.status)
-        assertEquals(GenerationStatus.DEPRECATED, clusters.findById(c1)?.status)
-    }
+            assertEquals("v2", repo.read().defaultEmbeddingVersion)
+            assertEquals(GenerationStatus.ACTIVE, statusOf("v2"))
+            assertEquals(GenerationStatus.DEPRECATED, statusOf("v1"))
+        }
 
     @Test
-    fun `setCounts updates catalog counters`() {
-        repo.seedIfMissing(now = 0L)
-        repo.setCounts(totalItems = 1_000L, embeddedItems = 980L, now = 5L)
+    fun `activateIndex flips status and repoints atomically`() =
+        runBlocking {
+            repo.seedIfMissing(now = 0L)
+            val i1 = insertIndexGeneration("idx/v1", GenerationStatus.BUILDING)
+            val i2 = insertIndexGeneration("idx/v2", GenerationStatus.BUILDING)
 
-        val state = repo.read()
-        assertEquals(1_000L, state.totalItems)
-        assertEquals(980L, state.embeddedItems)
-        assertEquals(5L, state.updatedAt)
-    }
+            repo.activateIndex(i1, now = 10L)
+            assertEquals(i1, repo.read().activeIndexId)
+
+            repo.activateIndex(i2, now = 20L)
+            assertEquals(i2, repo.read().activeIndexId)
+            assertEquals(GenerationStatus.ACTIVE, indexStatusOf(i2))
+            assertEquals(GenerationStatus.DEPRECATED, indexStatusOf(i1))
+        }
 
     @Test
-    fun `read after fresh seed has no active pointers`() {
-        repo.seedIfMissing(now = 0L)
-        assertFalse(repo.read().defaultEmbeddingVersion != null)
-        assertTrue(repo.read().activeIndexId == null)
-    }
+    fun `activateCluster flips status and repoints atomically`() =
+        runBlocking {
+            repo.seedIfMissing(now = 0L)
+            val clusters = ClusterGenerationRepository(db)
+            val c1 =
+                clusters.createBuilding(
+                    "v1",
+                    clusterCount = 23,
+                    catalogSizeAtBuild = 100,
+                    centroidsPath = "c1.bin",
+                )
+            val c2 =
+                clusters.createBuilding(
+                    "v1",
+                    clusterCount = 23,
+                    catalogSizeAtBuild = 110,
+                    centroidsPath = "c2.bin",
+                )
+
+            repo.activateCluster(c1, now = 10L)
+            assertEquals(c1, repo.read().activeClusterId)
+            assertEquals(GenerationStatus.ACTIVE, clusters.findById(c1)?.status)
+
+            repo.activateCluster(c2, now = 20L)
+            assertEquals(c2, repo.read().activeClusterId)
+            assertEquals(GenerationStatus.ACTIVE, clusters.findById(c2)?.status)
+            assertEquals(GenerationStatus.DEPRECATED, clusters.findById(c1)?.status)
+        }
+
+    @Test
+    fun `setCounts updates catalog counters`() =
+        runBlocking {
+            repo.seedIfMissing(now = 0L)
+            repo.setCounts(totalItems = 1_000L, embeddedItems = 980L, now = 5L)
+
+            val state = repo.read()
+            assertEquals(1_000L, state.totalItems)
+            assertEquals(980L, state.embeddedItems)
+            assertEquals(5L, state.updatedAt)
+        }
+
+    @Test
+    fun `read after fresh seed has no active pointers`() =
+        runBlocking {
+            repo.seedIfMissing(now = 0L)
+            assertFalse(repo.read().defaultEmbeddingVersion != null)
+            assertTrue(repo.read().activeIndexId == null)
+        }
 }

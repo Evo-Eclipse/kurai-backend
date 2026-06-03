@@ -6,6 +6,10 @@ import com.example.domain.auth.AuthSessionPort
 import com.example.domain.auth.EmailKind
 import com.example.domain.auth.LoginChallengePort
 import com.example.domain.auth.UserPort
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.runBlocking
 import java.util.UUID
 
 /**
@@ -23,10 +27,9 @@ import java.util.UUID
  * JWT minting lives in the [com.example.auth.AuthHandler]
  * because the signing key is a server-side concern.
  *
- * Repository calls here are blocking JDBC, run on the caller's dispatcher —
- * consistent with every other repo-touching path in the app. Moving that
- * I/O off the dispatcher is a systemic concern to be solved once at the
- * repository layer (see roadmap), not special-cased per method here.
+ * Repository calls are suspend and run on [sqliteDispatcher] via
+ * [com.example.infrastructure.sqlite.sqliteTransaction]. [isSessionActive] is
+ * synchronous for Caffeine cache loaders and uses [sessionCheckDispatcher].
  */
 class AuthService(
     private val users: UserPort,
@@ -39,11 +42,13 @@ class AuthService(
      * take effect on the next request without rebuilding the service.
      * Re-evaluated per call; tests pass `{ constant }`.
      */
-    private val challengeTtlMs: () -> Long,
-    private val sessionTtlMs: () -> Long,
+    private val challengeTtlMs: suspend () -> Long,
+    private val sessionTtlMs: suspend () -> Long,
     private val challengeRateLimitWindowMs: Long = DEFAULT_CHALLENGE_RATE_LIMIT_WINDOW_MS,
     private val challengeRateLimitMax: Int = DEFAULT_CHALLENGE_RATE_LIMIT_MAX,
     private val clock: () -> Long = { System.currentTimeMillis() },
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val sessionCheckDispatcher: CoroutineDispatcher = Dispatchers.IO.limitedParallelism(1),
 ) {
     suspend fun issueChallenge(email: String): IssueChallengeResult {
         val normalized = email.trim().lowercase()
@@ -212,7 +217,7 @@ class AuthService(
         identities.disable(AuthProvider.KEY, AuthCodecs.sha256Hex(rawKey), clock()) > 0
 
     /** Mint a fresh session + refresh secret; returns (sessionId, rawRefreshToken). */
-    private fun issueSession(
+    private suspend fun issueSession(
         userId: Long,
         deviceLabel: String?,
         now: Long,
@@ -230,7 +235,7 @@ class AuthService(
         return sessionId to refreshToken
     }
 
-    fun revokeSession(sessionId: String) {
+    suspend fun revokeSession(sessionId: String) {
         sessions.revoke(sessionId, clock())
     }
 
@@ -240,13 +245,14 @@ class AuthService(
      * `isActive`, which the JWT `validate` block consults so a revoked
      * session is rejected on every `authenticate("kurai")` route.
      *
-     * Intentionally non-suspend: it is invoked from a synchronous Caffeine
-     * cache loader, so it cannot be `suspend` (and is rare — cache-gated).
+     * Intentionally non-suspend: invoked from a synchronous Caffeine cache
+     * loader. Uses [sessionCheckDispatcher] so JDBC stays off request threads.
      */
-    fun isSessionActive(sessionId: String): Boolean {
-        val session = sessions.findById(sessionId) ?: return false
-        return session.isActive(clock())
-    }
+    fun isSessionActive(sessionId: String): Boolean =
+        runBlocking(sessionCheckDispatcher) {
+            val session = sessions.findById(sessionId) ?: return@runBlocking false
+            session.isActive(clock())
+        }
 
     private fun isPlausibleEmail(email: String): Boolean {
         if (email.length !in 3..320) return false

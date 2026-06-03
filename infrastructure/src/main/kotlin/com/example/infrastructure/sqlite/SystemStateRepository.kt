@@ -6,14 +6,13 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 
 class SystemStateRepository(
     private val db: Database,
 ) : SystemStatePort {
-    override fun seedIfMissing(now: Long) {
-        transaction(db) {
+    override suspend fun seedIfMissing(now: Long) {
+        sqliteTransaction(db) {
             val present =
                 SystemState
                     .selectAll()
@@ -28,8 +27,8 @@ class SystemStateRepository(
         }
     }
 
-    override fun read(): GlobalSystemState =
-        transaction(db) {
+    override suspend fun read(): GlobalSystemState =
+        sqliteTransaction(db) {
             SystemState
                 .selectAll()
                 .where { SystemState.id eq SINGLE_ROW_ID }
@@ -47,11 +46,11 @@ class SystemStateRepository(
                 ?: error("system_state row missing; seedIfMissing must run at startup")
         }
 
-    override fun setDefaultEmbeddingVersion(
+    override suspend fun setDefaultEmbeddingVersion(
         version: String,
         now: Long,
     ) {
-        transaction(db) {
+        sqliteTransaction(db) {
             EmbeddingGenerations.update({ EmbeddingGenerations.status eq GenerationStatus.ACTIVE }) {
                 it[status] = GenerationStatus.DEPRECATED
             }
@@ -66,11 +65,11 @@ class SystemStateRepository(
         }
     }
 
-    override fun activateCluster(
+    override suspend fun activateCluster(
         clusterId: Long,
         now: Long,
     ) {
-        transaction(db) {
+        sqliteTransaction(db) {
             ClusterGenerations.update({ ClusterGenerations.status eq GenerationStatus.ACTIVE }) {
                 it[status] = GenerationStatus.DEPRECATED
             }
@@ -85,11 +84,11 @@ class SystemStateRepository(
         }
     }
 
-    override fun activateIndex(
+    override suspend fun activateIndex(
         indexId: Long,
         now: Long,
     ) {
-        transaction(db) {
+        sqliteTransaction(db) {
             IndexGenerations.update({ IndexGenerations.status eq GenerationStatus.ACTIVE }) {
                 it[status] = GenerationStatus.DEPRECATED
             }
@@ -104,12 +103,12 @@ class SystemStateRepository(
         }
     }
 
-    override fun setCounts(
+    override suspend fun setCounts(
         totalItems: Long,
         embeddedItems: Long,
         now: Long,
     ) {
-        transaction(db) {
+        sqliteTransaction(db) {
             SystemState.update({ SystemState.id eq SINGLE_ROW_ID }) {
                 it[SystemState.totalItems] = totalItems
                 it[SystemState.embeddedItems] = embeddedItems

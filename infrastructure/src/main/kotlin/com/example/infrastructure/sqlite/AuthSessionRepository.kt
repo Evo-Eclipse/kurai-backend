@@ -10,14 +10,13 @@ import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 
 class AuthSessionRepository(
     private val db: Database,
 ) : AuthSessionPort {
-    override fun findById(id: String): AuthSession? =
-        transaction(db) {
+    override suspend fun findById(id: String): AuthSession? =
+        sqliteTransaction(db) {
             AuthSessions
                 .selectAll()
                 .where { AuthSessions.id eq id }
@@ -25,7 +24,7 @@ class AuthSessionRepository(
                 ?.let(::rowToSession)
         }
 
-    override fun insert(
+    override suspend fun insert(
         id: String,
         userId: Long,
         deviceLabel: String?,
@@ -33,7 +32,7 @@ class AuthSessionRepository(
         expiresAt: Long,
         now: Long,
     ) {
-        transaction(db) {
+        sqliteTransaction(db) {
             AuthSessions.insert {
                 it[AuthSessions.id] = id
                 it[AuthSessions.userId] = userId
@@ -46,17 +45,17 @@ class AuthSessionRepository(
         }
     }
 
-    override fun revoke(
+    override suspend fun revoke(
         id: String,
         now: Long,
     ): Int =
-        transaction(db) {
+        sqliteTransaction(db) {
             AuthSessions.update({ AuthSessions.id eq id }) {
                 it[AuthSessions.revokedAt] = now
             }
         }
 
-    override fun rotateIfActive(
+    override suspend fun rotateIfActive(
         sessionId: String,
         successorId: String,
         userId: Long,
@@ -65,7 +64,7 @@ class AuthSessionRepository(
         expiresAt: Long,
         now: Long,
     ): Boolean =
-        transaction(db) {
+        sqliteTransaction(db) {
             val updated =
                 AuthSessions.update({
                     (AuthSessions.id eq sessionId) and
@@ -75,7 +74,7 @@ class AuthSessionRepository(
                     it[AuthSessions.replacedBy] = successorId
                     it[AuthSessions.lastUsedAt] = now
                 }
-            if (updated == 0) return@transaction false
+            if (updated == 0) return@sqliteTransaction false
             AuthSessions.insert {
                 it[AuthSessions.id] = successorId
                 it[AuthSessions.userId] = userId
@@ -88,11 +87,11 @@ class AuthSessionRepository(
             true
         }
 
-    override fun revokeAllForUser(
+    override suspend fun revokeAllForUser(
         userId: Long,
         now: Long,
     ): Int =
-        transaction(db) {
+        sqliteTransaction(db) {
             AuthSessions.update({
                 (AuthSessions.userId eq userId) and AuthSessions.revokedAt.isNull()
             }) {
@@ -100,8 +99,8 @@ class AuthSessionRepository(
             }
         }
 
-    override fun deleteExpiredBefore(cutoff: Long): Int =
-        transaction(db) {
+    override suspend fun deleteExpiredBefore(cutoff: Long): Int =
+        sqliteTransaction(db) {
             AuthSessions.deleteWhere { AuthSessions.expiresAt less cutoff }
         }
 

@@ -6,14 +6,13 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 
 class RuntimeConfigRepository(
     private val db: Database,
 ) : RuntimeConfigPort {
-    override fun load(key: String): RuntimeConfigEntry? =
-        transaction(db) {
+    override suspend fun load(key: String): RuntimeConfigEntry? =
+        sqliteTransaction(db) {
             RuntimeConfigs
                 .selectAll()
                 .where { RuntimeConfigs.key eq key }
@@ -28,13 +27,13 @@ class RuntimeConfigRepository(
                 }
         }
 
-    override fun upsert(
+    override suspend fun upsert(
         key: String,
         valueType: String,
         value: String,
         now: Long,
     ) {
-        transaction(db) {
+        sqliteTransaction(db) {
             val updated =
                 RuntimeConfigs.update({ RuntimeConfigs.key eq key }) {
                     it[RuntimeConfigs.valueType] = valueType

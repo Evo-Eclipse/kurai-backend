@@ -25,7 +25,7 @@ class KMeansScheduler(
     private val clusterGenerations: ClusterGenerationPort,
     private val systemState: SystemStatePort,
     private val clusterServiceRef: AtomicReference<ClusterService?>,
-    private val intervalMs: () -> Long,
+    private val intervalMs: suspend () -> Long,
     private val minGrowthFactor: Double = 1.10,
     private val minAgeMs: Long = 24 * 3_600_000L,
     private val sampleLimit: Int = 50_000,

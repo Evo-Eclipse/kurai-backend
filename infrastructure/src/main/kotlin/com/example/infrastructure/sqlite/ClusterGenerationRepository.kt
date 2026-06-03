@@ -6,18 +6,17 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
 class ClusterGenerationRepository(
     private val db: Database,
 ) : ClusterGenerationPort {
-    override fun createBuilding(
+    override suspend fun createBuilding(
         embeddingVersion: String,
         clusterCount: Int,
         catalogSizeAtBuild: Long,
         centroidsPath: String,
     ): Long =
-        transaction(db) {
+        sqliteTransaction(db) {
             ClusterGenerations.insert {
                 it[ClusterGenerations.embeddingVersion] = embeddingVersion
                 it[status] = GenerationStatus.BUILDING
@@ -27,8 +26,8 @@ class ClusterGenerationRepository(
             }[ClusterGenerations.id]
         }
 
-    override fun findById(id: Long): ClusterGeneration? =
-        transaction(db) {
+    override suspend fun findById(id: Long): ClusterGeneration? =
+        sqliteTransaction(db) {
             ClusterGenerations
                 .selectAll()
                 .where { ClusterGenerations.id eq id }

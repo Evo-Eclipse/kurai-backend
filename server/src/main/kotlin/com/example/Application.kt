@@ -71,6 +71,7 @@ import com.example.infrastructure.sqlite.RuntimeConfigRepository
 import com.example.infrastructure.sqlite.SystemStateRepository
 import com.example.infrastructure.sqlite.UserRepository
 import com.example.infrastructure.sqlite.initSchema
+import com.example.infrastructure.sqlite.sqliteDispatcher
 import com.example.infrastructure.storage.LocalObjectStore
 import com.example.ingestion.IngestionHandler
 import com.example.ingestion.configureIngestionRoutes
@@ -215,6 +216,7 @@ suspend fun Application.installCore() {
             sender = dependencies.resolve(),
             challengeTtlMs = { runtime.get(ConfigKey.AuthChallengeTtlMs) },
             sessionTtlMs = { runtime.get(ConfigKey.AuthSessionTtlMs) },
+            sessionCheckDispatcher = sqliteDispatcher,
         )
     }
     dependencies.provide<SessionAuthenticator> {
@@ -248,8 +250,7 @@ suspend fun Application.installCore() {
     }
 
     dependencies.provide<EmbeddingVersionLookup> {
-        val systemState = dependencies.resolve<SystemStatePort>()
-        EmbeddingVersionLookup { systemState.read().defaultEmbeddingVersion ?: "unknown" }
+        EmbeddingVersionLookup(systemState = dependencies.resolve())
     }
 
     dependencies.provide<InferenceService> {
@@ -499,7 +500,7 @@ suspend fun Application.installLifecycle() {
         }
     }
 
-    withContext(Dispatchers.IO) { profileRepo.loadAllUserIds() }.forEach { userId ->
+    profileRepo.loadAllUserIds().forEach { userId ->
         cachingProfile.getOrLoad(userId)
     }
 
@@ -585,12 +586,15 @@ internal class ClusterServiceRef(
 /**
  * Wrapper exposing the active embedding version both as a raw [String]
  * (the form AcquisitionService wants) and as a typed [EmbeddingVersion]
- * (the form handlers and workers want).
+ * (the form handlers and workers want). Reads [SystemStatePort] via suspend
+ * lookups so callers never bridge with `runBlocking`.
  */
 internal class EmbeddingVersionLookup(
-    private val lookup: () -> String,
+    private val systemState: SystemStatePort,
 ) {
-    fun asStringLookup(): () -> String = lookup
+    suspend fun current(): String = systemState.read().defaultEmbeddingVersion ?: "unknown"
 
-    fun asEmbeddingVersionLookup(): () -> EmbeddingVersion = { EmbeddingVersion(lookup()) }
+    fun asStringLookup(): suspend () -> String = { current() }
+
+    fun asEmbeddingVersionLookup(): suspend () -> EmbeddingVersion = { EmbeddingVersion(current()) }
 }

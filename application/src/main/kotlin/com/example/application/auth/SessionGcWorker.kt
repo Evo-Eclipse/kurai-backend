@@ -17,8 +17,8 @@ private val log = LoggerFactory.getLogger(SessionGcWorker::class.java)
  */
 class SessionGcWorker(
     private val sessions: AuthSessionPort,
-    private val intervalMs: () -> Long,
-    private val retentionMs: () -> Long,
+    private val intervalMs: suspend () -> Long,
+    private val retentionMs: suspend () -> Long,
     private val clock: () -> Long = { System.currentTimeMillis() },
 ) {
     suspend fun run() {
@@ -34,7 +34,7 @@ class SessionGcWorker(
         }
     }
 
-    internal fun purgeOnce(): Int {
+    internal suspend fun purgeOnce(): Int {
         val removed = sessions.deleteExpiredBefore(clock() - retentionMs())
         if (removed > 0) {
             log.info("Purged {} auth sessions expired more than {} ms ago", removed, retentionMs())

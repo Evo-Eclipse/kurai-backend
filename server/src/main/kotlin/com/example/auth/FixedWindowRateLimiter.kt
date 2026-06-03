@@ -17,8 +17,8 @@ import java.time.Duration
  * Process-local: each instance counts only its own node.
  */
 class FixedWindowRateLimiter(
-    private val maxPerWindow: () -> Int,
-    private val windowMs: () -> Long,
+    private val maxPerWindow: suspend () -> Int,
+    private val windowMs: suspend () -> Long,
     private val clock: () -> Long = { System.currentTimeMillis() },
     idleEviction: Duration = Duration.ofHours(1),
     maxKeys: Long = 100_000,
@@ -36,10 +36,10 @@ class FixedWindowRateLimiter(
             .build<String, Window>()
 
     /** Hint for a `Retry-After` header — the full window has to elapse. */
-    fun retryAfterSeconds(): Long = (windowMs() / 1000).coerceAtLeast(1)
+    suspend fun retryAfterSeconds(): Long = (windowMs() / 1000).coerceAtLeast(1)
 
     /** True while the key is within budget; false once the window is spent. */
-    fun tryAcquire(key: String): Boolean {
+    suspend fun tryAcquire(key: String): Boolean {
         val now = clock()
         val window = windowMs()
         val updated =
@@ -60,7 +60,7 @@ class FixedWindowRateLimiter(
 class ChallengeIpRateLimiter(
     private val delegate: FixedWindowRateLimiter,
 ) {
-    fun tryAcquire(key: String): Boolean = delegate.tryAcquire(key)
+    suspend fun tryAcquire(key: String): Boolean = delegate.tryAcquire(key)
 
-    fun retryAfterSeconds(): Long = delegate.retryAfterSeconds()
+    suspend fun retryAfterSeconds(): Long = delegate.retryAfterSeconds()
 }

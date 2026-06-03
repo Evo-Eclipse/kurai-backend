@@ -8,17 +8,16 @@ import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 
 class AuthIdentityRepository(
     private val db: Database,
 ) : AuthIdentityPort {
-    override fun findBySubject(
+    override suspend fun findBySubject(
         provider: String,
         providerSubject: String,
     ): AuthIdentity? =
-        transaction(db) {
+        sqliteTransaction(db) {
             AuthIdentities
                 .selectAll()
                 .where {
@@ -37,13 +36,13 @@ class AuthIdentityRepository(
                 }
         }
 
-    override fun insert(
+    override suspend fun insert(
         userId: Long,
         provider: String,
         providerSubject: String,
         now: Long,
     ) {
-        transaction(db) {
+        sqliteTransaction(db) {
             AuthIdentities.insert {
                 it[AuthIdentities.userId] = userId
                 it[AuthIdentities.provider] = provider
@@ -53,12 +52,12 @@ class AuthIdentityRepository(
         }
     }
 
-    override fun disable(
+    override suspend fun disable(
         provider: String,
         providerSubject: String,
         now: Long,
     ): Int =
-        transaction(db) {
+        sqliteTransaction(db) {
             AuthIdentities.update({
                 (AuthIdentities.provider eq provider) and
                     (AuthIdentities.providerSubject eq providerSubject) and

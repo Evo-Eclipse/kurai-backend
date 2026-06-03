@@ -29,10 +29,10 @@ class AcquisitionService(
     private val itemRepository: CatalogItemPort,
     private val vectorIndex: ItemVectorIndexPort,
     private val objectStore: ObjectStorePort,
-    private val activeEmbeddingVersion: () -> String,
+    private val activeEmbeddingVersion: suspend () -> String,
     private val contentSources: Map<String, ContentSource> = emptyMap(),
 ) {
-    fun createJob(
+    suspend fun createJob(
         jobId: String,
         source: String,
         tags: List<String>,
@@ -107,7 +107,7 @@ class AcquisitionService(
         run(jobId, source, tags, limit, contentSource)
     }
 
-    fun getJob(jobId: String): JobStatus? =
+    suspend fun getJob(jobId: String): JobStatus? =
         jobRepository.findById(jobId)?.let { row ->
             JobStatus(
                 id = row.id,

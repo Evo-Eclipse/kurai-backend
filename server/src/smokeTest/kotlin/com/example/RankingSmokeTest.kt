@@ -20,6 +20,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
+import kotlinx.coroutines.runBlocking
 import org.jetbrains.exposed.v1.jdbc.Database
 import java.util.Date
 import kotlin.test.BeforeTest
@@ -41,14 +42,16 @@ class RankingSmokeTest {
 
     @BeforeTest
     fun setUp() {
-        db =
-            Database.connect(
-                "jdbc:h2:mem:${System.nanoTime()};MODE=MySQL;DB_CLOSE_DELAY=-1",
-                "org.h2.Driver",
-            )
-        initSchema(db)
-        // Pre-insert a profile so embeddingVersion matches the active version in the handler.
-        ProfileRepository(db).upsert(userId = USER_ID, embeddingVersion = "v1", lastAppliedEventId = 0L)
+        runBlocking {
+            db =
+                Database.connect(
+                    "jdbc:h2:mem:${System.nanoTime()};MODE=MySQL;DB_CLOSE_DELAY=-1",
+                    "org.h2.Driver",
+                )
+            initSchema(db)
+            // Pre-insert a profile so embeddingVersion matches the active version in the handler.
+            ProfileRepository(db).upsert(userId = USER_ID, embeddingVersion = "v1", lastAppliedEventId = 0L)
+        }
     }
 
     private fun buildHandler(): RankingHandler {

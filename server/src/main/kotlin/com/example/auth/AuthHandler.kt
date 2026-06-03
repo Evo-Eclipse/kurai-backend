@@ -89,7 +89,7 @@ class AuthHandler(
     private val issueRateLimiter: FixedWindowRateLimiter,
     private val challengeIpRateLimiter: ChallengeIpRateLimiter,
     private val jwtSecret: String,
-    private val jwtTtlMs: () -> Long,
+    private val jwtTtlMs: suspend () -> Long,
 ) {
     suspend fun handleChallenge(call: ApplicationCall) {
         if (!challengeIpRateLimiter.tryAcquire(call.request.origin.remoteHost)) {
@@ -195,7 +195,7 @@ class AuthHandler(
         call.respond(HttpStatusCode.NoContent)
     }
 
-    private fun mintJwt(
+    private suspend fun mintJwt(
         userId: Long,
         sessionId: String,
     ): String {

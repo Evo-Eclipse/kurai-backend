@@ -1,34 +1,34 @@
 package com.example.domain.auth
 
 interface UserPort {
-    fun insertVerifiedEmail(
+    suspend fun insertVerifiedEmail(
         email: String,
         emailKind: String,
         now: Long,
     ): Long
 
-    fun insertAnonymous(now: Long): Long
+    suspend fun insertAnonymous(now: Long): Long
 
-    fun touchLastSeen(
+    suspend fun touchLastSeen(
         userId: Long,
         now: Long,
     )
 }
 
 interface AuthIdentityPort {
-    fun findBySubject(
+    suspend fun findBySubject(
         provider: String,
         providerSubject: String,
     ): AuthIdentity?
 
-    fun insert(
+    suspend fun insert(
         userId: Long,
         provider: String,
         providerSubject: String,
         now: Long,
     )
 
-    fun disable(
+    suspend fun disable(
         provider: String,
         providerSubject: String,
         now: Long,
@@ -36,9 +36,9 @@ interface AuthIdentityPort {
 }
 
 interface AuthSessionPort {
-    fun findById(id: String): AuthSession?
+    suspend fun findById(id: String): AuthSession?
 
-    fun insert(
+    suspend fun insert(
         id: String,
         userId: Long,
         deviceLabel: String?,
@@ -47,7 +47,7 @@ interface AuthSessionPort {
         now: Long,
     )
 
-    fun revoke(
+    suspend fun revoke(
         id: String,
         now: Long,
     ): Int
@@ -56,7 +56,7 @@ interface AuthSessionPort {
      * Atomically supersedes an active session with a successor row. Returns
      * false when [sessionId] was already replaced or revoked.
      */
-    fun rotateIfActive(
+    suspend fun rotateIfActive(
         sessionId: String,
         successorId: String,
         userId: Long,
@@ -66,16 +66,16 @@ interface AuthSessionPort {
         now: Long,
     ): Boolean
 
-    fun revokeAllForUser(
+    suspend fun revokeAllForUser(
         userId: Long,
         now: Long,
     ): Int
 
-    fun deleteExpiredBefore(cutoff: Long): Int
+    suspend fun deleteExpiredBefore(cutoff: Long): Int
 }
 
 interface LoginChallengePort {
-    fun insert(
+    suspend fun insert(
         id: String,
         email: String,
         codeHash: String,
@@ -83,16 +83,16 @@ interface LoginChallengePort {
         now: Long,
     )
 
-    fun findById(id: String): LoginChallenge?
+    suspend fun findById(id: String): LoginChallenge?
 
-    fun incrementAttempts(id: String): Int
+    suspend fun incrementAttempts(id: String): Int
 
-    fun markConsumedIfPending(
+    suspend fun markConsumedIfPending(
         id: String,
         now: Long,
     ): Int
 
-    fun countCreatedSince(
+    suspend fun countCreatedSince(
         email: String,
         sinceMillis: Long,
     ): Long

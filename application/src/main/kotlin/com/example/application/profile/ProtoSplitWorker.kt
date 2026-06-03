@@ -22,7 +22,7 @@ class ProtoSplitWorker(
     private val cachingEmbedding: CachingEmbeddingAdapter,
     private val prototypeRepo: PrototypePort,
     private val eventRepo: UserEventPort,
-    private val intervalMs: () -> Long,
+    private val intervalMs: suspend () -> Long,
 ) {
     suspend fun run() {
         try {

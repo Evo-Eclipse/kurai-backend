@@ -27,7 +27,7 @@ class IngestionHandler(
     private val cachingProfile: CachingProfileAdapter,
     private val cachingEmbedding: CachingEmbeddingAdapter,
     private val eventQueue: EventQueue,
-    private val activeEmbeddingVersion: () -> EmbeddingVersion,
+    private val activeEmbeddingVersion: suspend () -> EmbeddingVersion,
     /** Resolves an opaque source tag to its numeric weight (dictionary + default). */
     private val resolveWeight: (String) -> Float,
 ) {

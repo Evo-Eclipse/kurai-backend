@@ -6,12 +6,11 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.insertIgnore
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
 class ItemRepository(
     private val db: Database,
 ) : CatalogItemPort {
-    override fun insertIdempotent(
+    override suspend fun insertIdempotent(
         md5: String,
         url: String,
         origin: String,
@@ -19,7 +18,7 @@ class ItemRepository(
         embeddingVersion: String,
         indexedAt: Long,
     ): Pair<Long, Boolean> =
-        transaction(db) {
+        sqliteTransaction(db) {
             val stmt =
                 Items.insertIgnore {
                     it[Items.md5] = md5
@@ -36,13 +35,13 @@ class ItemRepository(
             }
         }
 
-    override fun countAll(): Long =
-        transaction(db) {
+    override suspend fun countAll(): Long =
+        sqliteTransaction(db) {
             Items.selectAll().count()
         }
 
-    override fun loadSample(limit: Int): List<Long> =
-        transaction(db) {
+    override suspend fun loadSample(limit: Int): List<Long> =
+        sqliteTransaction(db) {
             Items
                 .selectAll()
                 .orderBy(Random())
