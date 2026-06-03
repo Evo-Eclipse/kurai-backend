@@ -1,12 +1,12 @@
 package com.example.application.catalog
 
+import com.example.domain.catalog.CatalogItemPort
+import com.example.domain.catalog.ClusterGenerationPort
+import com.example.domain.catalog.ItemVectorIndexPort
+import com.example.domain.catalog.SystemStatePort
 import com.example.domain.cluster.ClusterService
 import com.example.domain.profile.kMeansCentroids
-import com.example.infrastructure.lucene.LuceneAdapter
-import com.example.infrastructure.sqlite.ClusterGenerationRepository
-import com.example.infrastructure.sqlite.ItemRepository
-import com.example.infrastructure.sqlite.SystemStateRepository
-import com.example.infrastructure.storage.LocalObjectStore
+import com.example.domain.storage.ObjectStorePort
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -19,11 +19,11 @@ import java.util.concurrent.atomic.AtomicReference
 private val log = LoggerFactory.getLogger(KMeansScheduler::class.java)
 
 class KMeansScheduler(
-    private val itemRepo: ItemRepository,
-    private val luceneAdapter: LuceneAdapter,
-    private val objectStore: LocalObjectStore,
-    private val clusterGenerations: ClusterGenerationRepository,
-    private val systemState: SystemStateRepository,
+    private val itemRepo: CatalogItemPort,
+    private val vectorIndex: ItemVectorIndexPort,
+    private val objectStore: ObjectStorePort,
+    private val clusterGenerations: ClusterGenerationPort,
+    private val systemState: SystemStatePort,
     private val clusterServiceRef: AtomicReference<ClusterService?>,
     private val intervalMs: () -> Long,
     private val minGrowthFactor: Double = 1.10,
@@ -46,12 +46,9 @@ class KMeansScheduler(
     internal suspend fun check() {
         val now = System.currentTimeMillis()
         val totalItems = withContext(Dispatchers.IO) { itemRepo.countAll() }
-        val embeddedItems = luceneAdapter.numDocs().toLong()
-        // Catalog counters are system-written facts; refresh them every cycle.
+        val embeddedItems = vectorIndex.numDocs().toLong()
         systemState.setCounts(totalItems = totalItems, embeddedItems = embeddedItems, now = now)
 
-        // The rebuild trigger is persisted: compare the catalog against the
-        // active generation's catalog_size_at_build, so it survives restarts.
         val state = systemState.read()
         val active = state.activeClusterId?.let { clusterGenerations.findById(it) }
         val baseline = active?.catalogSizeAtBuild ?: 0L
@@ -68,7 +65,7 @@ class KMeansScheduler(
 
         log.info("KMeansScheduler: triggering retraining (total=$totalItems, baseline=$baseline)")
         val sampleIds = withContext(Dispatchers.IO) { itemRepo.loadSample(sampleLimit) }
-        val vectors = sampleIds.mapNotNull { luceneAdapter.getVector(it) }
+        val vectors = sampleIds.mapNotNull { vectorIndex.getVector(it) }
         if (vectors.size < 2) {
             log.warn("KMeansScheduler: insufficient vectors (${vectors.size}) to retrain — skipping")
             return
@@ -77,9 +74,6 @@ class KMeansScheduler(
         val k = clusterServiceRef.get()?.size?.takeIf { it >= 2 } ?: DEFAULT_K
         val centroids = trainKMeans(vectors, k = minOf(k, vectors.size), seed = now)
 
-        // Persist the centroids under a per-generation key, register the build,
-        // and flip system_state.active_cluster_id atomically; then swap the
-        // in-memory reference so live readers pick up the new clusters.
         val centroidsKey = "clusters/${embeddingVersion}_$now.bin"
         withContext(Dispatchers.IO) { objectStore.put(centroidsKey, serializeCentroids(centroids)) }
         val clusterId =
@@ -109,7 +103,6 @@ class KMeansScheduler(
         internal fun serializeCentroids(centroids: Array<FloatArray>): ByteArray {
             val k = centroids.size
             val dim = centroids.firstOrNull()?.size ?: 0
-            // Format: uint32 k (LE) | uint32 dim (LE) | k × dim × float32 (LE)
             val buf = ByteBuffer.allocate(8 + k * dim * 4).order(ByteOrder.LITTLE_ENDIAN)
             buf.putInt(k)
             buf.putInt(dim)

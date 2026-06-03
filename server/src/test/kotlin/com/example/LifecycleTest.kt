@@ -4,8 +4,8 @@ import com.example.application.profile.CachingProfileAdapter
 import com.example.application.profile.ProfilePersistWorker
 import com.example.domain.model.EmbeddingVersion
 import com.example.domain.model.UserEvent
+import com.example.domain.profile.PendingUserEvent
 import com.example.domain.profile.Scoring
-import com.example.infrastructure.sqlite.EventData
 import com.example.infrastructure.sqlite.EventRepository
 import com.example.infrastructure.sqlite.EventWeightRepository
 import com.example.infrastructure.sqlite.ProfileRepository
@@ -58,7 +58,7 @@ class LifecycleTest {
             val vec = normalizedVec(1)
             val events =
                 (1..5).map { i ->
-                    EventData(userId = userId, itemId = i.toLong(), sourceTag = "like", embeddingVersion = "v1")
+                    PendingUserEvent(userId = userId, itemId = i.toLong(), sourceTag = "like", embeddingVersion = "v1")
                 }
             eventRepo.appendBatch(events)
 

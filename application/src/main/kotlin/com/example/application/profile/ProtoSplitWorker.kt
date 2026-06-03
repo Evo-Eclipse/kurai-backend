@@ -2,13 +2,13 @@ package com.example.application.profile
 
 import com.example.application.embedding.CachingEmbeddingAdapter
 import com.example.domain.model.Prototype
+import com.example.domain.profile.PrototypePort
+import com.example.domain.profile.PrototypeType
 import com.example.domain.profile.Scoring
+import com.example.domain.profile.StoredPrototype
+import com.example.domain.profile.UserEventPort
 import com.example.domain.profile.silhouette
 import com.example.domain.profile.splitPrototypes
-import com.example.infrastructure.sqlite.EventRepository
-import com.example.infrastructure.sqlite.PrototypeRepository
-import com.example.infrastructure.sqlite.PrototypeRow
-import com.example.infrastructure.sqlite.PrototypeType
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -20,8 +20,8 @@ private val log = LoggerFactory.getLogger(ProtoSplitWorker::class.java)
 class ProtoSplitWorker(
     private val cachingProfile: CachingProfileAdapter,
     private val cachingEmbedding: CachingEmbeddingAdapter,
-    private val prototypeRepo: PrototypeRepository,
-    private val eventRepo: EventRepository,
+    private val prototypeRepo: PrototypePort,
+    private val eventRepo: UserEventPort,
     private val intervalMs: () -> Long,
 ) {
     suspend fun run() {
@@ -63,7 +63,7 @@ class ProtoSplitWorker(
         val newPrototypes = buildPrototypes(positiveVecs, assignments, bestK).take(MAX_POS)
         val rows =
             newPrototypes.map { p ->
-                PrototypeRow(
+                StoredPrototype(
                     prototypeType = PrototypeType.POSITIVE,
                     vector = p.vector,
                     weight = p.weight.toDouble(),

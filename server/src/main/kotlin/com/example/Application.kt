@@ -14,6 +14,7 @@ import com.example.application.config.ConfigKey
 import com.example.application.config.RuntimeConfig
 import com.example.application.embedding.CachingEmbeddingAdapter
 import com.example.application.profile.CachingProfileAdapter
+import com.example.application.profile.EventBatcher
 import com.example.application.profile.EventBatcherWorker
 import com.example.application.profile.ProfileMigrationWorker
 import com.example.application.profile.ProfilePersistWorker
@@ -27,7 +28,14 @@ import com.example.domain.auth.AuthIdentityPort
 import com.example.domain.auth.AuthSessionPort
 import com.example.domain.auth.LoginChallengePort
 import com.example.domain.auth.UserPort
+import com.example.domain.catalog.AcquisitionJobPort
+import com.example.domain.catalog.CatalogItemPort
+import com.example.domain.catalog.ClusterGenerationPort
+import com.example.domain.catalog.ItemVectorIndexPort
+import com.example.domain.catalog.SystemStatePort
 import com.example.domain.cluster.ClusterService
+import com.example.domain.config.RuntimeConfigPort
+import com.example.domain.content.ContentSource
 import com.example.domain.embedding.EmbedLookupPort
 import com.example.domain.events.EventQueue
 import com.example.domain.inference.InferenceService
@@ -35,9 +43,15 @@ import com.example.domain.model.EmbeddingVersion
 import com.example.domain.model.Prototype
 import com.example.domain.model.UserEvent
 import com.example.domain.model.UserProfile
+import com.example.domain.profile.PendingUserEvent
+import com.example.domain.profile.ProfilePort
+import com.example.domain.profile.PrototypePort
+import com.example.domain.profile.PrototypeType
+import com.example.domain.profile.UserEventPort
+import com.example.domain.storage.GetResult
+import com.example.domain.storage.ObjectStorePort
 import com.example.health.configureHealthRoutes
 import com.example.infrastructure.content.CdnContentSource
-import com.example.infrastructure.content.ContentSource
 import com.example.infrastructure.content.E621ContentSource
 import com.example.infrastructure.content.ImagePreprocessor
 import com.example.infrastructure.content.UnsplashContentSource
@@ -47,20 +61,16 @@ import com.example.infrastructure.sqlite.AcquisitionJobRepository
 import com.example.infrastructure.sqlite.AuthIdentityRepository
 import com.example.infrastructure.sqlite.AuthSessionRepository
 import com.example.infrastructure.sqlite.ClusterGenerationRepository
-import com.example.infrastructure.sqlite.EventBatcher
-import com.example.infrastructure.sqlite.EventData
 import com.example.infrastructure.sqlite.EventRepository
 import com.example.infrastructure.sqlite.EventWeightRepository
 import com.example.infrastructure.sqlite.ItemRepository
 import com.example.infrastructure.sqlite.LoginChallengeRepository
 import com.example.infrastructure.sqlite.ProfileRepository
 import com.example.infrastructure.sqlite.PrototypeRepository
-import com.example.infrastructure.sqlite.PrototypeType
 import com.example.infrastructure.sqlite.RuntimeConfigRepository
 import com.example.infrastructure.sqlite.SystemStateRepository
 import com.example.infrastructure.sqlite.UserRepository
 import com.example.infrastructure.sqlite.initSchema
-import com.example.infrastructure.storage.GetResult
 import com.example.infrastructure.storage.LocalObjectStore
 import com.example.ingestion.IngestionHandler
 import com.example.ingestion.configureIngestionRoutes
@@ -149,24 +159,26 @@ suspend fun Application.installCore() {
     dependencies.provide<HttpClient> { HttpClient(CIO) }
     dependencies.provide<ImagePreprocessor> { ImagePreprocessor() }
 
-    dependencies.provide<AcquisitionJobRepository> { AcquisitionJobRepository(dependencies.resolve()) }
-    dependencies.provide<ItemRepository> { ItemRepository(dependencies.resolve()) }
-    dependencies.provide<SystemStateRepository> {
+    dependencies.provide<AcquisitionJobPort> { AcquisitionJobRepository(dependencies.resolve()) }
+    dependencies.provide<CatalogItemPort> { ItemRepository(dependencies.resolve()) }
+    dependencies.provide<ItemVectorIndexPort> { dependencies.resolve<LuceneAdapter>() }
+    dependencies.provide<ObjectStorePort> { dependencies.resolve<LocalObjectStore>() }
+    dependencies.provide<SystemStatePort> {
         SystemStateRepository(dependencies.resolve()).also { it.seedIfMissing(System.currentTimeMillis()) }
     }
-    dependencies.provide<ClusterGenerationRepository> { ClusterGenerationRepository(dependencies.resolve()) }
-    dependencies.provide<ProfileRepository> { ProfileRepository(dependencies.resolve()) }
-    dependencies.provide<EventRepository> { EventRepository(dependencies.resolve()) }
+    dependencies.provide<ClusterGenerationPort> { ClusterGenerationRepository(dependencies.resolve()) }
+    dependencies.provide<ProfilePort> { ProfileRepository(dependencies.resolve()) }
+    dependencies.provide<UserEventPort> { EventRepository(dependencies.resolve()) }
     dependencies.provide<EventWeightRepository> { EventWeightRepository(dependencies.resolve()) }
-    dependencies.provide<PrototypeRepository> { PrototypeRepository(dependencies.resolve()) }
+    dependencies.provide<PrototypePort> { PrototypeRepository(dependencies.resolve()) }
     dependencies.provide<UserPort> { UserRepository(dependencies.resolve()) }
     dependencies.provide<AuthIdentityPort> { AuthIdentityRepository(dependencies.resolve()) }
     dependencies.provide<AuthSessionPort> { AuthSessionRepository(dependencies.resolve()) }
     dependencies.provide<LoginChallengePort> { LoginChallengeRepository(dependencies.resolve()) }
-    dependencies.provide<RuntimeConfigRepository> { RuntimeConfigRepository(dependencies.resolve()) }
+    dependencies.provide<RuntimeConfigPort> { RuntimeConfigRepository(dependencies.resolve()) }
 
     dependencies.provide<RuntimeConfig> {
-        val runtime = RuntimeConfig(dependencies.resolve<RuntimeConfigRepository>())
+        val runtime = RuntimeConfig(dependencies.resolve<RuntimeConfigPort>())
         // Seed bootstrap defaults so the first AuthService TTL lookup
         // does not blow up on a fresh database. Operator-set values
         // (if a row already exists) are preserved across restarts.
@@ -264,7 +276,7 @@ suspend fun Application.installCore() {
             jobRepository = dependencies.resolve(),
             inferenceService = dependencies.resolve(),
             itemRepository = dependencies.resolve(),
-            luceneAdapter = dependencies.resolve(),
+            vectorIndex = dependencies.resolve(),
             objectStore = dependencies.resolve(),
             activeEmbeddingVersion = dependencies.resolve<EmbeddingVersionLookup>().asStringLookup(),
             contentSources = dependencies.resolve<ContentSourceRegistry>().byName,
@@ -283,9 +295,9 @@ suspend fun Application.installCore() {
     }
 
     dependencies.provide<CachingProfileAdapter> {
-        val profileRepo = dependencies.resolve<ProfileRepository>()
-        val eventRepo = dependencies.resolve<EventRepository>()
-        val prototypeRepo = dependencies.resolve<PrototypeRepository>()
+        val profileRepo = dependencies.resolve<ProfilePort>()
+        val eventRepo = dependencies.resolve<UserEventPort>()
+        val prototypeRepo = dependencies.resolve<PrototypePort>()
         val cachingEmbedding = dependencies.resolve<CachingEmbeddingAdapter>()
         CachingProfileAdapter(
             loadProfile = { userId ->
@@ -327,13 +339,13 @@ suspend fun Application.installCore() {
     }
 
     dependencies.provide<EventBatcher> {
-        val eventRepo = dependencies.resolve<EventRepository>()
+        val eventRepo = dependencies.resolve<UserEventPort>()
         EventBatcher(flush = { events -> eventRepo.appendBatch(events) })
     }
     dependencies.provide<EventQueue> {
         val batcher = dependencies.resolve<EventBatcher>()
         EventQueue { event ->
-            batcher.enqueue(EventData(event.userId, event.itemId, event.sourceTag, event.embeddingVersion.value))
+            batcher.enqueue(PendingUserEvent(event.userId, event.itemId, event.sourceTag, event.embeddingVersion.value))
         }
     }
 
@@ -352,9 +364,9 @@ suspend fun Application.installCore() {
 
     dependencies.provide<ClusterServiceRef> {
         // Load whichever cluster generation system_state currently points at.
-        val systemState = dependencies.resolve<SystemStateRepository>()
-        val clusterGenerations = dependencies.resolve<ClusterGenerationRepository>()
-        val store = dependencies.resolve<LocalObjectStore>()
+        val systemState = dependencies.resolve<SystemStatePort>()
+        val clusterGenerations = dependencies.resolve<ClusterGenerationPort>()
+        val store = dependencies.resolve<ObjectStorePort>()
         val active = systemState.read().activeClusterId?.let { clusterGenerations.findById(it) }
         val clusters =
             active?.let { gen ->
@@ -415,12 +427,12 @@ suspend fun Application.installLifecycle() {
     val cachingProfile = dependencies.resolve<CachingProfileAdapter>()
     val cachingEmbedding = dependencies.resolve<CachingEmbeddingAdapter>()
     val eventBatcher = dependencies.resolve<EventBatcher>()
-    val profileRepo = dependencies.resolve<ProfileRepository>()
-    val eventRepo = dependencies.resolve<EventRepository>()
-    val prototypeRepo = dependencies.resolve<PrototypeRepository>()
-    val itemRepo = dependencies.resolve<ItemRepository>()
+    val profileRepo = dependencies.resolve<ProfilePort>()
+    val eventRepo = dependencies.resolve<UserEventPort>()
+    val prototypeRepo = dependencies.resolve<PrototypePort>()
+    val itemRepo = dependencies.resolve<CatalogItemPort>()
     val lucene = dependencies.resolve<LuceneAdapter>()
-    val objectStore = dependencies.resolve<LocalObjectStore>()
+    val objectStore = dependencies.resolve<ObjectStorePort>()
     val onnxAdapter = dependencies.resolve<OnnxInferenceAdapter>()
     val httpClient = dependencies.resolve<HttpClient>()
     val clusterRef = dependencies.resolve<ClusterServiceRef>()
@@ -464,10 +476,10 @@ suspend fun Application.installLifecycle() {
     acquisitionScope.launch {
         KMeansScheduler(
             itemRepo = itemRepo,
-            luceneAdapter = lucene,
+            vectorIndex = lucene,
             objectStore = objectStore,
-            clusterGenerations = dependencies.resolve<ClusterGenerationRepository>(),
-            systemState = dependencies.resolve<SystemStateRepository>(),
+            clusterGenerations = dependencies.resolve(),
+            systemState = dependencies.resolve(),
             clusterServiceRef = clusterRef.asAtomicReference(),
             intervalMs = { runtime.get(ConfigKey.KMeansCheckIntervalMs) },
         ).run()

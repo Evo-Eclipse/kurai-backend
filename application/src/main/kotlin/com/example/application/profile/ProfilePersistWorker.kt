@@ -1,6 +1,6 @@
 package com.example.application.profile
 
-import com.example.infrastructure.sqlite.ProfileRepository
+import com.example.domain.profile.ProfilePort
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
@@ -11,7 +11,7 @@ private val log = LoggerFactory.getLogger(ProfilePersistWorker::class.java)
 
 class ProfilePersistWorker(
     private val cachingProfile: CachingProfileAdapter,
-    private val profileRepo: ProfileRepository,
+    private val profileRepo: ProfilePort,
     private val intervalMs: () -> Long,
 ) {
     suspend fun run() {

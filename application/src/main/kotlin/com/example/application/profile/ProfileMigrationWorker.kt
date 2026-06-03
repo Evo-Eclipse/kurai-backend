@@ -4,9 +4,9 @@ import com.example.application.embedding.CachingEmbeddingAdapter
 import com.example.domain.model.EmbeddingVersion
 import com.example.domain.model.UserEvent
 import com.example.domain.model.UserProfile
+import com.example.domain.profile.ProfilePort
 import com.example.domain.profile.Scoring
-import com.example.infrastructure.sqlite.EventRepository
-import com.example.infrastructure.sqlite.ProfileRepository
+import com.example.domain.profile.UserEventPort
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -16,8 +16,8 @@ import org.slf4j.LoggerFactory
 private val log = LoggerFactory.getLogger(ProfileMigrationWorker::class.java)
 
 class ProfileMigrationWorker(
-    private val profileRepo: ProfileRepository,
-    private val eventRepo: EventRepository,
+    private val profileRepo: ProfilePort,
+    private val eventRepo: UserEventPort,
     private val cachingEmbedding: CachingEmbeddingAdapter,
     private val cachingProfile: CachingProfileAdapter,
     private val activeEmbeddingVersion: () -> EmbeddingVersion,

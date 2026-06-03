@@ -4,15 +4,15 @@ import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 import com.example.application.embedding.CachingEmbeddingAdapter
 import com.example.application.profile.CachingProfileAdapter
+import com.example.application.profile.EventBatcher
 import com.example.domain.embedding.EmbedLookupPort
 import com.example.domain.events.EventQueue
 import com.example.domain.model.EmbeddingVersion
 import com.example.domain.model.Prototype
 import com.example.domain.model.UserProfile
+import com.example.domain.profile.PendingUserEvent
 import com.example.domain.profile.Scoring
 import com.example.infrastructure.lucene.LuceneAdapter
-import com.example.infrastructure.sqlite.EventBatcher
-import com.example.infrastructure.sqlite.EventData
 import com.example.infrastructure.sqlite.EventRepository
 import com.example.infrastructure.sqlite.ProfileRepository
 import com.example.infrastructure.sqlite.initSchema
@@ -98,7 +98,7 @@ class IngestionSmokeTest {
         val eventQueue: EventQueue =
             EventQueue { event ->
                 eventBatcher.enqueue(
-                    EventData(event.userId, event.itemId, event.sourceTag, event.embeddingVersion.value),
+                    PendingUserEvent(event.userId, event.itemId, event.sourceTag, event.embeddingVersion.value),
                 )
             }
         return IngestionHandler(

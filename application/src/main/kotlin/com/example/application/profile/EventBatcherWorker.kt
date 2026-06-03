@@ -1,8 +1,11 @@
 package com.example.application.profile
 
-import com.example.infrastructure.sqlite.EventBatcher
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
+import org.slf4j.LoggerFactory
+
+private val log = LoggerFactory.getLogger(EventBatcherWorker::class.java)
 
 class EventBatcherWorker(
     private val batcher: EventBatcher,
@@ -10,11 +13,11 @@ class EventBatcherWorker(
     suspend fun run() {
         try {
             batcher.runFlushLoop()
-        } finally {
-            // NonCancellable ensures drainAndFlush completes even when the coroutine is being cancelled.
-            withContext(NonCancellable) {
-                batcher.drainAndFlush()
-            }
+        } catch (e: CancellationException) {
+            withContext(NonCancellable) { batcher.drainAndFlush() }
+            throw e
+        } catch (e: Exception) {
+            log.error("EventBatcherWorker crashed; worker stopped permanently", e)
         }
     }
 }

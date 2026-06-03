@@ -1,7 +1,6 @@
 package com.example.application.profile
 
-import com.example.infrastructure.sqlite.EventBatcher
-import com.example.infrastructure.sqlite.EventData
+import com.example.domain.profile.PendingUserEvent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceTimeBy
@@ -13,12 +12,13 @@ import kotlin.test.assertEquals
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class EventBatcherTest {
-    private fun event(i: Int) = EventData(userId = 1L, itemId = i.toLong(), sourceTag = "t", embeddingVersion = "v1")
+    private fun event(i: Int) =
+        PendingUserEvent(userId = 1L, itemId = i.toLong(), sourceTag = "t", embeddingVersion = "v1")
 
     @Test
     fun `size flush fires when buffer reaches flushSize`() =
         runTest {
-            val flushed = mutableListOf<EventData>()
+            val flushed = mutableListOf<PendingUserEvent>()
             val batcher = EventBatcher(flush = { flushed.addAll(it) }, flushSize = 500)
             val job = launch { batcher.runFlushLoop() }
 
@@ -35,7 +35,7 @@ class EventBatcherTest {
     @Test
     fun `time flush fires after timeout elapses`() =
         runTest {
-            val flushed = mutableListOf<EventData>()
+            val flushed = mutableListOf<PendingUserEvent>()
             val batcher = EventBatcher(flush = { flushed.addAll(it) }, flushSize = 500, flushTimeoutMs = 500L)
             val job = launch { batcher.runFlushLoop() }
 
@@ -50,7 +50,7 @@ class EventBatcherTest {
     @Test
     fun `worker drainAndFlush delivers remaining items on cancellation`() =
         runTest {
-            val flushed = mutableListOf<EventData>()
+            val flushed = mutableListOf<PendingUserEvent>()
             val batcher = EventBatcher(flush = { flushed.addAll(it) }, flushSize = 500)
             val worker = EventBatcherWorker(batcher)
             val job = launch { worker.run() }
@@ -69,7 +69,7 @@ class EventBatcherTest {
     @Test
     fun `concurrent enqueue loses no events`() =
         runTest {
-            val flushed = mutableListOf<EventData>()
+            val flushed = mutableListOf<PendingUserEvent>()
             val batcher = EventBatcher(flush = { flushed.addAll(it) }, flushSize = 100)
             val loopJob = launch { batcher.runFlushLoop() }
 
@@ -78,7 +78,7 @@ class EventBatcherTest {
                     launch {
                         repeat(5) { j ->
                             batcher.enqueue(
-                                EventData(
+                                PendingUserEvent(
                                     userId = i.toLong(),
                                     itemId = j.toLong(),
                                     sourceTag = "t",

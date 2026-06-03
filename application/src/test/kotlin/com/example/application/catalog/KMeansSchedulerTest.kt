@@ -76,7 +76,7 @@ class KMeansSchedulerTest {
             val scheduler =
                 KMeansScheduler(
                     itemRepo = itemRepo,
-                    luceneAdapter = lucene,
+                    vectorIndex = lucene,
                     objectStore = objectStore,
                     clusterGenerations = clusterGenerations,
                     systemState = systemState,
@@ -100,7 +100,7 @@ class KMeansSchedulerTest {
         minAgeMs: Long = 0L,
     ) = KMeansScheduler(
         itemRepo = itemRepo,
-        luceneAdapter = lucene,
+        vectorIndex = lucene,
         objectStore = objectStore,
         clusterGenerations = clusterGenerations,
         systemState = systemState,

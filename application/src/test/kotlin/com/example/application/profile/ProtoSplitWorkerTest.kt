@@ -4,8 +4,8 @@ import com.example.application.embedding.CachingEmbeddingAdapter
 import com.example.domain.model.EmbeddingVersion
 import com.example.domain.model.Prototype
 import com.example.domain.model.UserProfile
+import com.example.domain.profile.PendingUserEvent
 import com.example.domain.profile.Scoring
-import com.example.infrastructure.sqlite.EventData
 import com.example.infrastructure.sqlite.EventRepository
 import com.example.infrastructure.sqlite.EventWeightRepository
 import com.example.infrastructure.sqlite.ProfileRepository
@@ -78,7 +78,7 @@ class ProtoSplitWorkerTest {
         profileRepo.upsert(userId = userId, embeddingVersion = "v1", lastAppliedEventId = 0L)
         val events =
             positiveItemIds.map { itemId ->
-                EventData(userId = userId, itemId = itemId, sourceTag = "like", embeddingVersion = "v1")
+                PendingUserEvent(userId = userId, itemId = itemId, sourceTag = "like", embeddingVersion = "v1")
             }
         eventRepo.appendBatch(events)
 

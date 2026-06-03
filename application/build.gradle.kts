@@ -13,7 +13,7 @@ configure<org.jlleitschuh.gradle.ktlint.KtlintExtension> {
 
 dependencies {
     implementation(project(":domain"))
-    implementation(project(":infrastructure"))
+    testImplementation(project(":infrastructure"))
 
     implementation(libs.caffeine)
     implementation(libs.kotlinx.coroutines.core)

@@ -1,18 +1,18 @@
 package com.example.application.acquisition
 
+import com.example.domain.content.ContentSource
+import com.example.domain.content.Platform
+import com.example.domain.content.RawImage
+import com.example.domain.content.SourceQuery
 import com.example.domain.inference.InferenceService
 import com.example.domain.profile.Scoring
-import com.example.infrastructure.content.ContentSource
-import com.example.infrastructure.content.Platform
-import com.example.infrastructure.content.RawImage
-import com.example.infrastructure.content.SourceQuery
+import com.example.domain.storage.GetResult
+import com.example.domain.storage.ObjectStorePort
 import com.example.infrastructure.lucene.LuceneAdapter
 import com.example.infrastructure.sqlite.AcquisitionJobRepository
 import com.example.infrastructure.sqlite.ItemRepository
 import com.example.infrastructure.sqlite.Items
 import com.example.infrastructure.sqlite.initSchema
-import com.example.infrastructure.storage.GetResult
-import com.example.infrastructure.storage.ObjectStorePort
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.runBlocking
@@ -30,7 +30,7 @@ import kotlin.test.assertTrue
 class AcquisitionServiceTest {
     private lateinit var db: Database
     private lateinit var luceneDir: java.nio.file.Path
-    private lateinit var luceneAdapter: LuceneAdapter
+    private lateinit var vectorIndex: LuceneAdapter
     private val blobs = mutableMapOf<String, ByteArray>()
 
     private val fakeObjectStore =
@@ -83,7 +83,7 @@ class AcquisitionServiceTest {
             jobRepository = AcquisitionJobRepository(db),
             inferenceService = fakeInference(),
             itemRepository = ItemRepository(db),
-            luceneAdapter = luceneAdapter,
+            vectorIndex = vectorIndex,
             objectStore = fakeObjectStore,
             activeEmbeddingVersion = { "v1" },
         )
@@ -97,12 +97,12 @@ class AcquisitionServiceTest {
             )
         initSchema(db)
         luceneDir = createTempDirectory("kurai-acq-test-")
-        luceneAdapter = LuceneAdapter(luceneDir)
+        vectorIndex = LuceneAdapter(luceneDir)
     }
 
     @AfterTest
     fun tearDown() {
-        luceneAdapter.close()
+        vectorIndex.close()
         luceneDir.toFile().walkBottomUp().forEach { it.delete() }
         blobs.clear()
     }
@@ -182,7 +182,7 @@ class AcquisitionServiceTest {
                             },
                         ),
                     itemRepository = ItemRepository(db),
-                    luceneAdapter = luceneAdapter,
+                    vectorIndex = vectorIndex,
                     objectStore = fakeObjectStore,
                     activeEmbeddingVersion = { "v1" },
                 )

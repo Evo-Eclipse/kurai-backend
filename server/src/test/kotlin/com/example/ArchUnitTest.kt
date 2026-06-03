@@ -76,10 +76,10 @@ class ArchUnitTest {
     }
 
     @Test
-    fun `application auth does not import infrastructure`() {
+    fun `application does not import infrastructure`() {
         noClasses()
             .that()
-            .resideInAPackage("com.example.application.auth..")
+            .resideInAPackage("com.example.application..")
             .should()
             .dependOnClassesThat()
             .resideInAPackage("..infrastructure..")

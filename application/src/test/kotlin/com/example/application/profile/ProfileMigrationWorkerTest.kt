@@ -3,8 +3,8 @@ package com.example.application.profile
 import com.example.application.embedding.CachingEmbeddingAdapter
 import com.example.domain.model.EmbeddingVersion
 import com.example.domain.model.Prototype
+import com.example.domain.profile.PendingUserEvent
 import com.example.domain.profile.Scoring
-import com.example.infrastructure.sqlite.EventData
 import com.example.infrastructure.sqlite.EventRepository
 import com.example.infrastructure.sqlite.EventWeightRepository
 import com.example.infrastructure.sqlite.ProfileRepository
@@ -75,7 +75,7 @@ class ProfileMigrationWorkerTest {
             profileRepo.upsert(userId = 1L, embeddingVersion = "v1", lastAppliedEventId = 0L)
             // Insert a positive event
             eventRepo.appendBatch(
-                listOf(EventData(userId = 1L, itemId = 10L, sourceTag = "like", embeddingVersion = "v1")),
+                listOf(PendingUserEvent(userId = 1L, itemId = 10L, sourceTag = "like", embeddingVersion = "v1")),
             )
             val vec = normalizedVec(1)
 
@@ -137,8 +137,8 @@ class ProfileMigrationWorkerTest {
             profileRepo.upsert(userId = 3L, embeddingVersion = "v1", lastAppliedEventId = 0L)
             val events =
                 listOf(
-                    EventData(userId = 3L, itemId = 1L, sourceTag = "like", embeddingVersion = "v1"),
-                    EventData(userId = 3L, itemId = 2L, sourceTag = "like", embeddingVersion = "v1"),
+                    PendingUserEvent(userId = 3L, itemId = 1L, sourceTag = "like", embeddingVersion = "v1"),
+                    PendingUserEvent(userId = 3L, itemId = 2L, sourceTag = "like", embeddingVersion = "v1"),
                 )
             val ids = eventRepo.appendBatch(events)
             val maxId = ids.max()

@@ -3,18 +3,18 @@ package com.example
 import com.example.acquisition.AcquisitionHandler
 import com.example.acquisition.configureAcquisitionRoutes
 import com.example.application.acquisition.AcquisitionService
+import com.example.domain.content.ContentSource
+import com.example.domain.content.Platform
+import com.example.domain.content.RawImage
+import com.example.domain.content.SourceQuery
 import com.example.domain.inference.InferenceService
 import com.example.domain.profile.Scoring
-import com.example.infrastructure.content.ContentSource
-import com.example.infrastructure.content.Platform
-import com.example.infrastructure.content.RawImage
-import com.example.infrastructure.content.SourceQuery
+import com.example.domain.storage.GetResult
+import com.example.domain.storage.ObjectStorePort
 import com.example.infrastructure.lucene.LuceneAdapter
 import com.example.infrastructure.sqlite.AcquisitionJobRepository
 import com.example.infrastructure.sqlite.ItemRepository
 import com.example.infrastructure.sqlite.initSchema
-import com.example.infrastructure.storage.GetResult
-import com.example.infrastructure.storage.ObjectStorePort
 import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
@@ -41,7 +41,7 @@ import kotlin.test.assertNotNull
 class AcquisitionSmokeTest {
     private lateinit var db: Database
     private lateinit var luceneDir: java.nio.file.Path
-    private lateinit var luceneAdapter: LuceneAdapter
+    private lateinit var vectorIndex: LuceneAdapter
 
     private val fakeObjectStore =
         object : ObjectStorePort {
@@ -75,12 +75,12 @@ class AcquisitionSmokeTest {
             )
         initSchema(db)
         luceneDir = createTempDirectory("kurai-smoke-")
-        luceneAdapter = LuceneAdapter(luceneDir)
+        vectorIndex = LuceneAdapter(luceneDir)
     }
 
     @AfterTest
     fun tearDown() {
-        luceneAdapter.close()
+        vectorIndex.close()
         luceneDir.toFile().walkBottomUp().forEach { it.delete() }
     }
 
@@ -90,7 +90,7 @@ class AcquisitionSmokeTest {
                 jobRepository = AcquisitionJobRepository(db),
                 inferenceService = fakeInference(),
                 itemRepository = ItemRepository(db),
-                luceneAdapter = luceneAdapter,
+                vectorIndex = vectorIndex,
                 objectStore = fakeObjectStore,
                 activeEmbeddingVersion = { "v1" },
                 contentSources = sources,

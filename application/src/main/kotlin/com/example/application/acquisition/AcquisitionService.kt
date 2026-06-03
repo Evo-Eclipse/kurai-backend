@@ -1,12 +1,12 @@
 package com.example.application.acquisition
 
+import com.example.domain.catalog.AcquisitionJobPort
+import com.example.domain.catalog.CatalogItemPort
+import com.example.domain.catalog.ItemVectorIndexPort
+import com.example.domain.content.ContentSource
+import com.example.domain.content.SourceQuery
 import com.example.domain.inference.InferenceService
-import com.example.infrastructure.content.ContentSource
-import com.example.infrastructure.content.SourceQuery
-import com.example.infrastructure.lucene.LuceneAdapter
-import com.example.infrastructure.sqlite.AcquisitionJobRepository
-import com.example.infrastructure.sqlite.ItemRepository
-import com.example.infrastructure.storage.ObjectStorePort
+import com.example.domain.storage.ObjectStorePort
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.collect
@@ -24,10 +24,10 @@ data class JobStatus(
 )
 
 class AcquisitionService(
-    private val jobRepository: AcquisitionJobRepository,
+    private val jobRepository: AcquisitionJobPort,
     private val inferenceService: InferenceService,
-    private val itemRepository: ItemRepository,
-    private val luceneAdapter: LuceneAdapter,
+    private val itemRepository: CatalogItemPort,
+    private val vectorIndex: ItemVectorIndexPort,
     private val objectStore: ObjectStorePort,
     private val activeEmbeddingVersion: () -> String,
     private val contentSources: Map<String, ContentSource> = emptyMap(),
@@ -78,18 +78,17 @@ class AcquisitionService(
                         if (isNew) {
                             val vec = inferenceService.embed(image.bytes)
                             withContext(Dispatchers.IO) {
-                                luceneAdapter.write(itemId, vec)
+                                vectorIndex.write(itemId, vec)
                             }
                             objectStore.put("images/${image.md5}", image.bytes)
                         }
                         emit(itemId)
                     }
                 }.collect()
-            luceneAdapter.refresh()
+            vectorIndex.refresh()
             jobRepository.updateStatus(jobId, "done", Instant.now().toEpochMilli())
         } catch (e: Exception) {
-            // Commit any partial Lucene writes so a retry doesn't produce duplicate index entries.
-            runCatching { luceneAdapter.refresh() }
+            runCatching { vectorIndex.refresh() }
             jobRepository.updateStatus(jobId, "failed", Instant.now().toEpochMilli(), e.message)
             throw e
         }
