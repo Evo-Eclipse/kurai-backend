@@ -1,5 +1,6 @@
 package com.example.application.auth
 
+import com.example.domain.auth.AuthSessionPort
 import com.example.infrastructure.sqlite.AuthSessionRepository
 import com.example.infrastructure.sqlite.UserRepository
 import com.example.infrastructure.sqlite.initSchema
@@ -12,7 +13,7 @@ import kotlin.test.assertNull
 
 class SessionGcWorkerTest {
     private lateinit var db: Database
-    private lateinit var sessions: AuthSessionRepository
+    private lateinit var sessions: AuthSessionPort
     private var userId: Long = 0
 
     private val now = 1_000_000_000L

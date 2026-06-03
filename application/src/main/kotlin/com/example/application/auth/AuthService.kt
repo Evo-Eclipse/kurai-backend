@@ -1,11 +1,11 @@
 package com.example.application.auth
 
-import com.example.infrastructure.sqlite.AuthIdentityRepository
-import com.example.infrastructure.sqlite.AuthProvider
-import com.example.infrastructure.sqlite.AuthSessionRepository
-import com.example.infrastructure.sqlite.EmailKind
-import com.example.infrastructure.sqlite.LoginChallengeRepository
-import com.example.infrastructure.sqlite.UserRepository
+import com.example.domain.auth.AuthIdentityPort
+import com.example.domain.auth.AuthProvider
+import com.example.domain.auth.AuthSessionPort
+import com.example.domain.auth.EmailKind
+import com.example.domain.auth.LoginChallengePort
+import com.example.domain.auth.UserPort
 import java.util.UUID
 
 /**
@@ -29,10 +29,10 @@ import java.util.UUID
  * repository layer (see roadmap), not special-cased per method here.
  */
 class AuthService(
-    private val users: UserRepository,
-    private val identities: AuthIdentityRepository,
-    private val sessions: AuthSessionRepository,
-    private val challenges: LoginChallengeRepository,
+    private val users: UserPort,
+    private val identities: AuthIdentityPort,
+    private val sessions: AuthSessionPort,
+    private val challenges: LoginChallengePort,
     private val sender: MagicLinkSender,
     /**
      * Pull-based TTL accessors so operator updates to `runtime_config`

@@ -1,6 +1,6 @@
 package com.example.application.auth
 
-import com.example.infrastructure.sqlite.AuthSessionRepository
+import com.example.domain.auth.AuthSessionPort
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import org.slf4j.LoggerFactory
@@ -16,7 +16,7 @@ private val log = LoggerFactory.getLogger(SessionGcWorker::class.java)
  * path, so deleting its row loses no security signal.
  */
 class SessionGcWorker(
-    private val sessions: AuthSessionRepository,
+    private val sessions: AuthSessionPort,
     private val intervalMs: () -> Long,
     private val retentionMs: () -> Long,
     private val clock: () -> Long = { System.currentTimeMillis() },

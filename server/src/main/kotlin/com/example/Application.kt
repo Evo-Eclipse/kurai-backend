@@ -23,6 +23,10 @@ import com.example.auth.ChallengeIpRateLimiter
 import com.example.auth.FixedWindowRateLimiter
 import com.example.auth.SessionAuthenticator
 import com.example.auth.configureAuthRoutes
+import com.example.domain.auth.AuthIdentityPort
+import com.example.domain.auth.AuthSessionPort
+import com.example.domain.auth.LoginChallengePort
+import com.example.domain.auth.UserPort
 import com.example.domain.cluster.ClusterService
 import com.example.domain.embedding.EmbedLookupPort
 import com.example.domain.events.EventQueue
@@ -155,10 +159,10 @@ suspend fun Application.installCore() {
     dependencies.provide<EventRepository> { EventRepository(dependencies.resolve()) }
     dependencies.provide<EventWeightRepository> { EventWeightRepository(dependencies.resolve()) }
     dependencies.provide<PrototypeRepository> { PrototypeRepository(dependencies.resolve()) }
-    dependencies.provide<UserRepository> { UserRepository(dependencies.resolve()) }
-    dependencies.provide<AuthIdentityRepository> { AuthIdentityRepository(dependencies.resolve()) }
-    dependencies.provide<AuthSessionRepository> { AuthSessionRepository(dependencies.resolve()) }
-    dependencies.provide<LoginChallengeRepository> { LoginChallengeRepository(dependencies.resolve()) }
+    dependencies.provide<UserPort> { UserRepository(dependencies.resolve()) }
+    dependencies.provide<AuthIdentityPort> { AuthIdentityRepository(dependencies.resolve()) }
+    dependencies.provide<AuthSessionPort> { AuthSessionRepository(dependencies.resolve()) }
+    dependencies.provide<LoginChallengePort> { LoginChallengeRepository(dependencies.resolve()) }
     dependencies.provide<RuntimeConfigRepository> { RuntimeConfigRepository(dependencies.resolve()) }
 
     dependencies.provide<RuntimeConfig> {
@@ -421,13 +425,13 @@ suspend fun Application.installLifecycle() {
     val httpClient = dependencies.resolve<HttpClient>()
     val clusterRef = dependencies.resolve<ClusterServiceRef>()
     val versionLookup = dependencies.resolve<EmbeddingVersionLookup>()
-    val authSessionRepo = dependencies.resolve<AuthSessionRepository>()
+    val authSessions = dependencies.resolve<AuthSessionPort>()
     val runtime = dependencies.resolve<RuntimeConfig>()
 
     acquisitionScope.launch { EventBatcherWorker(eventBatcher).run() }
     acquisitionScope.launch {
         SessionGcWorker(
-            sessions = authSessionRepo,
+            sessions = authSessions,
             intervalMs = { runtime.get(ConfigKey.SessionGcIntervalMs) },
             retentionMs = { runtime.get(ConfigKey.SessionGcRetentionMs) },
         ).run()

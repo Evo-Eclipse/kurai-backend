@@ -16,7 +16,8 @@ import kotlin.test.Test
  *     ↓
  *   :application (com.example.application.*)
  *     ↓
- *   :infrastructure (com.example.infrastructure.*)  /  :domain (com.example.domain.*)
+ *   :infrastructure (com.example.infrastructure.*) → :domain
+ *   :domain (com.example.domain.*)
  *
  * Each bounded context is a leaf folder; sibling folders may not
  * depend on each other — the wiring layer (Application.kt) is the
@@ -47,13 +48,41 @@ class ArchUnitTest {
     }
 
     @Test
-    fun `infrastructure does not import domain or application types`() {
+    fun `infrastructure does not import application types`() {
         noClasses()
             .that()
             .resideInAPackage("..infrastructure..")
             .should()
             .dependOnClassesThat()
-            .resideInAnyPackage("..domain..", "com.example.application..")
+            .resideInAPackage("com.example.application..")
+            .check(productionClasses)
+    }
+
+    @Test
+    fun `infrastructure depends on domain only within com_example`() {
+        noClasses()
+            .that()
+            .resideInAPackage("..infrastructure..")
+            .should()
+            .dependOnClassesThat()
+            .resideInAnyPackage(
+                "com.example.application..",
+                "com.example.auth..",
+                "com.example.profile..",
+                "com.example.acquisition..",
+                "com.example.ingestion..",
+                "com.example.health..",
+            ).check(productionClasses)
+    }
+
+    @Test
+    fun `application auth does not import infrastructure`() {
+        noClasses()
+            .that()
+            .resideInAPackage("com.example.application.auth..")
+            .should()
+            .dependOnClassesThat()
+            .resideInAPackage("..infrastructure..")
             .check(productionClasses)
     }
 
