@@ -1,5 +1,6 @@
 package com.example.infrastructure.sqlite
 
+import com.example.domain.catalog.CatalogItemPort
 import org.jetbrains.exposed.v1.core.Random
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.Database
@@ -9,8 +10,8 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
 class ItemRepository(
     private val db: Database,
-) {
-    fun insertIdempotent(
+) : CatalogItemPort {
+    override fun insertIdempotent(
         md5: String,
         url: String,
         origin: String,
@@ -35,12 +36,12 @@ class ItemRepository(
             }
         }
 
-    fun countAll(): Long =
+    override fun countAll(): Long =
         transaction(db) {
             Items.selectAll().count()
         }
 
-    fun loadSample(limit: Int): List<Long> =
+    override fun loadSample(limit: Int): List<Long> =
         transaction(db) {
             Items
                 .selectAll()

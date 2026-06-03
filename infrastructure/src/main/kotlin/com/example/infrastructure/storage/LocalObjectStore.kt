@@ -1,5 +1,7 @@
 package com.example.infrastructure.storage
 
+import com.example.domain.storage.GetResult
+import com.example.domain.storage.ObjectStorePort
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.nio.file.Files

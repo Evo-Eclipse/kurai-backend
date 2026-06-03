@@ -1,5 +1,7 @@
 package com.example.infrastructure.sqlite
 
+import com.example.domain.profile.ProfilePort
+import com.example.domain.profile.ProfileState
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.neq
@@ -9,17 +11,10 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.upsert
 import java.time.Instant
 
-data class ProfileRow(
-    val userId: Long,
-    val embeddingVersion: String,
-    val lastAppliedEventId: Long,
-    val updatedAt: Long,
-)
-
 class ProfileRepository(
     private val db: Database,
-) {
-    fun upsert(
+) : ProfilePort {
+    override fun upsert(
         userId: Long,
         embeddingVersion: String,
         lastAppliedEventId: Long,
@@ -34,14 +29,14 @@ class ProfileRepository(
         }
     }
 
-    fun load(userId: Long): ProfileRow? =
+    override fun load(userId: Long): ProfileState? =
         transaction(db) {
             UserProfileState
                 .selectAll()
                 .where { UserProfileState.userId eq userId }
                 .singleOrNull()
                 ?.let { row ->
-                    ProfileRow(
+                    ProfileState(
                         userId = row[UserProfileState.userId],
                         embeddingVersion = row[UserProfileState.assignedEmbeddingVersion],
                         lastAppliedEventId = row[UserProfileState.lastAppliedEventId],
@@ -50,7 +45,7 @@ class ProfileRepository(
                 }
         }
 
-    fun findStaleVersions(activeVersion: String): List<Long> =
+    override fun findStaleVersions(activeVersion: String): List<Long> =
         transaction(db) {
             UserProfileState
                 .selectAll()
@@ -59,7 +54,7 @@ class ProfileRepository(
                 .map { it[UserProfileState.userId] }
         }
 
-    fun loadAllUserIds(): List<Long> =
+    override fun loadAllUserIds(): List<Long> =
         transaction(db) {
             UserProfileState
                 .selectAll()

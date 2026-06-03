@@ -1,5 +1,6 @@
 package com.example.infrastructure.content
-
+import com.example.domain.content.Platform
+import com.example.domain.content.SourceQuery
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope

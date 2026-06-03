@@ -1,5 +1,7 @@
 package com.example.infrastructure.sqlite
 
+import com.example.domain.catalog.GlobalSystemState
+import com.example.domain.catalog.SystemStatePort
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.insert
@@ -7,32 +9,10 @@ import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 
-data class SystemStateRow(
-    val defaultEmbeddingVersion: String?,
-    val activeClusterId: Long?,
-    val activeIndexId: Long?,
-    val totalItems: Long,
-    val embeddedItems: Long,
-    val updatedAt: Long,
-)
-
-/**
- * The single global-state row (`id = `[SINGLE_ROW_ID]). Holds the
- * system-written pointers to the active index/cluster generations, the
- * default embedding version served to new users, and catalog counters.
- *
- * These pointers are the source of truth for "what is active"; a
- * generation's own `status` column is its lifecycle label. The switchover
- * methods flip both in one transaction, so a reader never sees a generation
- * marked active without the pointer agreeing (and vice versa). The
- * single-row invariant is upheld here (always [SINGLE_ROW_ID]), not by a
- * SQLite CHECK — value rules live in Kotlin per the schema policy.
- */
 class SystemStateRepository(
     private val db: Database,
-) {
-    /** Inserts the single state row if it is not present yet. */
-    fun seedIfMissing(now: Long) {
+) : SystemStatePort {
+    override fun seedIfMissing(now: Long) {
         transaction(db) {
             val present =
                 SystemState
@@ -48,14 +28,14 @@ class SystemStateRepository(
         }
     }
 
-    fun read(): SystemStateRow =
+    override fun read(): GlobalSystemState =
         transaction(db) {
             SystemState
                 .selectAll()
                 .where { SystemState.id eq SINGLE_ROW_ID }
                 .firstOrNull()
                 ?.let {
-                    SystemStateRow(
+                    GlobalSystemState(
                         defaultEmbeddingVersion = it[SystemState.defaultEmbeddingVersion],
                         activeClusterId = it[SystemState.activeClusterId],
                         activeIndexId = it[SystemState.activeIndexId],
@@ -67,12 +47,7 @@ class SystemStateRepository(
                 ?: error("system_state row missing; seedIfMissing must run at startup")
         }
 
-    /**
-     * Atomic embedding-version switchover: activate [version], demote the
-     * currently-active embedding generation, and repoint
-     * `default_embedding_version` — all in one transaction.
-     */
-    fun setDefaultEmbeddingVersion(
+    override fun setDefaultEmbeddingVersion(
         version: String,
         now: Long,
     ) {
@@ -91,12 +66,7 @@ class SystemStateRepository(
         }
     }
 
-    /**
-     * Atomic cluster switchover: activate [clusterId], demote the currently-
-     * active cluster generation, and repoint `active_cluster_id` — all in one
-     * transaction.
-     */
-    fun activateCluster(
+    override fun activateCluster(
         clusterId: Long,
         now: Long,
     ) {
@@ -115,12 +85,7 @@ class SystemStateRepository(
         }
     }
 
-    /**
-     * Atomic index switchover: activate [indexId], demote the currently-
-     * active index generation, and repoint `active_index_id` — all in one
-     * transaction.
-     */
-    fun activateIndex(
+    override fun activateIndex(
         indexId: Long,
         now: Long,
     ) {
@@ -139,8 +104,7 @@ class SystemStateRepository(
         }
     }
 
-    /** Updates the catalog counters. Wired to a real source in a later wave. */
-    fun setCounts(
+    override fun setCounts(
         totalItems: Long,
         embeddedItems: Long,
         now: Long,

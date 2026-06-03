@@ -1,5 +1,6 @@
 package com.example.infrastructure.content
-
+import com.example.domain.content.Platform
+import com.example.domain.content.SourceQuery
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond

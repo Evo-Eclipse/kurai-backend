@@ -1,5 +1,6 @@
 package com.example.infrastructure.lucene
 
+import com.example.domain.catalog.ItemVectorIndexPort
 import org.apache.lucene.codecs.KnnVectorsFormat
 import org.apache.lucene.codecs.lucene104.Lucene104Codec
 import org.apache.lucene.codecs.lucene99.Lucene99HnswVectorsFormat
@@ -38,7 +39,8 @@ import kotlin.math.sqrt
  */
 class LuceneAdapter(
     val indexPath: Path,
-) : AutoCloseable {
+) : ItemVectorIndexPort,
+    AutoCloseable {
     private val directory: FSDirectory = FSDirectory.open(indexPath)
     private val writer: IndexWriter
 
@@ -72,7 +74,7 @@ class LuceneAdapter(
      *
      * Caller must invoke [refresh] before [search] sees the new doc.
      */
-    fun write(
+    override fun write(
         itemId: Long,
         vector: FloatArray,
     ) {
@@ -93,7 +95,7 @@ class LuceneAdapter(
      * Commits pending writes and refreshes the reader so subsequent
      * [search] calls see them.
      */
-    fun refresh() {
+    override fun refresh() {
         writer.commit()
         val current = readerRef.get()
         val refreshed = DirectoryReader.openIfChanged(current) ?: return
@@ -102,7 +104,7 @@ class LuceneAdapter(
     }
 
     /** Number of indexed (embedded) documents in the current reader view. */
-    fun numDocs(): Int = readerRef.get().numDocs()
+    override fun numDocs(): Int = readerRef.get().numDocs()
 
     /**
      * Returns up to [k] nearest item ids by cosine similarity. Empty index
@@ -135,7 +137,7 @@ class LuceneAdapter(
         }
     }
 
-    fun getVector(itemId: Long): FloatArray? {
+    override fun getVector(itemId: Long): FloatArray? {
         val reader = readerRef.get()
         if (reader.numDocs() == 0) return null
         val searcher = IndexSearcher(reader)

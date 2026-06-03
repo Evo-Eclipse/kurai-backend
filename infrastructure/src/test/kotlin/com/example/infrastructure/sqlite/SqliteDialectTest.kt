@@ -1,5 +1,5 @@
 package com.example.infrastructure.sqlite
-
+import com.example.domain.profile.PendingUserEvent
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import java.nio.file.Files
@@ -25,7 +25,7 @@ class SqliteDialectTest {
 
     @Test
     fun `UPDATE on user_events is rejected by trigger`() {
-        EventRepository(db).appendBatch(listOf(EventData(1L, 1L, "like", "v1")))
+        EventRepository(db).appendBatch(listOf(PendingUserEvent(1L, 1L, "like", "v1")))
         assertFailsWith<Exception> {
             transaction(db) {
                 exec("UPDATE user_events SET embedding_version = 'v2' WHERE user_id = 1")
@@ -35,7 +35,7 @@ class SqliteDialectTest {
 
     @Test
     fun `DELETE on user_events is rejected by trigger`() {
-        EventRepository(db).appendBatch(listOf(EventData(1L, 1L, "like", "v1")))
+        EventRepository(db).appendBatch(listOf(PendingUserEvent(1L, 1L, "like", "v1")))
         assertFailsWith<Exception> {
             transaction(db) {
                 exec("DELETE FROM user_events WHERE user_id = 1")

@@ -1,5 +1,5 @@
 package com.example.infrastructure.sqlite
-
+import com.example.domain.profile.PendingUserEvent
 import org.jetbrains.exposed.v1.jdbc.Database
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -75,7 +75,7 @@ class RepositoryCrudTest {
         val repo = EventRepository(db)
         val events =
             (1..10_000).map { i ->
-                EventData(userId = 1L, itemId = i.toLong(), sourceTag = "like", embeddingVersion = "v1")
+                PendingUserEvent(userId = 1L, itemId = i.toLong(), sourceTag = "like", embeddingVersion = "v1")
             }
         val ids = repo.appendBatch(events)
         assertEquals(10_000, ids.size)

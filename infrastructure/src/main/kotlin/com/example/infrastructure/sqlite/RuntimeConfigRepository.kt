@@ -1,5 +1,7 @@
 package com.example.infrastructure.sqlite
 
+import com.example.domain.config.RuntimeConfigEntry
+import com.example.domain.config.RuntimeConfigPort
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.insert
@@ -7,29 +9,17 @@ import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 
-data class RuntimeConfigRow(
-    val key: String,
-    val valueType: String,
-    val value: String,
-    val updatedAt: Long,
-)
-
-/**
- * Raw key/value access for `runtime_config`. Typed lookups happen
- * one layer up via `application/config/RuntimeConfig` so the type
- * discriminator and the parser stay in lockstep.
- */
 class RuntimeConfigRepository(
     private val db: Database,
-) {
-    fun load(key: String): RuntimeConfigRow? =
+) : RuntimeConfigPort {
+    override fun load(key: String): RuntimeConfigEntry? =
         transaction(db) {
             RuntimeConfigs
                 .selectAll()
                 .where { RuntimeConfigs.key eq key }
                 .firstOrNull()
                 ?.let {
-                    RuntimeConfigRow(
+                    RuntimeConfigEntry(
                         key = it[RuntimeConfigs.key],
                         valueType = it[RuntimeConfigs.valueType],
                         value = it[RuntimeConfigs.value],
@@ -38,7 +28,7 @@ class RuntimeConfigRepository(
                 }
         }
 
-    fun upsert(
+    override fun upsert(
         key: String,
         valueType: String,
         value: String,

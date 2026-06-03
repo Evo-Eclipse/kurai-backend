@@ -1,5 +1,5 @@
 package com.example.infrastructure.sqlite
-
+import com.example.domain.profile.PendingUserEvent
 import org.jetbrains.exposed.v1.jdbc.Database
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -24,7 +24,9 @@ class EventWeightResolutionTest {
 
     @Test
     fun `unknown tag resolves to the neutral default`() {
-        events.appendBatch(listOf(EventData(userId = 1L, itemId = 10L, sourceTag = "mystery", embeddingVersion = "v1")))
+        events.appendBatch(
+            listOf(PendingUserEvent(userId = 1L, itemId = 10L, sourceTag = "mystery", embeddingVersion = "v1")),
+        )
 
         val resolved = events.loadSince(userId = 1L, sinceEventId = 0L).single()
         assertEquals(EventWeightRepository.DEFAULT_EVENT_WEIGHT.toFloat(), resolved.weight)
@@ -32,7 +34,9 @@ class EventWeightResolutionTest {
 
     @Test
     fun `weight is resolved live, so a backfill changes the next read`() {
-        events.appendBatch(listOf(EventData(userId = 1L, itemId = 10L, sourceTag = "like", embeddingVersion = "v1")))
+        events.appendBatch(
+            listOf(PendingUserEvent(userId = 1L, itemId = 10L, sourceTag = "like", embeddingVersion = "v1")),
+        )
 
         // Before the operator defines "like", it is neutral.
         assertEquals(0f, events.loadSince(1L, 0L).single().weight)
@@ -48,9 +52,9 @@ class EventWeightResolutionTest {
         weights.upsert("dislike", -1.0, now = 0L)
         events.appendBatch(
             listOf(
-                EventData(1L, 10L, "like", "v1"),
-                EventData(1L, 11L, "dislike", "v1"),
-                EventData(1L, 12L, "mystery", "v1"), // resolves to 0 -> not positive
+                PendingUserEvent(1L, 10L, "like", "v1"),
+                PendingUserEvent(1L, 11L, "dislike", "v1"),
+                PendingUserEvent(1L, 12L, "mystery", "v1"), // resolves to 0 -> not positive
             ),
         )
 

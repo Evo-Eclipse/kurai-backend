@@ -1,5 +1,6 @@
 package com.example.infrastructure.content
-
+import com.example.domain.content.Platform
+import com.example.domain.content.SourceQuery
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals

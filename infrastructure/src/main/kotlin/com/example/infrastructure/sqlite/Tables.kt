@@ -49,11 +49,6 @@ object GenerationStatus {
     const val DEPRECATED = "deprecated"
 }
 
-object PrototypeType {
-    const val POSITIVE = "positive"
-    const val NEGATIVE = "negative"
-}
-
 object Cohort {
     /** Default A/B group until the experiment engine lands (a later wave). */
     const val CONTROL = "control"
@@ -125,7 +120,7 @@ object UserProfileState : Table("user_profile_state") {
 object UserPrototypes : Table("user_prototypes") {
     val id = long("id").autoIncrement()
     val userId = long("user_id")
-    val prototypeType = text("prototype_type") // values from `PrototypeType`
+    val prototypeType = text("prototype_type") // com.example.domain.profile.PrototypeType
     val vector = blob("vector") // float32[N], little-endian; see VectorCodec
     val weight = double("weight").default(1.0)
     val embeddingVersion = text("embedding_version")

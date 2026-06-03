@@ -1,5 +1,5 @@
 package com.example.infrastructure.sqlite
-
+import com.example.domain.profile.PendingUserEvent
 import org.jetbrains.exposed.v1.jdbc.Database
 import kotlin.test.BeforeTest
 import kotlin.test.Test

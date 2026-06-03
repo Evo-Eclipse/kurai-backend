@@ -1,5 +1,7 @@
 package com.example.infrastructure.sqlite
 
+import com.example.domain.catalog.AcquisitionJob
+import com.example.domain.catalog.AcquisitionJobPort
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.insert
@@ -7,26 +9,15 @@ import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 
-data class AcquisitionJobRow(
-    val id: String,
-    val status: String,
-    val origin: String,
-    val query: String,
-    val userId: Long?,
-    val createdAt: Long,
-    val completedAt: Long?,
-    val errorMessage: String?,
-)
-
 class AcquisitionJobRepository(
     private val db: Database,
-) {
-    fun insert(
+) : AcquisitionJobPort {
+    override fun insert(
         id: String,
         status: String,
         origin: String,
         query: String,
-        userId: Long? = null,
+        userId: Long?,
     ) {
         transaction(db) {
             AcquisitionJobs.insert {
@@ -39,11 +30,11 @@ class AcquisitionJobRepository(
         }
     }
 
-    fun updateStatus(
+    override fun updateStatus(
         id: String,
         status: String,
-        completedAt: Long? = null,
-        errorMessage: String? = null,
+        completedAt: Long?,
+        errorMessage: String?,
     ) {
         transaction(db) {
             AcquisitionJobs.update({ AcquisitionJobs.id eq id }) {
@@ -54,14 +45,14 @@ class AcquisitionJobRepository(
         }
     }
 
-    fun findById(id: String): AcquisitionJobRow? =
+    override fun findById(id: String): AcquisitionJob? =
         transaction(db) {
             AcquisitionJobs
                 .selectAll()
                 .where { AcquisitionJobs.id eq id }
                 .singleOrNull()
                 ?.let { row ->
-                    AcquisitionJobRow(
+                    AcquisitionJob(
                         id = row[AcquisitionJobs.id],
                         status = row[AcquisitionJobs.status],
                         origin = row[AcquisitionJobs.origin],

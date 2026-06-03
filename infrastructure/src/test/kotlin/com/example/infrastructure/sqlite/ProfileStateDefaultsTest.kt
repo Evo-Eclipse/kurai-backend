@@ -1,5 +1,5 @@
 package com.example.infrastructure.sqlite
-
+import com.example.domain.profile.PendingUserEvent
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -41,7 +41,7 @@ class ProfileStateDefaultsTest {
     @Test
     fun `an appended event snapshots the control cohort by default`() {
         EventRepository(db).appendBatch(
-            listOf(EventData(userId = 1L, itemId = 10L, sourceTag = "like", embeddingVersion = "v1")),
+            listOf(PendingUserEvent(userId = 1L, itemId = 10L, sourceTag = "like", embeddingVersion = "v1")),
         )
 
         val cohort =

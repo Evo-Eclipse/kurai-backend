@@ -1,5 +1,7 @@
 package com.example.infrastructure.sqlite
 
+import com.example.domain.profile.PrototypePort
+import com.example.domain.profile.StoredPrototype
 import com.example.infrastructure.sqlite.columns.VectorCodec
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.statements.api.ExposedBlob
@@ -10,40 +12,16 @@ import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import java.time.Instant
 
-data class PrototypeRow(
-    val prototypeType: String,
-    val vector: FloatArray,
-    val weight: Double,
-    val embeddingVersion: String,
-) {
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is PrototypeRow) return false
-        return prototypeType == other.prototypeType &&
-            vector.contentEquals(other.vector) &&
-            weight == other.weight &&
-            embeddingVersion == other.embeddingVersion
-    }
-
-    override fun hashCode(): Int {
-        var result = prototypeType.hashCode()
-        result = 31 * result + vector.contentHashCode()
-        result = 31 * result + weight.hashCode()
-        result = 31 * result + embeddingVersion.hashCode()
-        return result
-    }
-}
-
 class PrototypeRepository(
     private val db: Database,
-) {
-    fun load(userId: Long): List<PrototypeRow> =
+) : PrototypePort {
+    override fun load(userId: Long): List<StoredPrototype> =
         transaction(db) {
             UserPrototypes
                 .selectAll()
                 .where { UserPrototypes.userId eq userId }
                 .map { row ->
-                    PrototypeRow(
+                    StoredPrototype(
                         prototypeType = row[UserPrototypes.prototypeType],
                         vector = VectorCodec.decode(row[UserPrototypes.vector].bytes),
                         weight = row[UserPrototypes.weight],
@@ -52,9 +30,9 @@ class PrototypeRepository(
                 }
         }
 
-    fun replaceAll(
+    override fun replaceAll(
         userId: Long,
-        rows: List<PrototypeRow>,
+        rows: List<StoredPrototype>,
     ) {
         transaction(db) {
             UserPrototypes.deleteWhere { UserPrototypes.userId eq userId }
