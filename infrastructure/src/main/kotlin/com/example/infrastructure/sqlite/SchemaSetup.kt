@@ -52,6 +52,7 @@ private fun applySqlitePragmas(db: Database) {
             raw.createStatement().use { stmt ->
                 stmt.execute("PRAGMA journal_mode=WAL")
                 stmt.execute("PRAGMA synchronous=NORMAL")
+                stmt.execute("PRAGMA busy_timeout=5000")
             }
         } finally {
             raw.autoCommit = previous
