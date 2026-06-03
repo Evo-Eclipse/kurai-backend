@@ -1,9 +1,6 @@
-package com.example.application.auth
+package com.example.infrastructure.sqlite
 
-import com.example.infrastructure.sqlite.AuthSessionRepository
-import com.example.infrastructure.sqlite.EmailKind
-import com.example.infrastructure.sqlite.UserRepository
-import com.example.infrastructure.sqlite.initSchema
+import com.example.domain.auth.EmailKind
 import org.jetbrains.exposed.v1.jdbc.Database
 import java.util.UUID
 import kotlin.test.Test
@@ -28,12 +25,11 @@ class AuthSessionRepositoryTest {
         val now = 1_700_000_000_000L
         val userId = users.insertVerifiedEmail("rotate-test@example.com", EmailKind.REAL, now)
         val sessionId = UUID.randomUUID().toString()
-        val refreshToken = AuthCodecs.generateRefreshToken()
         repo.insert(
             id = sessionId,
             userId = userId,
             deviceLabel = "phone",
-            refreshHash = AuthCodecs.sha256Hex(refreshToken),
+            refreshHash = "hash-parent",
             expiresAt = now + 60_000,
             now = now,
         )
@@ -46,7 +42,7 @@ class AuthSessionRepositoryTest {
                 successorId = successorA,
                 userId = userId,
                 deviceLabel = "phone",
-                refreshHash = AuthCodecs.sha256Hex(AuthCodecs.generateRefreshToken()),
+                refreshHash = "hash-a",
                 expiresAt = now + 120_000,
                 now = now + 1,
             )
@@ -56,7 +52,7 @@ class AuthSessionRepositoryTest {
                 successorId = successorB,
                 userId = userId,
                 deviceLabel = "phone",
-                refreshHash = AuthCodecs.sha256Hex(AuthCodecs.generateRefreshToken()),
+                refreshHash = "hash-b",
                 expiresAt = now + 120_000,
                 now = now + 2,
             )

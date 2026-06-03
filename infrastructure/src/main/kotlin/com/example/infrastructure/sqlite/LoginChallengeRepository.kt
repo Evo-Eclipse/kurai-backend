@@ -1,5 +1,7 @@
 package com.example.infrastructure.sqlite
 
+import com.example.domain.auth.LoginChallenge
+import com.example.domain.auth.LoginChallengePort
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greaterEq
@@ -11,20 +13,10 @@ import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 
-data class LoginChallengeRow(
-    val id: String,
-    val email: String,
-    val codeHash: String,
-    val expiresAt: Long,
-    val consumedAt: Long?,
-    val attempts: Int,
-    val createdAt: Long,
-)
-
 class LoginChallengeRepository(
     private val db: Database,
-) {
-    fun insert(
+) : LoginChallengePort {
+    override fun insert(
         id: String,
         email: String,
         codeHash: String,
@@ -42,14 +34,14 @@ class LoginChallengeRepository(
         }
     }
 
-    fun findById(id: String): LoginChallengeRow? =
+    override fun findById(id: String): LoginChallenge? =
         transaction(db) {
             LoginChallenges
                 .selectAll()
                 .where { LoginChallenges.id eq id }
                 .firstOrNull()
                 ?.let {
-                    LoginChallengeRow(
+                    LoginChallenge(
                         id = it[LoginChallenges.id],
                         email = it[LoginChallenges.email],
                         codeHash = it[LoginChallenges.codeHash],
@@ -61,24 +53,14 @@ class LoginChallengeRepository(
                 }
         }
 
-    /**
-     * Atomically bumps the failed-attempt counter for a challenge. Run
-     * on every wrong code so the per-challenge brute-force budget is
-     * enforced without a read-modify-write race.
-     */
-    fun incrementAttempts(id: String): Int =
+    override fun incrementAttempts(id: String): Int =
         transaction(db) {
             LoginChallenges.update({ LoginChallenges.id eq id }) {
                 it[LoginChallenges.attempts] = LoginChallenges.attempts + 1
             }
         }
 
-    /**
-     * Atomically marks the challenge as consumed if and only if it was
-     * still pending. Returns the number of rows updated (0 if already
-     * consumed or missing) so callers can distinguish a race.
-     */
-    fun markConsumedIfPending(
+    override fun markConsumedIfPending(
         id: String,
         now: Long,
     ): Int =
@@ -90,13 +72,7 @@ class LoginChallengeRepository(
             }
         }
 
-    /**
-     * Counts challenges issued for an e-mail since [sinceMillis],
-     * regardless of consumed/expired state. Powers the per-email
-     * rate-limit on `POST /auth/challenge`, which throttles the act
-     * of requesting a code, not the pool of usable codes.
-     */
-    fun countCreatedSince(
+    override fun countCreatedSince(
         email: String,
         sinceMillis: Long,
     ): Long =

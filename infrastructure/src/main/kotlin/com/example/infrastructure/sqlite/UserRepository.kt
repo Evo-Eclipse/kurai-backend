@@ -1,5 +1,6 @@
 package com.example.infrastructure.sqlite
 
+import com.example.domain.auth.UserPort
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.insert
@@ -19,7 +20,7 @@ data class UserRow(
 
 class UserRepository(
     private val db: Database,
-) {
+) : UserPort {
     fun findById(id: Long): UserRow? =
         transaction(db) {
             Users
@@ -29,12 +30,7 @@ class UserRepository(
                 ?.let(::rowToUser)
         }
 
-    /**
-     * Insert a new e-mail-only user and return the generated id.
-     * Sets `email_verified_at = now` because callers reach this path
-     * only after a successful magic-link / OTP verification.
-     */
-    fun insertVerifiedEmail(
+    override fun insertVerifiedEmail(
         email: String,
         emailKind: String,
         now: Long,
@@ -49,12 +45,7 @@ class UserRepository(
             } get Users.id
         }
 
-    /**
-     * Insert a user with no e-mail and return the generated id. Used by the
-     * `key` flow, where the opaque key is the only credential and there is
-     * no verified address to record.
-     */
-    fun insertAnonymous(now: Long): Long =
+    override fun insertAnonymous(now: Long): Long =
         transaction(db) {
             Users.insert {
                 it[Users.createdAt] = now
@@ -62,7 +53,7 @@ class UserRepository(
             } get Users.id
         }
 
-    fun touchLastSeen(
+    override fun touchLastSeen(
         userId: Long,
         now: Long,
     ) {

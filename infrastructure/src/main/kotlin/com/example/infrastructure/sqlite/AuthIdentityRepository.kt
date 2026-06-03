@@ -1,5 +1,7 @@
 package com.example.infrastructure.sqlite
 
+import com.example.domain.auth.AuthIdentity
+import com.example.domain.auth.AuthIdentityPort
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.isNull
@@ -9,22 +11,13 @@ import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 
-data class AuthIdentityRow(
-    val id: Long,
-    val userId: Long,
-    val provider: String,
-    val providerSubject: String,
-    val disabledAt: Long?,
-    val createdAt: Long,
-)
-
 class AuthIdentityRepository(
     private val db: Database,
-) {
-    fun findBySubject(
+) : AuthIdentityPort {
+    override fun findBySubject(
         provider: String,
         providerSubject: String,
-    ): AuthIdentityRow? =
+    ): AuthIdentity? =
         transaction(db) {
             AuthIdentities
                 .selectAll()
@@ -33,7 +26,7 @@ class AuthIdentityRepository(
                         (AuthIdentities.providerSubject eq providerSubject)
                 }.firstOrNull()
                 ?.let {
-                    AuthIdentityRow(
+                    AuthIdentity(
                         id = it[AuthIdentities.id],
                         userId = it[AuthIdentities.userId],
                         provider = it[AuthIdentities.provider],
@@ -44,7 +37,7 @@ class AuthIdentityRepository(
                 }
         }
 
-    fun insert(
+    override fun insert(
         userId: Long,
         provider: String,
         providerSubject: String,
@@ -60,11 +53,7 @@ class AuthIdentityRepository(
         }
     }
 
-    /**
-     * Retires an identity by stamping `disabled_at` (only if not already
-     * set). Used to turn off a compromised or banned `key`.
-     */
-    fun disable(
+    override fun disable(
         provider: String,
         providerSubject: String,
         now: Long,

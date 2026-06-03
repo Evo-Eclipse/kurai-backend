@@ -13,6 +13,8 @@ configure<org.jlleitschuh.gradle.ktlint.KtlintExtension> {
 }
 
 dependencies {
+    implementation(project(":domain"))
+
     // `api` for types that :server constructs via `dependencies.provide<…>`:
     // Database, HttpClient, the CIO engine. Without `api`, server would need
     // its own copy of these dependencies to even reference the types.

@@ -54,25 +54,9 @@ object PrototypeType {
     const val NEGATIVE = "negative"
 }
 
-object EmailKind {
-    const val REAL = "real"
-
-    /** Apple Private Relay forwarder address. */
-    const val RELAY = "relay"
-}
-
 object Cohort {
     /** Default A/B group until the experiment engine lands (a later wave). */
     const val CONTROL = "control"
-}
-
-object AuthProvider {
-    const val EMAIL = "email"
-    const val GOOGLE = "google"
-    const val APPLE = "apple"
-
-    /** Opaque, self-issued seed-phrase-style login key. */
-    const val KEY = "key"
 }
 
 object Items : Table("items") {
@@ -200,7 +184,7 @@ object Users : Table("users") {
     val id = long("id").autoIncrement()
     val email = text("email").nullable().uniqueIndex()
     val emailVerifiedAt = timestampMillis("email_verified_at").nullable()
-    val emailKind = text("email_kind").nullable() // values from `EmailKind`
+    val emailKind = text("email_kind").nullable() // com.example.domain.auth.EmailKind
     val createdAt = timestampMillisDefaultNow("created_at")
     val lastSeenAt = timestampMillis("last_seen_at")
     val deletedAt = timestampMillis("deleted_at").nullable()
@@ -211,7 +195,7 @@ object Users : Table("users") {
 object AuthIdentities : Table("auth_identities") {
     val id = long("id").autoIncrement()
     val userId = long("user_id").references(Users.id)
-    val provider = text("provider") // values from `AuthProvider`
+    val provider = text("provider") // com.example.domain.auth.AuthProvider
 
     /**
      * Stable identifier issued by the provider:

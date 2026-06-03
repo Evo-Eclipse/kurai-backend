@@ -1,5 +1,7 @@
 package com.example.infrastructure.sqlite
 
+import com.example.domain.auth.AuthSession
+import com.example.domain.auth.AuthSessionPort
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.isNull
@@ -11,24 +13,10 @@ import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 
-data class AuthSessionRow(
-    val id: String,
-    val userId: Long,
-    val deviceLabel: String?,
-    val refreshHash: String,
-    val replacedBy: String?,
-    val lastUsedAt: Long,
-    val expiresAt: Long,
-    val revokedAt: Long?,
-    val createdAt: Long,
-) {
-    fun isActive(now: Long): Boolean = revokedAt == null && expiresAt > now
-}
-
 class AuthSessionRepository(
     private val db: Database,
-) {
-    fun findById(id: String): AuthSessionRow? =
+) : AuthSessionPort {
+    override fun findById(id: String): AuthSession? =
         transaction(db) {
             AuthSessions
                 .selectAll()
@@ -37,7 +25,7 @@ class AuthSessionRepository(
                 ?.let(::rowToSession)
         }
 
-    fun insert(
+    override fun insert(
         id: String,
         userId: Long,
         deviceLabel: String?,
@@ -58,7 +46,7 @@ class AuthSessionRepository(
         }
     }
 
-    fun revoke(
+    override fun revoke(
         id: String,
         now: Long,
     ): Int =
@@ -68,12 +56,7 @@ class AuthSessionRepository(
             }
         }
 
-    /**
-     * Atomically supersedes an active session with a successor row. Returns
-     * false when [sessionId] was already replaced or revoked (e.g. a
-     * concurrent refresh won the race).
-     */
-    fun rotateIfActive(
+    override fun rotateIfActive(
         sessionId: String,
         successorId: String,
         userId: Long,
@@ -105,11 +88,7 @@ class AuthSessionRepository(
             true
         }
 
-    /**
-     * Revokes every still-active session for a user. Called on refresh-token
-     * reuse, when the whole chain is assumed compromised.
-     */
-    fun revokeAllForUser(
+    override fun revokeAllForUser(
         userId: Long,
         now: Long,
     ): Int =
@@ -121,20 +100,13 @@ class AuthSessionRepository(
             }
         }
 
-    /**
-     * Deletes sessions whose `expires_at` is strictly before [cutoff].
-     * Superseded/revoked rows that are still unexpired are left alone so
-     * refresh-reuse detection keeps working within a token's lifetime;
-     * past expiry the token is rejected anyway, so the row is safe to drop.
-     * Returns the number of rows removed.
-     */
-    fun deleteExpiredBefore(cutoff: Long): Int =
+    override fun deleteExpiredBefore(cutoff: Long): Int =
         transaction(db) {
             AuthSessions.deleteWhere { AuthSessions.expiresAt less cutoff }
         }
 
-    private fun rowToSession(row: org.jetbrains.exposed.v1.core.ResultRow): AuthSessionRow =
-        AuthSessionRow(
+    private fun rowToSession(row: org.jetbrains.exposed.v1.core.ResultRow): AuthSession =
+        AuthSession(
             id = row[AuthSessions.id],
             userId = row[AuthSessions.userId],
             deviceLabel = row[AuthSessions.deviceLabel],
