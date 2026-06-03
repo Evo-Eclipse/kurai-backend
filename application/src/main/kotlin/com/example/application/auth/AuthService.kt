@@ -6,8 +6,6 @@ import com.example.infrastructure.sqlite.AuthSessionRepository
 import com.example.infrastructure.sqlite.EmailKind
 import com.example.infrastructure.sqlite.LoginChallengeRepository
 import com.example.infrastructure.sqlite.UserRepository
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import java.util.UUID
 
 /**
@@ -24,6 +22,11 @@ import java.util.UUID
  * The service is transport-agnostic: no Ktor types reach this layer.
  * JWT minting lives in the [com.example.auth.AuthHandler]
  * because the signing key is a server-side concern.
+ *
+ * Repository calls here are blocking JDBC, run on the caller's dispatcher —
+ * consistent with every other repo-touching path in the app. Moving that
+ * I/O off the dispatcher is a systemic concern to be solved once at the
+ * repository layer (see roadmap), not special-cased per method here.
  */
 class AuthService(
     private val users: UserRepository,
@@ -117,10 +120,15 @@ class AuthService(
 
         if (session.replacedBy != null) {
             if (AuthCodecs.constantTimeEquals(session.refreshHash, presentedHash)) {
-                // Only treat as theft (revoke chain) if this superseded token was *not*
-                // the direct predecessor of a still-active successor. This prevents
-                // legitimate concurrent/retried refreshes from self-revoking the fresh
-                // session (false positive "reuse").
+                // Revoke the chain only if this superseded token is NOT the direct
+                // predecessor of a still-active successor — so a legitimate
+                // concurrent/retried refresh does not self-revoke the fresh session.
+                // Trade-off: a stolen *immediate* predecessor replayed once, before the
+                // user rotates again, is indistinguishable from that benign race and is
+                // not flagged. It is still rejected (returns Invalid, grants nothing);
+                // we favour availability over revoking the legitimate racer on an
+                // ambiguous signal. Strict OAuth-BCP "revoke on any reuse" is the
+                // alternative if detection is later valued over UX.
                 val successor = session.replacedBy?.let { sessions.findById(it) }
                 val isImmediatePredecessor =
                     successor != null &&
@@ -166,46 +174,42 @@ class AuthService(
      * The HTTP surface for this is public; callers must rate-limit it (see
      * the abuse note on `configureAuthRoutes`).
      */
-    suspend fun issueKey(deviceLabel: String?): KeyIssued =
-        withContext(Dispatchers.IO) {
-            val now = clock()
-            val userId = users.insertAnonymous(now)
-            val rawKey = AuthCodecs.generateKey()
-            identities.insert(userId, AuthProvider.KEY, AuthCodecs.sha256Hex(rawKey), now)
-            val (sessionId, refreshToken) = issueSession(userId, deviceLabel, now)
-            KeyIssued(
-                userId = userId,
-                key = rawKey,
-                sessionId = sessionId,
-                refreshToken = refreshToken,
-            )
-        }
+    suspend fun issueKey(deviceLabel: String?): KeyIssued {
+        val now = clock()
+        val userId = users.insertAnonymous(now)
+        val rawKey = AuthCodecs.generateKey()
+        identities.insert(userId, AuthProvider.KEY, AuthCodecs.sha256Hex(rawKey), now)
+        val (sessionId, refreshToken) = issueSession(userId, deviceLabel, now)
+        return KeyIssued(
+            userId = userId,
+            key = rawKey,
+            sessionId = sessionId,
+            refreshToken = refreshToken,
+        )
+    }
 
     /** Exchange a key for a session, unless its identity is disabled. */
     suspend fun verifyKey(
         rawKey: String,
         deviceLabel: String?,
-    ): VerifyKeyResult =
-        withContext(Dispatchers.IO) {
-            val now = clock()
-            val identity =
-                identities.findBySubject(AuthProvider.KEY, AuthCodecs.sha256Hex(rawKey))
-                    ?: return@withContext VerifyKeyResult.Invalid
-            if (identity.disabledAt != null) return@withContext VerifyKeyResult.Invalid
-            users.touchLastSeen(identity.userId, now)
-            val (sessionId, refreshToken) = issueSession(identity.userId, deviceLabel, now)
-            VerifyKeyResult.Ok(
-                userId = identity.userId,
-                sessionId = sessionId,
-                refreshToken = refreshToken,
-            )
-        }
+    ): VerifyKeyResult {
+        val now = clock()
+        val identity =
+            identities.findBySubject(AuthProvider.KEY, AuthCodecs.sha256Hex(rawKey))
+                ?: return VerifyKeyResult.Invalid
+        if (identity.disabledAt != null) return VerifyKeyResult.Invalid
+        users.touchLastSeen(identity.userId, now)
+        val (sessionId, refreshToken) = issueSession(identity.userId, deviceLabel, now)
+        return VerifyKeyResult.Ok(
+            userId = identity.userId,
+            sessionId = sessionId,
+            refreshToken = refreshToken,
+        )
+    }
 
     /** Operator action: retire a key so it can no longer log in. */
     suspend fun disableKey(rawKey: String): Boolean =
-        withContext(Dispatchers.IO) {
-            identities.disable(AuthProvider.KEY, AuthCodecs.sha256Hex(rawKey), clock()) > 0
-        }
+        identities.disable(AuthProvider.KEY, AuthCodecs.sha256Hex(rawKey), clock()) > 0
 
     /** Mint a fresh session + refresh secret; returns (sessionId, rawRefreshToken). */
     private fun issueSession(
@@ -232,8 +236,12 @@ class AuthService(
 
     /**
      * Returns true iff the session id is present, not revoked, and not
-     * expired. Used by `CallAuth.requireUserId` to back the per-request
-     * session check (with a small Caffeine cache).
+     * expired. Backs [com.example.auth.SessionAuthenticator]'s cached
+     * `isActive`, which the JWT `validate` block consults so a revoked
+     * session is rejected on every `authenticate("kurai")` route.
+     *
+     * Intentionally non-suspend: it is invoked from a synchronous Caffeine
+     * cache loader, so it cannot be `suspend` (and is rare — cache-gated).
      */
     fun isSessionActive(sessionId: String): Boolean {
         val session = sessions.findById(sessionId) ?: return false
