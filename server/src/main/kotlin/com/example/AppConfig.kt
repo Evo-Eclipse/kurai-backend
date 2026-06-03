@@ -8,6 +8,8 @@ data class AppConfig(
     val jwtSecret: String,
     val luceneDir: Path,
     val onnxIntraOpThreads: Int,
+    /** Max concurrent ONNX `infer` calls (bounded IO dispatcher). */
+    val onnxInferenceParallelism: Int,
     val unsplash: UnsplashConfig,
     val e621: E621Config,
     val sqlitePath: Path,
@@ -28,6 +30,9 @@ data class AppConfig(
 ) {
     init {
         require(onnxIntraOpThreads > 0) { "KURAI_ONNX_INTRA_OP_THREADS should be positive" }
+        require(onnxInferenceParallelism > 0) {
+            "KURAI_ONNX_INFERENCE_PARALLELISM should be positive"
+        }
         require(profilePersistIntervalMs > 0) { "KURAI_PROFILE_PERSIST_INTERVAL_MS should be positive" }
         require(kMeansCheckIntervalMs > 0) { "KURAI_KMEANS_CHECK_INTERVAL_MS should be positive" }
         require(authJwtTtlMs > 0) { "KURAI_AUTH_JWT_TTL_MS should be positive" }
@@ -43,6 +48,7 @@ data class AppConfig(
 
     companion object {
         const val DEFAULT_ONNX_INTRA_OP_THREADS: Int = 2
+        const val DEFAULT_ONNX_INFERENCE_PARALLELISM: Int = 1
         const val DEFAULT_UNSPLASH_BASE_URL: String = "https://api.unsplash.com"
         const val DEFAULT_E621_BASE_URL: String = "https://e621.net"
         const val DEFAULT_PROFILE_PERSIST_INTERVAL_MS: Long = 30_000
@@ -66,6 +72,9 @@ data class AppConfig(
                 onnxIntraOpThreads =
                     env["KURAI_ONNX_INTRA_OP_THREADS"]?.toInt()
                         ?: DEFAULT_ONNX_INTRA_OP_THREADS,
+                onnxInferenceParallelism =
+                    env["KURAI_ONNX_INFERENCE_PARALLELISM"]?.toInt()
+                        ?: DEFAULT_ONNX_INFERENCE_PARALLELISM,
                 unsplash =
                     UnsplashConfig(
                         baseUrl = env["KURAI_UNSPLASH_BASE_URL"] ?: DEFAULT_UNSPLASH_BASE_URL,

@@ -149,6 +149,7 @@ suspend fun Application.installCore() {
                 inputName = ONNX_INPUT_NAME,
                 outputName = ONNX_OUTPUT_NAME,
                 intraOpThreads = config.onnxIntraOpThreads,
+                inferenceParallelism = config.onnxInferenceParallelism,
             )
         }
     }

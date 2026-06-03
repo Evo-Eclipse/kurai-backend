@@ -11,14 +11,10 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /**
- * Proof-of-fix for the ONNX / Dispatchers.Default starvation
- * pattern. Before [OnnxInferenceAdapter] routed `session.run()`
- * through its own bounded pool, every concurrent `infer` call
- * pinned a `Dispatchers.Default` thread. On a 2-core JVM
- * `Default = max(2, ncores) = 2`, so a small number of concurrent
- * embeds wedged any other `withContext(Dispatchers.Default) { … }`
- * indefinitely. This test exercises the post-fix invariant:
- * `Default` stays responsive while inference is in flight.
+ * [OnnxInferenceAdapter] routes blocking `session.run()` through a
+ * bounded IO dispatcher so concurrent embeds do not pin
+ * `Dispatchers.Default`. On a 2-core JVM `Default = max(2, ncores) = 2`;
+ * this test asserts `Default` stays responsive while inference is in flight.
  */
 class OnnxPoolStarvationTest {
     @Test
