@@ -19,6 +19,7 @@ import com.example.application.profile.EventBatcherWorker
 import com.example.application.profile.ProfileMigrationWorker
 import com.example.application.profile.ProfilePersistWorker
 import com.example.application.profile.ProtoSplitWorker
+import com.example.application.profile.RankingService
 import com.example.auth.AuthHandler
 import com.example.auth.ChallengeIpRateLimiter
 import com.example.auth.FixedWindowRateLimiter
@@ -406,14 +407,17 @@ suspend fun Application.installCore() {
             }
         ClusterServiceRef(clusters)
     }
-    dependencies.provide<RankingHandler> {
+    dependencies.provide<RankingService> {
         val ref = dependencies.resolve<ClusterServiceRef>()
-        RankingHandler(
+        RankingService(
             cachingProfile = dependencies.resolve(),
             cachingEmbedding = dependencies.resolve(),
             getClusterService = { ref.get() },
             activeEmbeddingVersion = dependencies.resolve<EmbeddingVersionLookup>().asEmbeddingVersionLookup(),
         )
+    }
+    dependencies.provide<RankingHandler> {
+        RankingHandler(dependencies.resolve())
     }
 }
 

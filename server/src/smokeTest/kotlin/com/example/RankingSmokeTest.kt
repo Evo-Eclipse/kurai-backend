@@ -4,6 +4,7 @@ import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 import com.example.application.embedding.CachingEmbeddingAdapter
 import com.example.application.profile.CachingProfileAdapter
+import com.example.application.profile.RankingService
 import com.example.domain.model.EmbeddingVersion
 import com.example.domain.model.Prototype
 import com.example.domain.model.UserProfile
@@ -75,10 +76,12 @@ class RankingSmokeTest {
             )
         val cachingEmbedding = CachingEmbeddingAdapter(lookupFromStore = { _ -> emptyMap() })
         return RankingHandler(
-            cachingProfile = cachingProfile,
-            cachingEmbedding = cachingEmbedding,
-            getClusterService = { null },
-            activeEmbeddingVersion = { EmbeddingVersion("v1") },
+            RankingService(
+                cachingProfile = cachingProfile,
+                cachingEmbedding = cachingEmbedding,
+                getClusterService = { null },
+                activeEmbeddingVersion = { EmbeddingVersion("v1") },
+            ),
         )
     }
 

@@ -5,6 +5,7 @@ import com.auth0.jwt.algorithms.Algorithm
 import com.example.ReadinessGate
 import com.example.application.embedding.CachingEmbeddingAdapter
 import com.example.application.profile.CachingProfileAdapter
+import com.example.application.profile.RankingService
 import com.example.configure
 import com.example.domain.cluster.ClusterService
 import com.example.domain.model.EmbeddingVersion
@@ -104,10 +105,12 @@ class RankingHandlerTest {
             }
         val handler =
             RankingHandler(
-                profileAdapter(warmProfile()),
-                embeddingAdapter(vecs),
-                getClusterService = { null },
-                activeEmbeddingVersion = { EmbeddingVersion("v1") },
+                RankingService(
+                    profileAdapter(warmProfile()),
+                    embeddingAdapter(vecs),
+                    getClusterService = { null },
+                    activeEmbeddingVersion = { EmbeddingVersion("v1") },
+                ),
             )
         testApplication {
             application {
@@ -133,10 +136,12 @@ class RankingHandlerTest {
     fun `stale embedding version returns 503 with Retry-After header`() {
         val handler =
             RankingHandler(
-                profileAdapter(warmProfile("v1")),
-                embeddingAdapter(emptyMap()),
-                getClusterService = { null },
-                activeEmbeddingVersion = { EmbeddingVersion("v2") },
+                RankingService(
+                    profileAdapter(warmProfile("v1")),
+                    embeddingAdapter(emptyMap()),
+                    getClusterService = { null },
+                    activeEmbeddingVersion = { EmbeddingVersion("v2") },
+                ),
             )
         testApplication {
             application {
@@ -339,10 +344,12 @@ class RankingHandlerTest {
     ) = testApplication {
         val handler =
             RankingHandler(
-                profileAdapter(profile),
-                embeddingAdapter(vectors),
-                getClusterService,
-                activeEmbeddingVersion = { activeVersion },
+                RankingService(
+                    profileAdapter(profile),
+                    embeddingAdapter(vectors),
+                    getClusterService,
+                    activeEmbeddingVersion = { activeVersion },
+                ),
             )
         application {
             configure(ReadinessGate().also { it.markReady() }, secret)
