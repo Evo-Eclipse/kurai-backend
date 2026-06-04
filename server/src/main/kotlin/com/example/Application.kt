@@ -425,7 +425,9 @@ suspend fun Application.installPlugins() {
     val config = dependencies.resolve<AppConfig>()
     val gate = dependencies.resolve<ReadinessGate>()
     val sessionAuth = dependencies.resolve<SessionAuthenticator>()
-    configure(gate, config.jwtSecret) { sessionId -> sessionAuth.isActive(sessionId) }
+    configure(gate, config.jwtSecret, trustForwardedHeaders = config.trustedProxy) { sessionId ->
+        sessionAuth.isActive(sessionId)
+    }
 }
 
 /**
@@ -544,10 +546,17 @@ suspend fun Application.installLifecycle() {
 fun Application.configure(
     readinessGate: ReadinessGate,
     jwtSecret: String = "",
+    trustForwardedHeaders: Boolean = false,
     isSessionActive: (sessionId: String) -> Boolean = { true },
 ) {
     install(ContentNegotiation) { json() }
-    install(XForwardedHeaders)
+    // Trust X-Forwarded-* only behind a proxy (KURAI_TRUSTED_PROXY). Installing
+    // it unconditionally would let any client spoof X-Forwarded-For and rotate
+    // its per-IP rate-limit bucket; off by default, origin.remoteHost is then
+    // the real socket peer.
+    if (trustForwardedHeaders) {
+        install(XForwardedHeaders)
+    }
     // Default CallLogging format: logs method + URI + status, not headers.
     // Authorization header values never appear in log output.
     install(CallLogging)

@@ -48,6 +48,12 @@ data class AppConfig(
     val adminToken: String?,
     /** Strict OAuth-BCP reuse detection: revoke the chain on any replay. */
     val authStrictReuse: Boolean,
+    /**
+     * True when the server runs behind a trusted reverse proxy. Only then are
+     * X-Forwarded-* headers trusted; otherwise origin.remoteHost is the direct
+     * socket peer, so clients cannot spoof their per-IP rate-limit bucket.
+     */
+    val trustedProxy: Boolean,
 ) {
     init {
         require(onnxIntraOpThreads > 0) { "KURAI_ONNX_INTRA_OP_THREADS should be positive" }
@@ -161,6 +167,7 @@ data class AppConfig(
                         ?: DEFAULT_SESSION_GC_RETENTION_MS,
                 adminToken = env["KURAI_ADMIN_TOKEN"],
                 authStrictReuse = env.parseBooleanFlag("KURAI_AUTH_STRICT_REUSE"),
+                trustedProxy = env.parseBooleanFlag("KURAI_TRUSTED_PROXY"),
             )
 
         private fun Map<String, String>.parseBooleanFlag(name: String): Boolean =

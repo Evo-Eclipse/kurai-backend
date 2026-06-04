@@ -651,4 +651,31 @@ class AuthFlowTest {
                 }
             assertEquals(HttpStatusCode.OK, stillWorks.status)
         }
+
+    @Test
+    fun `spoofed X-Forwarded-For does not bypass the per-IP rate limit`() =
+        testApplication {
+            val (_, _, authService) = fresh()
+            installAuth(authService)
+            val http = jsonClient()
+
+            // No trusted proxy in tests, so X-Forwarded-For is ignored and all
+            // requests share the real socket peer's bucket (budget 5/window).
+            repeat(5) { i ->
+                val ok =
+                    http.post("/auth/key/issue") {
+                        header("X-Forwarded-For", "10.0.0.$i")
+                        contentType(ContentType.Application.Json)
+                        setBody(KeyIssueRequest())
+                    }
+                assertEquals(HttpStatusCode.OK, ok.status)
+            }
+            val limited =
+                http.post("/auth/key/issue") {
+                    header("X-Forwarded-For", "10.0.0.99")
+                    contentType(ContentType.Application.Json)
+                    setBody(KeyIssueRequest())
+                }
+            assertEquals(HttpStatusCode.TooManyRequests, limited.status)
+        }
 }
