@@ -1,8 +1,25 @@
 package com.example
 
-import com.example.infrastructure.content.E621Config
-import com.example.infrastructure.content.UnsplashConfig
 import java.nio.file.Path
+
+/**
+ * Server-owned env DTOs for content-source credentials. They mirror the
+ * shape an adapter needs but live in `:server`, so [AppConfig] does not
+ * import infrastructure types; the composition root maps these to the
+ * adapter's own config when wiring the sources.
+ */
+data class UnsplashEnv(
+    val baseUrl: String,
+    val userAgent: String,
+    val accessKey: String,
+)
+
+data class E621Env(
+    val baseUrl: String,
+    val userAgent: String,
+    val username: String,
+    val accessKey: String,
+)
 
 data class AppConfig(
     val jwtSecret: String,
@@ -10,8 +27,8 @@ data class AppConfig(
     val onnxIntraOpThreads: Int,
     /** Max concurrent ONNX `infer` calls (bounded IO dispatcher). */
     val onnxInferenceParallelism: Int,
-    val unsplash: UnsplashConfig,
-    val e621: E621Config,
+    val unsplash: UnsplashEnv,
+    val e621: E621Env,
     val sqlitePath: Path,
     val objectStoreDir: Path,
     val onnxModelPath: Path,
@@ -76,7 +93,7 @@ data class AppConfig(
                     env["KURAI_ONNX_INFERENCE_PARALLELISM"]?.toInt()
                         ?: DEFAULT_ONNX_INFERENCE_PARALLELISM,
                 unsplash =
-                    UnsplashConfig(
+                    UnsplashEnv(
                         baseUrl = env["KURAI_UNSPLASH_BASE_URL"] ?: DEFAULT_UNSPLASH_BASE_URL,
                         userAgent =
                             env["KURAI_UNSPLASH_USER_AGENT"]
@@ -86,7 +103,7 @@ data class AppConfig(
                                 ?: error("Missing required environment variable: KURAI_UNSPLASH_ACCESS_KEY"),
                     ),
                 e621 =
-                    E621Config(
+                    E621Env(
                         baseUrl = env["KURAI_E621_BASE_URL"] ?: DEFAULT_E621_BASE_URL,
                         userAgent =
                             env["KURAI_E621_USER_AGENT"]

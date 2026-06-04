@@ -53,8 +53,10 @@ import com.example.domain.storage.GetResult
 import com.example.domain.storage.ObjectStorePort
 import com.example.health.configureHealthRoutes
 import com.example.infrastructure.content.CdnContentSource
+import com.example.infrastructure.content.E621Config
 import com.example.infrastructure.content.E621ContentSource
 import com.example.infrastructure.content.ImagePreprocessor
+import com.example.infrastructure.content.UnsplashConfig
 import com.example.infrastructure.content.UnsplashContentSource
 import com.example.infrastructure.lucene.LuceneAdapter
 import com.example.infrastructure.onnx.OnnxInferenceAdapter
@@ -267,8 +269,25 @@ suspend fun Application.installCore() {
         val httpClient = dependencies.resolve<HttpClient>()
         ContentSourceRegistry(
             mapOf(
-                "unsplash" to UnsplashContentSource(config.unsplash, httpClient),
-                "e621" to E621ContentSource(config.e621, httpClient),
+                "unsplash" to
+                    UnsplashContentSource(
+                        UnsplashConfig(
+                            baseUrl = config.unsplash.baseUrl,
+                            userAgent = config.unsplash.userAgent,
+                            accessKey = config.unsplash.accessKey,
+                        ),
+                        httpClient,
+                    ),
+                "e621" to
+                    E621ContentSource(
+                        E621Config(
+                            baseUrl = config.e621.baseUrl,
+                            userAgent = config.e621.userAgent,
+                            username = config.e621.username,
+                            accessKey = config.e621.accessKey,
+                        ),
+                        httpClient,
+                    ),
                 "cdn" to CdnContentSource(httpClient),
             ),
         )
