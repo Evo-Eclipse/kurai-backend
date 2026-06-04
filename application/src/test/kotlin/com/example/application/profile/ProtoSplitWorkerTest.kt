@@ -11,6 +11,7 @@ import com.example.infrastructure.sqlite.EventWeightRepository
 import com.example.infrastructure.sqlite.ProfileRepository
 import com.example.infrastructure.sqlite.PrototypeRepository
 import com.example.infrastructure.sqlite.initSchema
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.jetbrains.exposed.v1.jdbc.Database
 import kotlin.test.BeforeTest
@@ -36,7 +37,7 @@ class ProtoSplitWorkerTest {
         eventRepo = EventRepository(db)
         prototypeRepo = PrototypeRepository(db)
         // Resolve "like" to a positive weight so loadPositiveSince returns the events.
-        EventWeightRepository(db).upsert("like", 1.0, now = 0L)
+        runBlocking { EventWeightRepository(db).upsert("like", 1.0, now = 0L) }
     }
 
     // Builds a normalized vector dominated by dimension `axis` with slight variation from `offset`.

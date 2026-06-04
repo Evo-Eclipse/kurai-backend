@@ -1,5 +1,6 @@
 package com.example.infrastructure.sqlite
 
+import com.example.domain.events.EventWeightPort
 import com.example.domain.profile.PendingUserEvent
 import com.example.domain.profile.ResolvedUserEvent
 import com.example.domain.profile.UserEventPort
@@ -88,7 +89,7 @@ class EventRepository(
         .orderBy(UserEvents.id to SortOrder.ASC)
 
     private fun toResolvedEvent(row: org.jetbrains.exposed.v1.core.ResultRow): ResolvedUserEvent {
-        val resolved = row.getOrNull(EventWeights.weight) ?: EventWeightRepository.DEFAULT_EVENT_WEIGHT
+        val resolved = row.getOrNull(EventWeights.weight) ?: EventWeightPort.DEFAULT_EVENT_WEIGHT
         return ResolvedUserEvent(
             userId = row[UserEvents.userId],
             itemId = row[UserEvents.itemId],

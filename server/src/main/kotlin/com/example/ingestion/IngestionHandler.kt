@@ -29,7 +29,7 @@ class IngestionHandler(
     private val eventQueue: EventQueue,
     private val activeEmbeddingVersion: suspend () -> EmbeddingVersion,
     /** Resolves an opaque source tag to its numeric weight (dictionary + default). */
-    private val resolveWeight: (String) -> Float,
+    private val resolveWeight: suspend (String) -> Float,
 ) {
     suspend fun handleIngest(call: ApplicationCall) {
         val sub = call.requireAuthenticatedUserId() ?: return

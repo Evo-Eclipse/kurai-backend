@@ -38,6 +38,7 @@ import com.example.domain.config.RuntimeConfigPort
 import com.example.domain.content.ContentSource
 import com.example.domain.embedding.EmbedLookupPort
 import com.example.domain.events.EventQueue
+import com.example.domain.events.EventWeightPort
 import com.example.domain.inference.InferenceService
 import com.example.domain.model.EmbeddingVersion
 import com.example.domain.model.Prototype
@@ -171,7 +172,7 @@ suspend fun Application.installCore() {
     dependencies.provide<ClusterGenerationPort> { ClusterGenerationRepository(dependencies.resolve()) }
     dependencies.provide<ProfilePort> { ProfileRepository(dependencies.resolve()) }
     dependencies.provide<UserEventPort> { EventRepository(dependencies.resolve()) }
-    dependencies.provide<EventWeightRepository> { EventWeightRepository(dependencies.resolve()) }
+    dependencies.provide<EventWeightPort> { EventWeightRepository(dependencies.resolve()) }
     dependencies.provide<PrototypePort> { PrototypeRepository(dependencies.resolve()) }
     dependencies.provide<UserPort> { UserRepository(dependencies.resolve()) }
     dependencies.provide<AuthIdentityPort> { AuthIdentityRepository(dependencies.resolve()) }
@@ -352,14 +353,14 @@ suspend fun Application.installCore() {
     }
 
     dependencies.provide<IngestionHandler> {
-        val eventWeights = dependencies.resolve<EventWeightRepository>()
+        val eventWeights = dependencies.resolve<EventWeightPort>()
         IngestionHandler(
             cachingProfile = dependencies.resolve(),
             cachingEmbedding = dependencies.resolve(),
             eventQueue = dependencies.resolve(),
             activeEmbeddingVersion = dependencies.resolve<EmbeddingVersionLookup>().asEmbeddingVersionLookup(),
             resolveWeight = { tag ->
-                (eventWeights.resolve(tag) ?: EventWeightRepository.DEFAULT_EVENT_WEIGHT).toFloat()
+                (eventWeights.resolve(tag) ?: EventWeightPort.DEFAULT_EVENT_WEIGHT).toFloat()
             },
         )
     }

@@ -1,4 +1,5 @@
 package com.example.infrastructure.sqlite
+import com.example.domain.events.EventWeightPort
 import com.example.domain.profile.PendingUserEvent
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.exposed.v1.jdbc.Database
@@ -31,7 +32,7 @@ class EventWeightResolutionTest {
             )
 
             val resolved = events.loadSince(userId = 1L, sinceEventId = 0L).single()
-            assertEquals(EventWeightRepository.DEFAULT_EVENT_WEIGHT.toFloat(), resolved.weight)
+            assertEquals(EventWeightPort.DEFAULT_EVENT_WEIGHT.toFloat(), resolved.weight)
         }
 
     @Test
