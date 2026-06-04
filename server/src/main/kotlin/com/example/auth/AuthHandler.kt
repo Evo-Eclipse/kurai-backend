@@ -16,6 +16,8 @@ import io.ktor.server.plugins.origin
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import kotlinx.serialization.Serializable
+import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
 import java.util.Date
 import java.util.UUID
 
@@ -77,6 +79,11 @@ data class KeyVerifyRequest(
     val deviceLabel: String? = null,
 )
 
+@Serializable
+data class KeyDisableRequest(
+    val key: String,
+)
+
 /**
  * HTTP surface for the magic-link / OTP auth flow.
  *
@@ -90,6 +97,11 @@ class AuthHandler(
     private val challengeIpRateLimiter: ChallengeIpRateLimiter,
     private val jwtSecret: String,
     private val jwtTtlMs: suspend () -> Long,
+    /**
+     * Shared operator secret for the disable-key route. Null (env unset)
+     * leaves the route inert (404), so it is opt-in via KURAI_ADMIN_TOKEN.
+     */
+    private val adminToken: String?,
 ) {
     suspend fun handleChallenge(call: ApplicationCall) {
         if (!challengeIpRateLimiter.tryAcquire(call.request.origin.remoteHost)) {
@@ -193,6 +205,46 @@ class AuthHandler(
         authService.revokeSession(identity.sessionId)
         sessionAuth.invalidate(identity.sessionId)
         call.respond(HttpStatusCode.NoContent)
+    }
+
+    /**
+     * Operator action: retire an opaque login key by setting `disabled_at`.
+     * Gated by a shared secret in the `X-Admin-Token` header. Responds 404
+     * when no operator token is configured, so the route is inert unless
+     * KURAI_ADMIN_TOKEN is set; 401 on a missing/wrong token; 404
+     * KEY_NOT_FOUND when the key is unknown or already disabled.
+     */
+    suspend fun handleDisableKey(call: ApplicationCall) {
+        val expected = adminToken
+        if (expected == null) {
+            call.respond(HttpStatusCode.NotFound, ErrorResponse(ErrorDetail("NOT_FOUND")))
+            return
+        }
+        val presented = call.request.headers["X-Admin-Token"]
+        if (presented == null || !constantTimeMatch(presented, expected)) {
+            call.respond(HttpStatusCode.Unauthorized, ErrorResponse(ErrorDetail("UNAUTHORIZED")))
+            return
+        }
+        val req = call.receive<KeyDisableRequest>()
+        if (authService.disableKey(req.key)) {
+            call.respond(HttpStatusCode.NoContent)
+        } else {
+            call.respond(HttpStatusCode.NotFound, ErrorResponse(ErrorDetail("KEY_NOT_FOUND")))
+        }
+    }
+
+    /**
+     * Constant-time secret comparison. Both sides are SHA-256'd to a fixed
+     * 32-byte digest first, so neither the comparison nor the input length
+     * leaks a timing signal about the configured token.
+     */
+    private fun constantTimeMatch(
+        presented: String,
+        secret: String,
+    ): Boolean {
+        val a = MessageDigest.getInstance("SHA-256").digest(presented.toByteArray(StandardCharsets.UTF_8))
+        val b = MessageDigest.getInstance("SHA-256").digest(secret.toByteArray(StandardCharsets.UTF_8))
+        return MessageDigest.isEqual(a, b)
     }
 
     private suspend fun mintJwt(

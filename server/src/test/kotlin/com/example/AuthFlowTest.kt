@@ -7,6 +7,7 @@ import com.example.auth.ChallengeIpRateLimiter
 import com.example.auth.ChallengeRequest
 import com.example.auth.ChallengeResponse
 import com.example.auth.FixedWindowRateLimiter
+import com.example.auth.KeyDisableRequest
 import com.example.auth.KeyIssueRequest
 import com.example.auth.KeyIssueResponse
 import com.example.auth.KeyVerifyRequest
@@ -48,6 +49,7 @@ import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientCon
 
 class AuthFlowTest {
     private val secret = "test-secret-long-enough-for-hmac-256-bytes!"
+    private val adminToken = "test-admin-secret-token"
 
     /**
      * Captures the OTP per email so a test can replay it. In production
@@ -104,6 +106,7 @@ class AuthFlowTest {
                         ),
                     jwtSecret = secret,
                     jwtTtlMs = { 60_000L },
+                    adminToken = adminToken,
                 )
             configureAuthRoutes(handler)
             // A stand-in resource endpoint guarded only by `authenticate`,
@@ -542,5 +545,65 @@ class AuthFlowTest {
                     setBody(KeyVerifyRequest(key = "00000000-0000-4000-8000-000000000000"))
                 }
             assertEquals(HttpStatusCode.Unauthorized, resp.status)
+        }
+
+    @Test
+    fun `disable-key route retires a key with the operator token`() =
+        testApplication {
+            val (_, _, authService) = fresh()
+            installAuth(authService)
+            val http = jsonClient()
+
+            val issued: KeyIssueResponse =
+                http
+                    .post("/auth/key/issue") {
+                        contentType(ContentType.Application.Json)
+                        setBody(KeyIssueRequest())
+                    }.body()
+
+            val disabled =
+                http.post("/auth/key/disable") {
+                    header("X-Admin-Token", adminToken)
+                    contentType(ContentType.Application.Json)
+                    setBody(KeyDisableRequest(key = issued.key))
+                }
+            assertEquals(HttpStatusCode.NoContent, disabled.status)
+
+            val afterDisable =
+                http.post("/auth/key/verify") {
+                    contentType(ContentType.Application.Json)
+                    setBody(KeyVerifyRequest(key = issued.key))
+                }
+            assertEquals(HttpStatusCode.Unauthorized, afterDisable.status)
+        }
+
+    @Test
+    fun `disable-key route rejects a wrong operator token and leaves the key usable`() =
+        testApplication {
+            val (_, _, authService) = fresh()
+            installAuth(authService)
+            val http = jsonClient()
+
+            val issued: KeyIssueResponse =
+                http
+                    .post("/auth/key/issue") {
+                        contentType(ContentType.Application.Json)
+                        setBody(KeyIssueRequest())
+                    }.body()
+
+            val rejected =
+                http.post("/auth/key/disable") {
+                    header("X-Admin-Token", "wrong-token")
+                    contentType(ContentType.Application.Json)
+                    setBody(KeyDisableRequest(key = issued.key))
+                }
+            assertEquals(HttpStatusCode.Unauthorized, rejected.status)
+
+            val stillWorks =
+                http.post("/auth/key/verify") {
+                    contentType(ContentType.Application.Json)
+                    setBody(KeyVerifyRequest(key = issued.key))
+                }
+            assertEquals(HttpStatusCode.OK, stillWorks.status)
         }
 }

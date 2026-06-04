@@ -44,6 +44,8 @@ data class AppConfig(
     val keyIssueRateLimitWindowMs: Long,
     val sessionGcIntervalMs: Long,
     val sessionGcRetentionMs: Long,
+    /** Shared operator secret for the disable-key route; null leaves it inert. */
+    val adminToken: String?,
 ) {
     init {
         require(onnxIntraOpThreads > 0) { "KURAI_ONNX_INTRA_OP_THREADS should be positive" }
@@ -155,6 +157,7 @@ data class AppConfig(
                 sessionGcRetentionMs =
                     env["KURAI_SESSION_GC_RETENTION_MS"]?.toLong()
                         ?: DEFAULT_SESSION_GC_RETENTION_MS,
+                adminToken = env["KURAI_ADMIN_TOKEN"],
             )
 
         private fun Map<String, String>.parseBooleanFlag(name: String): Boolean =

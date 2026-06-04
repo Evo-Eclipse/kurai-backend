@@ -249,6 +249,7 @@ suspend fun Application.installCore() {
             challengeIpRateLimiter = dependencies.resolve(),
             jwtSecret = config.jwtSecret,
             jwtTtlMs = { runtime.get(ConfigKey.AuthJwtTtlMs) },
+            adminToken = config.adminToken,
         )
     }
 
