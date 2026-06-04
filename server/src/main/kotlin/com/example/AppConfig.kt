@@ -46,6 +46,8 @@ data class AppConfig(
     val sessionGcRetentionMs: Long,
     /** Shared operator secret for the disable-key route; null leaves it inert. */
     val adminToken: String?,
+    /** Strict OAuth-BCP reuse detection: revoke the chain on any replay. */
+    val authStrictReuse: Boolean,
 ) {
     init {
         require(onnxIntraOpThreads > 0) { "KURAI_ONNX_INTRA_OP_THREADS should be positive" }
@@ -158,6 +160,7 @@ data class AppConfig(
                     env["KURAI_SESSION_GC_RETENTION_MS"]?.toLong()
                         ?: DEFAULT_SESSION_GC_RETENTION_MS,
                 adminToken = env["KURAI_ADMIN_TOKEN"],
+                authStrictReuse = env.parseBooleanFlag("KURAI_AUTH_STRICT_REUSE"),
             )
 
         private fun Map<String, String>.parseBooleanFlag(name: String): Boolean =

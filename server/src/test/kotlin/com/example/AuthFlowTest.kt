@@ -67,7 +67,7 @@ class AuthFlowTest {
         }
     }
 
-    private fun fresh(): Triple<Database, CapturingSender, AuthService> {
+    private fun fresh(strictReuse: Boolean = false): Triple<Database, CapturingSender, AuthService> {
         val db = Database.connect("jdbc:h2:mem:auth${System.nanoTime()};MODE=MySQL;DB_CLOSE_DELAY=-1", "org.h2.Driver")
         initSchema(db)
         val sender = CapturingSender()
@@ -80,6 +80,7 @@ class AuthFlowTest {
                 sender = sender,
                 challengeTtlMs = { 10 * 60 * 1000L },
                 sessionTtlMs = { 30L * 24 * 60 * 60 * 1000L },
+                strictReuseDetection = strictReuse,
             )
         return Triple(db, sender, authService)
     }
@@ -453,6 +454,50 @@ class AuthFlowTest {
                         setBody(RefreshRequest(sessionId = rotated.sessionId, refreshToken = rotated.refreshToken))
                     }.body()
             assertNotEquals(rotated.refreshToken, replay2.refreshToken)
+        }
+
+    @Test
+    fun `strict reuse mode burns the chain even on the immediate-predecessor replay`() =
+        testApplication {
+            val (_, sender, authService) = fresh(strictReuse = true)
+            installAuth(authService)
+            val http = jsonClient()
+
+            http
+                .post("/auth/challenge") {
+                    contentType(ContentType.Application.Json)
+                    setBody(ChallengeRequest(email = "strict@example.com"))
+                }.body<ChallengeResponse>()
+            val (challengeId, code) = checkNotNull(sender.byEmail["strict@example.com"])
+            val first: VerifyResponse =
+                http
+                    .post("/auth/verify") {
+                        contentType(ContentType.Application.Json)
+                        setBody(VerifyRequest(challengeId = challengeId, code = code))
+                    }.body()
+
+            val rotated: RefreshResponse =
+                http
+                    .post("/auth/refresh") {
+                        contentType(ContentType.Application.Json)
+                        setBody(RefreshRequest(sessionId = first.sessionId, refreshToken = first.refreshToken))
+                    }.body()
+
+            // Replay the immediate predecessor: strict mode burns the chain.
+            val replay =
+                http.post("/auth/refresh") {
+                    contentType(ContentType.Application.Json)
+                    setBody(RefreshRequest(sessionId = first.sessionId, refreshToken = first.refreshToken))
+                }
+            assertEquals(HttpStatusCode.Unauthorized, replay.status)
+
+            // Unlike lenient mode, the fresh rotated session is now revoked too.
+            val afterBurn =
+                http.post("/auth/refresh") {
+                    contentType(ContentType.Application.Json)
+                    setBody(RefreshRequest(sessionId = rotated.sessionId, refreshToken = rotated.refreshToken))
+                }
+            assertEquals(HttpStatusCode.Unauthorized, afterBurn.status)
         }
 
     @Test

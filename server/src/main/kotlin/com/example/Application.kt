@@ -220,6 +220,7 @@ suspend fun Application.installCore() {
             challengeTtlMs = { runtime.get(ConfigKey.AuthChallengeTtlMs) },
             sessionTtlMs = { runtime.get(ConfigKey.AuthSessionTtlMs) },
             sessionCheckDispatcher = sqliteDispatcher,
+            strictReuseDetection = config.authStrictReuse,
         )
     }
     dependencies.provide<SessionAuthenticator> {

@@ -49,6 +49,14 @@ class AuthService(
     private val clock: () -> Long = { System.currentTimeMillis() },
     @OptIn(ExperimentalCoroutinesApi::class)
     private val sessionCheckDispatcher: CoroutineDispatcher = Dispatchers.IO.limitedParallelism(1),
+    /**
+     * Strict OAuth-BCP reuse detection. When true, any replay of a
+     * superseded refresh token revokes the whole session chain -- including
+     * the immediate-predecessor race that lenient mode (the default)
+     * tolerates. Deploy-time security posture (KURAI_AUTH_STRICT_REUSE),
+     * not a live tuning knob.
+     */
+    private val strictReuseDetection: Boolean = false,
 ) {
     suspend fun issueChallenge(email: String): IssueChallengeResult {
         val normalized = email.trim().lowercase()
@@ -134,12 +142,20 @@ class AuthService(
                 // we favour availability over revoking the legitimate racer on an
                 // ambiguous signal. Strict OAuth-BCP "revoke on any reuse" is the
                 // alternative if detection is later valued over UX.
-                val successor = session.replacedBy?.let { sessions.findById(it) }
-                val isImmediatePredecessor =
-                    successor != null &&
-                        successor.replacedBy == null &&
-                        successor.isActive(now)
-                if (!isImmediatePredecessor) {
+                val revoke =
+                    if (strictReuseDetection) {
+                        // Strict OAuth-BCP: any superseded replay burns the chain.
+                        true
+                    } else {
+                        // Lenient: spare the immediate-predecessor race (a still-active
+                        // successor with no replacement of its own) so a legitimate
+                        // concurrent/retried refresh does not self-revoke.
+                        val successor = session.replacedBy?.let { sessions.findById(it) }
+                        successor == null ||
+                            successor.replacedBy != null ||
+                            !successor.isActive(now)
+                    }
+                if (revoke) {
                     sessions.revokeAllForUser(session.userId, now)
                 }
             }
