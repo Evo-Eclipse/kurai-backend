@@ -678,4 +678,30 @@ class AuthFlowTest {
                 }
             assertEquals(HttpStatusCode.TooManyRequests, limited.status)
         }
+
+    @Test
+    fun `challenge is rate-limited per IP across distinct emails`() =
+        testApplication {
+            val (_, _, authService) = fresh()
+            installAuth(authService)
+            val http = jsonClient()
+
+            // Distinct emails so the per-email limit never trips; the per-IP
+            // ChallengeIpRateLimiter (budget 5) must still cap the burst.
+            repeat(5) { i ->
+                val ok =
+                    http.post("/auth/challenge") {
+                        contentType(ContentType.Application.Json)
+                        setBody(ChallengeRequest(email = "ip-rl-$i@example.com"))
+                    }
+                assertEquals(HttpStatusCode.OK, ok.status)
+            }
+            val limited =
+                http.post("/auth/challenge") {
+                    contentType(ContentType.Application.Json)
+                    setBody(ChallengeRequest(email = "ip-rl-final@example.com"))
+                }
+            assertEquals(HttpStatusCode.TooManyRequests, limited.status)
+            assertTrue(limited.headers[HttpHeaders.RetryAfter] != null, "expected Retry-After on 429")
+        }
 }
