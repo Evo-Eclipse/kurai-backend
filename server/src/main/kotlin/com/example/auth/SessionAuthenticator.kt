@@ -46,8 +46,13 @@ class SessionAuthenticator(
     cacheTtl: Duration = DEFAULT_SESSION_CACHE_TTL,
     cacheMaxSize: Long = DEFAULT_SESSION_CACHE_MAX_SIZE,
 ) : AutoCloseable {
-    /** Owns the coroutine that runs the async cache loader; cancelled by [close]. */
-    private val loaderScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    /**
+     * Owns the coroutine that runs the async cache loader; cancelled by [close].
+     * IO-scoped to match the loader's purpose (a DB read) and the rest of the
+     * project's I/O scopes -- though the blocking JDBC itself already hops to
+     * `sqliteDispatcher` inside `sqliteTransaction`, so this only frames intent.
+     */
+    private val loaderScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private val activeSessionCache: AsyncLoadingCache<String, Boolean> =
         Caffeine
