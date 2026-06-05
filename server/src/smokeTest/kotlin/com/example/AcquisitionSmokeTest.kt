@@ -25,8 +25,6 @@ import io.ktor.http.contentType
 import io.ktor.server.testing.testApplication
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -57,7 +55,12 @@ class AcquisitionSmokeTest {
         object : ContentSource {
             override val platform = Platform("test")
 
-            override fun fetch(query: SourceQuery): Flow<RawImage> = emptyFlow()
+            override suspend fun fetch(
+                query: SourceQuery,
+                onImage: suspend (RawImage) -> Unit,
+            ) {
+                // no images
+            }
         }
 
     private fun fakeInference(): InferenceService =

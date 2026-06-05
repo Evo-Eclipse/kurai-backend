@@ -8,10 +8,9 @@ import com.example.domain.content.SourceQuery
 import com.example.domain.inference.InferenceService
 import com.example.domain.storage.ObjectStorePort
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.flatMapMerge
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.withContext
 import java.time.Instant
 
@@ -46,7 +45,6 @@ class AcquisitionService(
         return jobId
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
     suspend fun run(
         jobId: String,
         source: String,
@@ -60,31 +58,39 @@ class AcquisitionService(
             return
         }
         try {
-            contentSource
-                .fetch(SourceQuery(tags, limit))
-                .flatMapMerge(PIPELINE_CONCURRENCY) { image ->
-                    flow {
-                        val (itemId, isNew) =
-                            withContext(Dispatchers.IO) {
-                                itemRepository.insertIdempotent(
-                                    md5 = image.md5,
-                                    url = image.cdnUrl,
-                                    origin = image.originPostUrl,
-                                    rating = image.rating,
-                                    embeddingVersion = activeEmbeddingVersion(),
-                                    indexedAt = Instant.now().toEpochMilli(),
-                                )
+            coroutineScope {
+                val semaphore = Semaphore(PIPELINE_CONCURRENCY)
+                contentSource.fetch(SourceQuery(tags, limit)) { image ->
+                    // Acquire before launch so onImage suspends once
+                    // PIPELINE_CONCURRENCY images are in flight: this backpressures
+                    // the source and bounds the image bytes held in memory.
+                    semaphore.acquire()
+                    launch {
+                        try {
+                            val (itemId, isNew) =
+                                withContext(Dispatchers.IO) {
+                                    itemRepository.insertIdempotent(
+                                        md5 = image.md5,
+                                        url = image.cdnUrl,
+                                        origin = image.originPostUrl,
+                                        rating = image.rating,
+                                        embeddingVersion = activeEmbeddingVersion(),
+                                        indexedAt = Instant.now().toEpochMilli(),
+                                    )
+                                }
+                            if (isNew) {
+                                val vec = inferenceService.embed(image.bytes)
+                                withContext(Dispatchers.IO) {
+                                    vectorIndex.write(itemId, vec)
+                                }
+                                objectStore.put("images/${image.md5}", image.bytes)
                             }
-                        if (isNew) {
-                            val vec = inferenceService.embed(image.bytes)
-                            withContext(Dispatchers.IO) {
-                                vectorIndex.write(itemId, vec)
-                            }
-                            objectStore.put("images/${image.md5}", image.bytes)
+                        } finally {
+                            semaphore.release()
                         }
-                        emit(itemId)
                     }
-                }.collect()
+                }
+            }
             vectorIndex.refresh()
             jobRepository.updateStatus(jobId, "done", Instant.now().toEpochMilli())
         } catch (e: Exception) {
