@@ -119,6 +119,10 @@ class AcquisitionService(
         }
 
     companion object {
+        /**
+         * Max in-flight images per acquisition job and the acquisition worker-scope
+         * parallelism cap (see Application.installCore AcquisitionScope wiring).
+         */
         const val PIPELINE_CONCURRENCY = 10
     }
 }

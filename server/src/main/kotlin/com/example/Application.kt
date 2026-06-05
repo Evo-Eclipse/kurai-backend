@@ -133,7 +133,8 @@ suspend fun Application.installCore() {
     dependencies.provide<AcquisitionScope> {
         AcquisitionScope(
             CoroutineScope(
-                SupervisorJob() + Dispatchers.IO.limitedParallelism(8),
+                SupervisorJob() +
+                    Dispatchers.IO.limitedParallelism(AcquisitionService.PIPELINE_CONCURRENCY),
             ),
         )
     }

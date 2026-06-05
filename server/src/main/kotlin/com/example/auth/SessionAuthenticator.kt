@@ -43,8 +43,8 @@ data class CallerIdentity(
  */
 class SessionAuthenticator(
     private val authService: AuthService,
-    cacheTtl: Duration = Duration.ofSeconds(30),
-    cacheMaxSize: Long = 10_000,
+    cacheTtl: Duration = DEFAULT_SESSION_CACHE_TTL,
+    cacheMaxSize: Long = DEFAULT_SESSION_CACHE_MAX_SIZE,
 ) : AutoCloseable {
     /** Owns the coroutine that runs the async cache loader; cancelled by [close]. */
     private val loaderScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -99,5 +99,13 @@ class SessionAuthenticator(
     /** Cancels the loader scope; called on application shutdown. */
     override fun close() {
         loaderScope.cancel()
+    }
+
+    companion object {
+        /** Verdict cache TTL: a revoked session is rejected within one window. */
+        val DEFAULT_SESSION_CACHE_TTL: Duration = Duration.ofSeconds(30)
+
+        /** Max distinct session ids cached before size eviction. */
+        const val DEFAULT_SESSION_CACHE_MAX_SIZE: Long = 10_000
     }
 }

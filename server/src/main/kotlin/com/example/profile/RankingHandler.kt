@@ -61,7 +61,7 @@ class RankingHandler(
                 )
 
             RankingOutcome.VersionMismatch -> {
-                call.response.headers.append(HttpHeaders.RetryAfter, "30")
+                call.response.headers.append(HttpHeaders.RetryAfter, RETRY_AFTER_VERSION_MISMATCH_SEC.toString())
                 call.respond(
                     HttpStatusCode.ServiceUnavailable,
                     ErrorResponse(ErrorDetail("EMBEDDING_VERSION_MISMATCH")),
@@ -73,5 +73,8 @@ class RankingHandler(
     companion object {
         const val MAX_CANDIDATES = 500
         const val MAX_TOP_K = 100
+
+        /** Retry-After (seconds) sent with a 503 embedding-version mismatch. */
+        const val RETRY_AFTER_VERSION_MISMATCH_SEC = 30
     }
 }

@@ -8,9 +8,12 @@ import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.JdbcTransaction
 import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
 
+/** SQLite serializes writes (single writer); one in-process writer matches it. */
+private const val SQLITE_WRITER_PARALLELISM = 1
+
 /** SQLite write serialization: one in-process writer matches WAL single-writer. */
 @OptIn(ExperimentalCoroutinesApi::class)
-val sqliteDispatcher: CoroutineDispatcher = Dispatchers.IO.limitedParallelism(1)
+val sqliteDispatcher: CoroutineDispatcher = Dispatchers.IO.limitedParallelism(SQLITE_WRITER_PARALLELISM)
 
 /**
  * Runs [block] on [sqliteDispatcher] via Exposed's [suspendTransaction].

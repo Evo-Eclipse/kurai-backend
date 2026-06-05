@@ -55,12 +55,12 @@ class RankingService(
         val finalIds: List<Long> =
             when {
                 profile.positivePrototypes.isNotEmpty() ->
-                    scored.mmr(vecs, lambda = 0.5f, n = topK).distinct().take(topK)
+                    scored.mmr(vecs, lambda = MMR_LAMBDA, n = topK).distinct().take(topK)
                 clusterService != null -> {
                     // Cold-start: no positive prototypes yet -- distribute across target
                     // clusters. Seed combines userId with a daily bucket so the ordering
                     // is stable within a day but rotates daily and differs across users.
-                    val seed = userId xor (clock() / 86_400_000L)
+                    val seed = userId xor (clock() / MILLIS_PER_DAY)
                     coldStartRanking(
                         candidateIds.filter { it in vecs },
                         vecs,
@@ -94,5 +94,12 @@ class RankingService(
             if (result.size == before) break
         }
         return result
+    }
+
+    companion object {
+        /** MMR relevance/diversity trade-off: 0 = max diversity, 1 = pure relevance. */
+        const val MMR_LAMBDA = 0.5f
+
+        private const val MILLIS_PER_DAY = 86_400_000L
     }
 }

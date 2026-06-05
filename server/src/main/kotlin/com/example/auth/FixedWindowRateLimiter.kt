@@ -20,8 +20,8 @@ class FixedWindowRateLimiter(
     private val maxPerWindow: suspend () -> Int,
     private val windowMs: suspend () -> Long,
     private val clock: () -> Long = { System.currentTimeMillis() },
-    idleEviction: Duration = Duration.ofHours(1),
-    maxKeys: Long = 100_000,
+    idleEviction: Duration = DEFAULT_IDLE_EVICTION,
+    maxKeys: Long = DEFAULT_MAX_KEYS,
 ) {
     private class Window(
         val start: Long,
@@ -53,6 +53,14 @@ class FixedWindowRateLimiter(
                 },
             )
         return updated.count <= maxPerWindow()
+    }
+
+    companion object {
+        /** Evict a key after this long idle so memory stays bounded. */
+        val DEFAULT_IDLE_EVICTION: Duration = Duration.ofHours(1)
+
+        /** Max distinct keys (IPs) tracked before Caffeine evicts by size. */
+        const val DEFAULT_MAX_KEYS: Long = 100_000
     }
 }
 
