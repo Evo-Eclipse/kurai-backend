@@ -75,7 +75,6 @@ import com.example.infrastructure.sqlite.RuntimeConfigRepository
 import com.example.infrastructure.sqlite.SystemStateRepository
 import com.example.infrastructure.sqlite.UserRepository
 import com.example.infrastructure.sqlite.initSchema
-import com.example.infrastructure.sqlite.sqliteDispatcher
 import com.example.infrastructure.storage.LocalObjectStore
 import com.example.ingestion.IngestionHandler
 import com.example.ingestion.configureIngestionRoutes
@@ -220,7 +219,6 @@ suspend fun Application.installCore() {
             sender = dependencies.resolve(),
             challengeTtlMs = { runtime.get(ConfigKey.AuthChallengeTtlMs) },
             sessionTtlMs = { runtime.get(ConfigKey.AuthSessionTtlMs) },
-            sessionCheckDispatcher = sqliteDispatcher,
             strictReuseDetection = config.authStrictReuse,
         )
     }
@@ -465,6 +463,7 @@ suspend fun Application.installLifecycle() {
     val objectStore = dependencies.resolve<ObjectStorePort>()
     val onnxAdapter = dependencies.resolve<OnnxInferenceAdapter>()
     val httpClient = dependencies.resolve<HttpClient>()
+    val sessionAuth = dependencies.resolve<SessionAuthenticator>()
     val clusterRef = dependencies.resolve<ClusterServiceRef>()
     val versionLookup = dependencies.resolve<EmbeddingVersionLookup>()
     val authSessions = dependencies.resolve<AuthSessionPort>()
@@ -524,6 +523,7 @@ suspend fun Application.installLifecycle() {
                 lucene.close()
                 onnxAdapter.close()
                 httpClient.close()
+                sessionAuth.close()
             }
         }
     }
@@ -551,7 +551,7 @@ fun Application.configure(
     readinessGate: ReadinessGate,
     jwtSecret: String = "",
     trustForwardedHeaders: Boolean = false,
-    isSessionActive: (sessionId: String) -> Boolean = { true },
+    isSessionActive: suspend (sessionId: String) -> Boolean = { true },
 ) {
     install(ContentNegotiation) { json() }
     // Trust X-Forwarded-* only behind a proxy (KURAI_TRUSTED_PROXY). Installing

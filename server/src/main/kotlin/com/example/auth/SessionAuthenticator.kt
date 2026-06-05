@@ -3,12 +3,19 @@ package com.example.auth
 import com.example.ErrorDetail
 import com.example.ErrorResponse
 import com.example.application.auth.AuthService
+import com.github.benmanes.caffeine.cache.AsyncLoadingCache
 import com.github.benmanes.caffeine.cache.Caffeine
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.auth.jwt.JWTPrincipal
 import io.ktor.server.auth.principal
 import io.ktor.server.response.respond
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.future.await
+import kotlinx.coroutines.future.future
 import java.time.Duration
 
 /**
@@ -26,23 +33,28 @@ data class CallerIdentity(
  * Bridges JWT validation (which Ktor's auth plugin already performed)
  * with the session-revocation check that lives in [AuthService].
  *
- * Caches the active/inactive verdict per `sessionId` in a small
- * Caffeine cache so a torrent of requests on one session does not
- * hammer the DB. The TTL is intentionally short (30 s): a revoked
- * session keeps working for at most one cache window, which is
- * acceptable for logout UX while saving most of the DB round-trips.
+ * Caches the active/inactive verdict per `sessionId` in a Caffeine
+ * [AsyncLoadingCache] so a torrent of requests on one session does not
+ * hammer the DB. The loader is the *suspend* [AuthService.isSessionActive]
+ * run on [scope] — so the JWT `validate` path awaits the verdict without
+ * blocking a thread (no `runBlocking`). The TTL is intentionally short
+ * (30 s): a revoked session keeps working for at most one cache window,
+ * which is acceptable for logout UX while saving most DB round-trips.
  */
 class SessionAuthenticator(
     private val authService: AuthService,
     cacheTtl: Duration = Duration.ofSeconds(30),
     cacheMaxSize: Long = 10_000,
-) {
-    private val activeSessionCache =
+) : AutoCloseable {
+    /** Owns the coroutine that runs the async cache loader; cancelled by [close]. */
+    private val loaderScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    private val activeSessionCache: AsyncLoadingCache<String, Boolean> =
         Caffeine
             .newBuilder()
             .expireAfterWrite(cacheTtl)
             .maximumSize(cacheMaxSize)
-            .build<String, Boolean>()
+            .buildAsync { sessionId, _ -> loaderScope.future { authService.isSessionActive(sessionId) } }
 
     suspend fun requireAuthenticatedSession(call: ApplicationCall): CallerIdentity? {
         val principal = call.principal<JWTPrincipal>()
@@ -74,12 +86,18 @@ class SessionAuthenticator(
      * Cached active/revoked verdict for a session id. Backs the JWT
      * `validate` block in `Application.configure`, so the revocation
      * check applies to every `authenticate("kurai")` route — not just
-     * the ones that call [requireAuthenticatedSession] directly.
+     * the ones that call [requireAuthenticatedSession] directly. Suspends
+     * on the async cache instead of blocking a thread.
      */
-    fun isActive(sessionId: String): Boolean = activeSessionCache.get(sessionId) { authService.isSessionActive(it) }
+    suspend fun isActive(sessionId: String): Boolean = activeSessionCache.get(sessionId).await()
 
     /** Invalidate the cache entry immediately on revoke. */
     fun invalidate(sessionId: String) {
-        activeSessionCache.invalidate(sessionId)
+        activeSessionCache.synchronous().invalidate(sessionId)
+    }
+
+    /** Cancels the loader scope; called on application shutdown. */
+    override fun close() {
+        loaderScope.cancel()
     }
 }

@@ -6,10 +6,6 @@ import com.example.domain.auth.AuthSessionPort
 import com.example.domain.auth.EmailKind
 import com.example.domain.auth.LoginChallengePort
 import com.example.domain.auth.UserPort
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.runBlocking
 import java.util.UUID
 
 /**
@@ -28,8 +24,8 @@ import java.util.UUID
  * because the signing key is a server-side concern.
  *
  * Repository calls are suspend and run on [sqliteDispatcher] via
- * [com.example.infrastructure.sqlite.sqliteTransaction]. [isSessionActive] is
- * synchronous for Caffeine cache loaders and uses [sessionCheckDispatcher].
+ * [com.example.infrastructure.sqlite.sqliteTransaction]; [isSessionActive]
+ * is suspend too, driven by the SessionAuthenticator async cache.
  */
 class AuthService(
     private val users: UserPort,
@@ -47,8 +43,6 @@ class AuthService(
     private val challengeRateLimitWindowMs: Long = DEFAULT_CHALLENGE_RATE_LIMIT_WINDOW_MS,
     private val challengeRateLimitMax: Int = DEFAULT_CHALLENGE_RATE_LIMIT_MAX,
     private val clock: () -> Long = { System.currentTimeMillis() },
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private val sessionCheckDispatcher: CoroutineDispatcher = Dispatchers.IO.limitedParallelism(1),
     /**
      * Strict OAuth-BCP reuse detection. When true, any replay of a
      * superseded refresh token revokes the whole session chain -- including
@@ -261,14 +255,13 @@ class AuthService(
      * `isActive`, which the JWT `validate` block consults so a revoked
      * session is rejected on every `authenticate("kurai")` route.
      *
-     * Intentionally non-suspend: invoked from a synchronous Caffeine cache
-     * loader. Uses [sessionCheckDispatcher] so JDBC stays off request threads.
+     * Suspends: the SessionAuthenticator AsyncLoadingCache runs it on its
+     * own scope, so no request thread blocks while the DB is consulted.
      */
-    fun isSessionActive(sessionId: String): Boolean =
-        runBlocking(sessionCheckDispatcher) {
-            val session = sessions.findById(sessionId) ?: return@runBlocking false
-            session.isActive(clock())
-        }
+    suspend fun isSessionActive(sessionId: String): Boolean {
+        val session = sessions.findById(sessionId) ?: return false
+        return session.isActive(clock())
+    }
 
     private fun isPlausibleEmail(email: String): Boolean {
         if (email.length !in 3..320) return false
