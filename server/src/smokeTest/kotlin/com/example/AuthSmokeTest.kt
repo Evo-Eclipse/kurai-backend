@@ -53,6 +53,12 @@ class AuthSmokeTest {
                         call.response.headers.append(HttpHeaders.RetryAfter, "60")
                         call.respond(HttpStatusCode.TooManyRequests)
                     }
+                    post("/auth/key/disable") {
+                        when (call.request.headers["X-Admin-Token"]) {
+                            "smoke-admin-token" -> call.respond(HttpStatusCode.NoContent)
+                            else -> call.respond(HttpStatusCode.Unauthorized)
+                        }
+                    }
                     post("/auth/verify") { call.respond(HttpStatusCode.Unauthorized) }
                     post("/auth/refresh") { call.respond(HttpStatusCode.Unauthorized) }
                 }
@@ -107,6 +113,33 @@ class AuthSmokeTest {
                 }
             assertEquals(HttpStatusCode.TooManyRequests, response.status)
             assertEquals("60", response.headers[HttpHeaders.RetryAfter])
+        }
+
+    @Test
+    fun `key disable is wired and gated by X-Admin-Token`() =
+        setup {
+            val missing =
+                client.post("/auth/key/disable") {
+                    contentType(ContentType.Application.Json)
+                    setBody("""{"key":"00000000-0000-4000-8000-000000000000"}""")
+                }
+            assertEquals(HttpStatusCode.Unauthorized, missing.status)
+
+            val wrong =
+                client.post("/auth/key/disable") {
+                    header("X-Admin-Token", "wrong")
+                    contentType(ContentType.Application.Json)
+                    setBody("""{"key":"00000000-0000-4000-8000-000000000000"}""")
+                }
+            assertEquals(HttpStatusCode.Unauthorized, wrong.status)
+
+            val ok =
+                client.post("/auth/key/disable") {
+                    header("X-Admin-Token", "smoke-admin-token")
+                    contentType(ContentType.Application.Json)
+                    setBody("""{"key":"00000000-0000-4000-8000-000000000000"}""")
+                }
+            assertEquals(HttpStatusCode.NoContent, ok.status)
         }
 
     @Test

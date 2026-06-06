@@ -11,6 +11,7 @@ import com.example.infrastructure.sqlite.initSchema
 import com.example.infrastructure.storage.LocalObjectStore
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
 import org.jetbrains.exposed.v1.jdbc.Database
@@ -35,19 +36,21 @@ class KMeansSchedulerTest {
 
     @BeforeTest
     fun setUp() {
-        db =
-            Database.connect(
-                "jdbc:h2:mem:${System.nanoTime()};MODE=MySQL;DB_CLOSE_DELAY=-1",
-                "org.h2.Driver",
-            )
-        initSchema(db)
-        itemRepo = ItemRepository(db)
-        luceneDir = Files.createTempDirectory("lucene-kmeans-test")
-        objectStoreDir = Files.createTempDirectory("objstore-kmeans-test")
-        lucene = LuceneAdapter(luceneDir)
-        objectStore = LocalObjectStore(objectStoreDir)
-        clusterGenerations = ClusterGenerationRepository(db)
-        systemState = SystemStateRepository(db).also { it.seedIfMissing(0L) }
+        runBlocking {
+            db =
+                Database.connect(
+                    "jdbc:h2:mem:${System.nanoTime()};MODE=MySQL;DB_CLOSE_DELAY=-1",
+                    "org.h2.Driver",
+                )
+            initSchema(db)
+            itemRepo = ItemRepository(db)
+            luceneDir = Files.createTempDirectory("lucene-kmeans-test")
+            objectStoreDir = Files.createTempDirectory("objstore-kmeans-test")
+            lucene = LuceneAdapter(luceneDir)
+            objectStore = LocalObjectStore(objectStoreDir)
+            clusterGenerations = ClusterGenerationRepository(db)
+            systemState = SystemStateRepository(db).also { it.seedIfMissing(0L) }
+        }
     }
 
     private fun normalizedVec(vararg values: Float): FloatArray {
@@ -56,7 +59,7 @@ class KMeansSchedulerTest {
         return Scoring.l2Normalize(v)
     }
 
-    private fun insertItem(md5: String): Long {
+    private suspend fun insertItem(md5: String): Long {
         val (id, _) =
             itemRepo.insertIdempotent(
                 md5 = md5,
@@ -110,7 +113,7 @@ class KMeansSchedulerTest {
         minAgeMs = minAgeMs,
     )
 
-    private fun indexItems(vararg vectors: FloatArray) {
+    private suspend fun indexItems(vararg vectors: FloatArray) {
         vectors.forEachIndexed { i, vec ->
             val id = insertItem("md5-$i")
             lucene.write(id, vec)
@@ -167,31 +170,33 @@ class KMeansSchedulerTest {
         }
 
     @Test
-    fun `trainKMeans produces k centroids of correct dimension`() {
-        val dim = 768
-        val vectors = (1..200).map { i -> normalizedVec(i.toFloat()) }
-        val centroids = KMeansScheduler.trainKMeans(vectors, k = 3, seed = 42L)
+    fun `trainKMeans produces k centroids of correct dimension`() =
+        runBlocking {
+            val dim = 768
+            val vectors = (1..200).map { i -> normalizedVec(i.toFloat()) }
+            val centroids = KMeansScheduler.trainKMeans(vectors, k = 3, seed = 42L)
 
-        assertEquals(3, centroids.size)
-        centroids.forEach { c ->
-            assertEquals(dim, c.size, "Each centroid must have dim=$dim")
-            val norm = kotlin.math.sqrt(c.sumOf { it * it.toDouble() }).toFloat()
-            assert(kotlin.math.abs(norm - 1f) < 0.01f) { "Centroid must be L2-normalized, got norm=$norm" }
+            assertEquals(3, centroids.size)
+            centroids.forEach { c ->
+                assertEquals(dim, c.size, "Each centroid must have dim=$dim")
+                val norm = kotlin.math.sqrt(c.sumOf { it * it.toDouble() }).toFloat()
+                assert(kotlin.math.abs(norm - 1f) < 0.01f) { "Centroid must be L2-normalized, got norm=$norm" }
+            }
         }
-    }
 
     @Test
-    fun `serializeCentroids and loadCentroids round-trip`() {
-        val k = 4
-        val centroids =
-            Array(k) {
-                normalizedVec((it + 1).toFloat())
-            }
-        val bytes = KMeansScheduler.serializeCentroids(centroids)
-        val service = ClusterService.fromCentroids(ClusterCentroidsLoader.load(bytes))
+    fun `serializeCentroids and loadCentroids round-trip`() =
+        runBlocking {
+            val k = 4
+            val centroids =
+                Array(k) {
+                    normalizedVec((it + 1).toFloat())
+                }
+            val bytes = KMeansScheduler.serializeCentroids(centroids)
+            val service = ClusterService.fromCentroids(ClusterCentroidsLoader.load(bytes))
 
-        assertEquals(k, service.size)
-    }
+            assertEquals(k, service.size)
+        }
 
     @Test
     fun `concurrent ranking during swap sees consistent reference`() =

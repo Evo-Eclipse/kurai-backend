@@ -23,10 +23,9 @@ import java.util.UUID
  * JWT minting lives in the [com.example.auth.AuthHandler]
  * because the signing key is a server-side concern.
  *
- * Repository calls here are blocking JDBC, run on the caller's dispatcher —
- * consistent with every other repo-touching path in the app. Moving that
- * I/O off the dispatcher is a systemic concern to be solved once at the
- * repository layer (see roadmap), not special-cased per method here.
+ * Repository calls are suspend and run on [sqliteDispatcher] via
+ * [com.example.infrastructure.sqlite.sqliteTransaction]; [isSessionActive]
+ * is suspend too, driven by the SessionAuthenticator async cache.
  */
 class AuthService(
     private val users: UserPort,
@@ -39,11 +38,19 @@ class AuthService(
      * take effect on the next request without rebuilding the service.
      * Re-evaluated per call; tests pass `{ constant }`.
      */
-    private val challengeTtlMs: () -> Long,
-    private val sessionTtlMs: () -> Long,
+    private val challengeTtlMs: suspend () -> Long,
+    private val sessionTtlMs: suspend () -> Long,
     private val challengeRateLimitWindowMs: Long = DEFAULT_CHALLENGE_RATE_LIMIT_WINDOW_MS,
     private val challengeRateLimitMax: Int = DEFAULT_CHALLENGE_RATE_LIMIT_MAX,
     private val clock: () -> Long = { System.currentTimeMillis() },
+    /**
+     * Strict OAuth-BCP reuse detection. When true, any replay of a
+     * superseded refresh token revokes the whole session chain -- including
+     * the immediate-predecessor race that lenient mode (the default)
+     * tolerates. Deploy-time security posture (KURAI_AUTH_STRICT_REUSE),
+     * not a live tuning knob.
+     */
+    private val strictReuseDetection: Boolean = false,
 ) {
     suspend fun issueChallenge(email: String): IssueChallengeResult {
         val normalized = email.trim().lowercase()
@@ -129,12 +136,20 @@ class AuthService(
                 // we favour availability over revoking the legitimate racer on an
                 // ambiguous signal. Strict OAuth-BCP "revoke on any reuse" is the
                 // alternative if detection is later valued over UX.
-                val successor = session.replacedBy?.let { sessions.findById(it) }
-                val isImmediatePredecessor =
-                    successor != null &&
-                        successor.replacedBy == null &&
-                        successor.isActive(now)
-                if (!isImmediatePredecessor) {
+                val revoke =
+                    if (strictReuseDetection) {
+                        // Strict OAuth-BCP: any superseded replay burns the chain.
+                        true
+                    } else {
+                        // Lenient: spare the immediate-predecessor race (a still-active
+                        // successor with no replacement of its own) so a legitimate
+                        // concurrent/retried refresh does not self-revoke.
+                        val successor = session.replacedBy?.let { sessions.findById(it) }
+                        successor == null ||
+                            successor.replacedBy != null ||
+                            !successor.isActive(now)
+                    }
+                if (revoke) {
                     sessions.revokeAllForUser(session.userId, now)
                 }
             }
@@ -212,7 +227,7 @@ class AuthService(
         identities.disable(AuthProvider.KEY, AuthCodecs.sha256Hex(rawKey), clock()) > 0
 
     /** Mint a fresh session + refresh secret; returns (sessionId, rawRefreshToken). */
-    private fun issueSession(
+    private suspend fun issueSession(
         userId: Long,
         deviceLabel: String?,
         now: Long,
@@ -230,7 +245,7 @@ class AuthService(
         return sessionId to refreshToken
     }
 
-    fun revokeSession(sessionId: String) {
+    suspend fun revokeSession(sessionId: String) {
         sessions.revoke(sessionId, clock())
     }
 
@@ -240,10 +255,10 @@ class AuthService(
      * `isActive`, which the JWT `validate` block consults so a revoked
      * session is rejected on every `authenticate("kurai")` route.
      *
-     * Intentionally non-suspend: it is invoked from a synchronous Caffeine
-     * cache loader, so it cannot be `suspend` (and is rare — cache-gated).
+     * Suspends: the SessionAuthenticator AsyncLoadingCache runs it on its
+     * own scope, so no request thread blocks while the DB is consulted.
      */
-    fun isSessionActive(sessionId: String): Boolean {
+    suspend fun isSessionActive(sessionId: String): Boolean {
         val session = sessions.findById(sessionId) ?: return false
         return session.isActive(clock())
     }

@@ -7,6 +7,9 @@ import org.jetbrains.exposed.v1.jdbc.SchemaUtils
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import java.sql.Connection
 
+/** Wait this long for a SQLite lock before SQLITE_BUSY (checkpoint/external). */
+private const val SQLITE_BUSY_TIMEOUT_MS = 5_000
+
 private val ALL_TABLES =
     arrayOf(
         Items,
@@ -52,6 +55,7 @@ private fun applySqlitePragmas(db: Database) {
             raw.createStatement().use { stmt ->
                 stmt.execute("PRAGMA journal_mode=WAL")
                 stmt.execute("PRAGMA synchronous=NORMAL")
+                stmt.execute("PRAGMA busy_timeout=$SQLITE_BUSY_TIMEOUT_MS")
             }
         } finally {
             raw.autoCommit = previous

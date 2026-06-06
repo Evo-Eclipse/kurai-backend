@@ -7,6 +7,7 @@ import com.example.auth.ChallengeIpRateLimiter
 import com.example.auth.ChallengeRequest
 import com.example.auth.ChallengeResponse
 import com.example.auth.FixedWindowRateLimiter
+import com.example.auth.KeyDisableRequest
 import com.example.auth.KeyIssueRequest
 import com.example.auth.KeyIssueResponse
 import com.example.auth.KeyVerifyRequest
@@ -48,6 +49,7 @@ import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientCon
 
 class AuthFlowTest {
     private val secret = "test-secret-long-enough-for-hmac-256-bytes!"
+    private val adminToken = "test-admin-secret-token"
 
     /**
      * Captures the OTP per email so a test can replay it. In production
@@ -65,7 +67,7 @@ class AuthFlowTest {
         }
     }
 
-    private fun fresh(): Triple<Database, CapturingSender, AuthService> {
+    private fun fresh(strictReuse: Boolean = false): Triple<Database, CapturingSender, AuthService> {
         val db = Database.connect("jdbc:h2:mem:auth${System.nanoTime()};MODE=MySQL;DB_CLOSE_DELAY=-1", "org.h2.Driver")
         initSchema(db)
         val sender = CapturingSender()
@@ -78,6 +80,7 @@ class AuthFlowTest {
                 sender = sender,
                 challengeTtlMs = { 10 * 60 * 1000L },
                 sessionTtlMs = { 30L * 24 * 60 * 60 * 1000L },
+                strictReuseDetection = strictReuse,
             )
         return Triple(db, sender, authService)
     }
@@ -104,6 +107,7 @@ class AuthFlowTest {
                         ),
                     jwtSecret = secret,
                     jwtTtlMs = { 60_000L },
+                    adminToken = adminToken,
                 )
             configureAuthRoutes(handler)
             // A stand-in resource endpoint guarded only by `authenticate`,
@@ -453,6 +457,50 @@ class AuthFlowTest {
         }
 
     @Test
+    fun `strict reuse mode burns the chain even on the immediate-predecessor replay`() =
+        testApplication {
+            val (_, sender, authService) = fresh(strictReuse = true)
+            installAuth(authService)
+            val http = jsonClient()
+
+            http
+                .post("/auth/challenge") {
+                    contentType(ContentType.Application.Json)
+                    setBody(ChallengeRequest(email = "strict@example.com"))
+                }.body<ChallengeResponse>()
+            val (challengeId, code) = checkNotNull(sender.byEmail["strict@example.com"])
+            val first: VerifyResponse =
+                http
+                    .post("/auth/verify") {
+                        contentType(ContentType.Application.Json)
+                        setBody(VerifyRequest(challengeId = challengeId, code = code))
+                    }.body()
+
+            val rotated: RefreshResponse =
+                http
+                    .post("/auth/refresh") {
+                        contentType(ContentType.Application.Json)
+                        setBody(RefreshRequest(sessionId = first.sessionId, refreshToken = first.refreshToken))
+                    }.body()
+
+            // Replay the immediate predecessor: strict mode burns the chain.
+            val replay =
+                http.post("/auth/refresh") {
+                    contentType(ContentType.Application.Json)
+                    setBody(RefreshRequest(sessionId = first.sessionId, refreshToken = first.refreshToken))
+                }
+            assertEquals(HttpStatusCode.Unauthorized, replay.status)
+
+            // Unlike lenient mode, the fresh rotated session is now revoked too.
+            val afterBurn =
+                http.post("/auth/refresh") {
+                    contentType(ContentType.Application.Json)
+                    setBody(RefreshRequest(sessionId = rotated.sessionId, refreshToken = rotated.refreshToken))
+                }
+            assertEquals(HttpStatusCode.Unauthorized, afterBurn.status)
+        }
+
+    @Test
     fun `issuing a key logs the user in and the key works again on another device`() =
         testApplication {
             val (_, _, authService) = fresh()
@@ -542,5 +590,118 @@ class AuthFlowTest {
                     setBody(KeyVerifyRequest(key = "00000000-0000-4000-8000-000000000000"))
                 }
             assertEquals(HttpStatusCode.Unauthorized, resp.status)
+        }
+
+    @Test
+    fun `disable-key route retires a key with the operator token`() =
+        testApplication {
+            val (_, _, authService) = fresh()
+            installAuth(authService)
+            val http = jsonClient()
+
+            val issued: KeyIssueResponse =
+                http
+                    .post("/auth/key/issue") {
+                        contentType(ContentType.Application.Json)
+                        setBody(KeyIssueRequest())
+                    }.body()
+
+            val disabled =
+                http.post("/auth/key/disable") {
+                    header("X-Admin-Token", adminToken)
+                    contentType(ContentType.Application.Json)
+                    setBody(KeyDisableRequest(key = issued.key))
+                }
+            assertEquals(HttpStatusCode.NoContent, disabled.status)
+
+            val afterDisable =
+                http.post("/auth/key/verify") {
+                    contentType(ContentType.Application.Json)
+                    setBody(KeyVerifyRequest(key = issued.key))
+                }
+            assertEquals(HttpStatusCode.Unauthorized, afterDisable.status)
+        }
+
+    @Test
+    fun `disable-key route rejects a wrong operator token and leaves the key usable`() =
+        testApplication {
+            val (_, _, authService) = fresh()
+            installAuth(authService)
+            val http = jsonClient()
+
+            val issued: KeyIssueResponse =
+                http
+                    .post("/auth/key/issue") {
+                        contentType(ContentType.Application.Json)
+                        setBody(KeyIssueRequest())
+                    }.body()
+
+            val rejected =
+                http.post("/auth/key/disable") {
+                    header("X-Admin-Token", "wrong-token")
+                    contentType(ContentType.Application.Json)
+                    setBody(KeyDisableRequest(key = issued.key))
+                }
+            assertEquals(HttpStatusCode.Unauthorized, rejected.status)
+
+            val stillWorks =
+                http.post("/auth/key/verify") {
+                    contentType(ContentType.Application.Json)
+                    setBody(KeyVerifyRequest(key = issued.key))
+                }
+            assertEquals(HttpStatusCode.OK, stillWorks.status)
+        }
+
+    @Test
+    fun `spoofed X-Forwarded-For does not bypass the per-IP rate limit`() =
+        testApplication {
+            val (_, _, authService) = fresh()
+            installAuth(authService)
+            val http = jsonClient()
+
+            // No trusted proxy in tests, so X-Forwarded-For is ignored and all
+            // requests share the real socket peer's bucket (budget 5/window).
+            repeat(5) { i ->
+                val ok =
+                    http.post("/auth/key/issue") {
+                        header("X-Forwarded-For", "10.0.0.$i")
+                        contentType(ContentType.Application.Json)
+                        setBody(KeyIssueRequest())
+                    }
+                assertEquals(HttpStatusCode.OK, ok.status)
+            }
+            val limited =
+                http.post("/auth/key/issue") {
+                    header("X-Forwarded-For", "10.0.0.99")
+                    contentType(ContentType.Application.Json)
+                    setBody(KeyIssueRequest())
+                }
+            assertEquals(HttpStatusCode.TooManyRequests, limited.status)
+        }
+
+    @Test
+    fun `challenge is rate-limited per IP across distinct emails`() =
+        testApplication {
+            val (_, _, authService) = fresh()
+            installAuth(authService)
+            val http = jsonClient()
+
+            // Distinct emails so the per-email limit never trips; the per-IP
+            // ChallengeIpRateLimiter (budget 5) must still cap the burst.
+            repeat(5) { i ->
+                val ok =
+                    http.post("/auth/challenge") {
+                        contentType(ContentType.Application.Json)
+                        setBody(ChallengeRequest(email = "ip-rl-$i@example.com"))
+                    }
+                assertEquals(HttpStatusCode.OK, ok.status)
+            }
+            val limited =
+                http.post("/auth/challenge") {
+                    contentType(ContentType.Application.Json)
+                    setBody(ChallengeRequest(email = "ip-rl-final@example.com"))
+                }
+            assertEquals(HttpStatusCode.TooManyRequests, limited.status)
+            assertTrue(limited.headers[HttpHeaders.RetryAfter] != null, "expected Retry-After on 429")
         }
 }

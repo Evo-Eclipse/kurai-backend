@@ -139,4 +139,22 @@ class ArchUnitTest {
                 checkNotNull(Long::class.javaPrimitiveType),
             ).check(productionClasses)
     }
+
+    @Test
+    fun `env config holds no infrastructure types`() {
+        // AppConfig and its source-config DTOs are server-owned env records;
+        // the composition root maps them to infrastructure adapter config, so
+        // the env layer itself stays free of infrastructure imports.
+        noClasses()
+            .that()
+            .haveSimpleName("AppConfig")
+            .or()
+            .haveSimpleName("UnsplashEnv")
+            .or()
+            .haveSimpleName("E621Env")
+            .should()
+            .dependOnClassesThat()
+            .resideInAPackage("com.example.infrastructure..")
+            .check(productionClasses)
+    }
 }

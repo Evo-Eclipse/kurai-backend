@@ -19,6 +19,7 @@ import com.example.application.profile.EventBatcherWorker
 import com.example.application.profile.ProfileMigrationWorker
 import com.example.application.profile.ProfilePersistWorker
 import com.example.application.profile.ProtoSplitWorker
+import com.example.application.profile.RankingService
 import com.example.auth.AuthHandler
 import com.example.auth.ChallengeIpRateLimiter
 import com.example.auth.FixedWindowRateLimiter
@@ -38,6 +39,7 @@ import com.example.domain.config.RuntimeConfigPort
 import com.example.domain.content.ContentSource
 import com.example.domain.embedding.EmbedLookupPort
 import com.example.domain.events.EventQueue
+import com.example.domain.events.EventWeightPort
 import com.example.domain.inference.InferenceService
 import com.example.domain.model.EmbeddingVersion
 import com.example.domain.model.Prototype
@@ -52,8 +54,10 @@ import com.example.domain.storage.GetResult
 import com.example.domain.storage.ObjectStorePort
 import com.example.health.configureHealthRoutes
 import com.example.infrastructure.content.CdnContentSource
+import com.example.infrastructure.content.E621Config
 import com.example.infrastructure.content.E621ContentSource
 import com.example.infrastructure.content.ImagePreprocessor
+import com.example.infrastructure.content.UnsplashConfig
 import com.example.infrastructure.content.UnsplashContentSource
 import com.example.infrastructure.lucene.LuceneAdapter
 import com.example.infrastructure.onnx.OnnxInferenceAdapter
@@ -129,7 +133,8 @@ suspend fun Application.installCore() {
     dependencies.provide<AcquisitionScope> {
         AcquisitionScope(
             CoroutineScope(
-                SupervisorJob() + Dispatchers.IO.limitedParallelism(8),
+                SupervisorJob() +
+                    Dispatchers.IO.limitedParallelism(AcquisitionService.PIPELINE_CONCURRENCY),
             ),
         )
     }
@@ -149,6 +154,7 @@ suspend fun Application.installCore() {
                 inputName = ONNX_INPUT_NAME,
                 outputName = ONNX_OUTPUT_NAME,
                 intraOpThreads = config.onnxIntraOpThreads,
+                inferenceParallelism = config.onnxInferenceParallelism,
             )
         }
     }
@@ -169,7 +175,7 @@ suspend fun Application.installCore() {
     dependencies.provide<ClusterGenerationPort> { ClusterGenerationRepository(dependencies.resolve()) }
     dependencies.provide<ProfilePort> { ProfileRepository(dependencies.resolve()) }
     dependencies.provide<UserEventPort> { EventRepository(dependencies.resolve()) }
-    dependencies.provide<EventWeightRepository> { EventWeightRepository(dependencies.resolve()) }
+    dependencies.provide<EventWeightPort> { EventWeightRepository(dependencies.resolve()) }
     dependencies.provide<PrototypePort> { PrototypeRepository(dependencies.resolve()) }
     dependencies.provide<UserPort> { UserRepository(dependencies.resolve()) }
     dependencies.provide<AuthIdentityPort> { AuthIdentityRepository(dependencies.resolve()) }
@@ -214,6 +220,7 @@ suspend fun Application.installCore() {
             sender = dependencies.resolve(),
             challengeTtlMs = { runtime.get(ConfigKey.AuthChallengeTtlMs) },
             sessionTtlMs = { runtime.get(ConfigKey.AuthSessionTtlMs) },
+            strictReuseDetection = config.authStrictReuse,
         )
     }
     dependencies.provide<SessionAuthenticator> {
@@ -243,12 +250,12 @@ suspend fun Application.installCore() {
             challengeIpRateLimiter = dependencies.resolve(),
             jwtSecret = config.jwtSecret,
             jwtTtlMs = { runtime.get(ConfigKey.AuthJwtTtlMs) },
+            adminToken = config.adminToken,
         )
     }
 
     dependencies.provide<EmbeddingVersionLookup> {
-        val systemState = dependencies.resolve<SystemStateRepository>()
-        EmbeddingVersionLookup { systemState.read().defaultEmbeddingVersion ?: "unknown" }
+        EmbeddingVersionLookup(systemState = dependencies.resolve())
     }
 
     dependencies.provide<InferenceService> {
@@ -264,8 +271,25 @@ suspend fun Application.installCore() {
         val httpClient = dependencies.resolve<HttpClient>()
         ContentSourceRegistry(
             mapOf(
-                "unsplash" to UnsplashContentSource(config.unsplash, httpClient),
-                "e621" to E621ContentSource(config.e621, httpClient),
+                "unsplash" to
+                    UnsplashContentSource(
+                        UnsplashConfig(
+                            baseUrl = config.unsplash.baseUrl,
+                            userAgent = config.unsplash.userAgent,
+                            accessKey = config.unsplash.accessKey,
+                        ),
+                        httpClient,
+                    ),
+                "e621" to
+                    E621ContentSource(
+                        E621Config(
+                            baseUrl = config.e621.baseUrl,
+                            userAgent = config.e621.userAgent,
+                            username = config.e621.username,
+                            accessKey = config.e621.accessKey,
+                        ),
+                        httpClient,
+                    ),
                 "cdn" to CdnContentSource(httpClient),
             ),
         )
@@ -350,14 +374,14 @@ suspend fun Application.installCore() {
     }
 
     dependencies.provide<IngestionHandler> {
-        val eventWeights = dependencies.resolve<EventWeightRepository>()
+        val eventWeights = dependencies.resolve<EventWeightPort>()
         IngestionHandler(
             cachingProfile = dependencies.resolve(),
             cachingEmbedding = dependencies.resolve(),
             eventQueue = dependencies.resolve(),
             activeEmbeddingVersion = dependencies.resolve<EmbeddingVersionLookup>().asEmbeddingVersionLookup(),
             resolveWeight = { tag ->
-                (eventWeights.resolve(tag) ?: EventWeightRepository.DEFAULT_EVENT_WEIGHT).toFloat()
+                (eventWeights.resolve(tag) ?: EventWeightPort.DEFAULT_EVENT_WEIGHT).toFloat()
             },
         )
     }
@@ -382,14 +406,17 @@ suspend fun Application.installCore() {
             }
         ClusterServiceRef(clusters)
     }
-    dependencies.provide<RankingHandler> {
+    dependencies.provide<RankingService> {
         val ref = dependencies.resolve<ClusterServiceRef>()
-        RankingHandler(
+        RankingService(
             cachingProfile = dependencies.resolve(),
             cachingEmbedding = dependencies.resolve(),
             getClusterService = { ref.get() },
             activeEmbeddingVersion = dependencies.resolve<EmbeddingVersionLookup>().asEmbeddingVersionLookup(),
         )
+    }
+    dependencies.provide<RankingHandler> {
+        RankingHandler(dependencies.resolve())
     }
 }
 
@@ -401,7 +428,9 @@ suspend fun Application.installPlugins() {
     val config = dependencies.resolve<AppConfig>()
     val gate = dependencies.resolve<ReadinessGate>()
     val sessionAuth = dependencies.resolve<SessionAuthenticator>()
-    configure(gate, config.jwtSecret) { sessionId -> sessionAuth.isActive(sessionId) }
+    configure(gate, config.jwtSecret, trustForwardedHeaders = config.trustedProxy) { sessionId ->
+        sessionAuth.isActive(sessionId)
+    }
 }
 
 /**
@@ -435,6 +464,7 @@ suspend fun Application.installLifecycle() {
     val objectStore = dependencies.resolve<ObjectStorePort>()
     val onnxAdapter = dependencies.resolve<OnnxInferenceAdapter>()
     val httpClient = dependencies.resolve<HttpClient>()
+    val sessionAuth = dependencies.resolve<SessionAuthenticator>()
     val clusterRef = dependencies.resolve<ClusterServiceRef>()
     val versionLookup = dependencies.resolve<EmbeddingVersionLookup>()
     val authSessions = dependencies.resolve<AuthSessionPort>()
@@ -494,11 +524,12 @@ suspend fun Application.installLifecycle() {
                 lucene.close()
                 onnxAdapter.close()
                 httpClient.close()
+                sessionAuth.close()
             }
         }
     }
 
-    withContext(Dispatchers.IO) { profileRepo.loadAllUserIds() }.forEach { userId ->
+    profileRepo.loadAllUserIds().forEach { userId ->
         cachingProfile.getOrLoad(userId)
     }
 
@@ -520,10 +551,17 @@ suspend fun Application.installLifecycle() {
 fun Application.configure(
     readinessGate: ReadinessGate,
     jwtSecret: String = "",
-    isSessionActive: (sessionId: String) -> Boolean = { true },
+    trustForwardedHeaders: Boolean = false,
+    isSessionActive: suspend (sessionId: String) -> Boolean = { true },
 ) {
     install(ContentNegotiation) { json() }
-    install(XForwardedHeaders)
+    // Trust X-Forwarded-* only behind a proxy (KURAI_TRUSTED_PROXY). Installing
+    // it unconditionally would let any client spoof X-Forwarded-For and rotate
+    // its per-IP rate-limit bucket; off by default, origin.remoteHost is then
+    // the real socket peer.
+    if (trustForwardedHeaders) {
+        install(XForwardedHeaders)
+    }
     // Default CallLogging format: logs method + URI + status, not headers.
     // Authorization header values never appear in log output.
     install(CallLogging)
@@ -584,12 +622,15 @@ internal class ClusterServiceRef(
 /**
  * Wrapper exposing the active embedding version both as a raw [String]
  * (the form AcquisitionService wants) and as a typed [EmbeddingVersion]
- * (the form handlers and workers want).
+ * (the form handlers and workers want). Reads [SystemStatePort] via suspend
+ * lookups so callers never bridge with `runBlocking`.
  */
 internal class EmbeddingVersionLookup(
-    private val lookup: () -> String,
+    private val systemState: SystemStatePort,
 ) {
-    fun asStringLookup(): () -> String = lookup
+    suspend fun current(): String = systemState.read().defaultEmbeddingVersion ?: "unknown"
 
-    fun asEmbeddingVersionLookup(): () -> EmbeddingVersion = { EmbeddingVersion(lookup()) }
+    fun asStringLookup(): suspend () -> String = { current() }
+
+    fun asEmbeddingVersionLookup(): suspend () -> EmbeddingVersion = { EmbeddingVersion(current()) }
 }

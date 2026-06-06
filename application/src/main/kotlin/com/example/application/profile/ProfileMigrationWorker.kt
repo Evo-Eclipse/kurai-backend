@@ -20,7 +20,7 @@ class ProfileMigrationWorker(
     private val eventRepo: UserEventPort,
     private val cachingEmbedding: CachingEmbeddingAdapter,
     private val cachingProfile: CachingProfileAdapter,
-    private val activeEmbeddingVersion: () -> EmbeddingVersion,
+    private val activeEmbeddingVersion: suspend () -> EmbeddingVersion,
     private val scanIntervalMs: Long = SCAN_INTERVAL_MS,
 ) {
     suspend fun run() {

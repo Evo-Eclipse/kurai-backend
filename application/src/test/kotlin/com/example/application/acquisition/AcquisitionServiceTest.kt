@@ -13,8 +13,6 @@ import com.example.infrastructure.sqlite.AcquisitionJobRepository
 import com.example.infrastructure.sqlite.ItemRepository
 import com.example.infrastructure.sqlite.Items
 import com.example.infrastructure.sqlite.initSchema
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -57,7 +55,12 @@ class AcquisitionServiceTest {
         object : ContentSource {
             override val platform = Platform("test")
 
-            override fun fetch(query: SourceQuery): Flow<RawImage> = images.take(query.limit).asFlow()
+            override suspend fun fetch(
+                query: SourceQuery,
+                onImage: suspend (RawImage) -> Unit,
+            ) {
+                images.take(query.limit).forEach { onImage(it) }
+            }
         }
 
     private fun makeImage(seed: Int): RawImage {

@@ -7,19 +7,18 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.neq
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.upsert
 import java.time.Instant
 
 class ProfileRepository(
     private val db: Database,
 ) : ProfilePort {
-    override fun upsert(
+    override suspend fun upsert(
         userId: Long,
         embeddingVersion: String,
         lastAppliedEventId: Long,
     ) {
-        transaction(db) {
+        sqliteTransaction(db) {
             UserProfileState.upsert {
                 it[UserProfileState.userId] = userId
                 it[UserProfileState.assignedEmbeddingVersion] = embeddingVersion
@@ -29,8 +28,8 @@ class ProfileRepository(
         }
     }
 
-    override fun load(userId: Long): ProfileState? =
-        transaction(db) {
+    override suspend fun load(userId: Long): ProfileState? =
+        sqliteTransaction(db) {
             UserProfileState
                 .selectAll()
                 .where { UserProfileState.userId eq userId }
@@ -45,8 +44,8 @@ class ProfileRepository(
                 }
         }
 
-    override fun findStaleVersions(activeVersion: String): List<Long> =
-        transaction(db) {
+    override suspend fun findStaleVersions(activeVersion: String): List<Long> =
+        sqliteTransaction(db) {
             UserProfileState
                 .selectAll()
                 .where { UserProfileState.assignedEmbeddingVersion neq activeVersion }
@@ -54,8 +53,8 @@ class ProfileRepository(
                 .map { it[UserProfileState.userId] }
         }
 
-    override fun loadAllUserIds(): List<Long> =
-        transaction(db) {
+    override suspend fun loadAllUserIds(): List<Long> =
+        sqliteTransaction(db) {
             UserProfileState
                 .selectAll()
                 .map { it[UserProfileState.userId] }

@@ -1,5 +1,6 @@
 package com.example.infrastructure.content
 import com.example.domain.content.Platform
+import com.example.domain.content.RawImage
 import com.example.domain.content.SourceQuery
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
@@ -12,7 +13,6 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.utils.io.ByteReadChannel
-import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
@@ -49,7 +49,8 @@ class E621ContentSourceTest {
                 }
             val source = E621ContentSource(config, client, noOpRateLimiter())
 
-            val results = source.fetch(SourceQuery(tags = listOf("anything"), limit = 3)).toList()
+            val results = mutableListOf<RawImage>()
+            source.fetch(SourceQuery(tags = listOf("anything"), limit = 3)) { results += it }
 
             assertEquals(3, results.size)
             results.forEach { raw ->
@@ -78,7 +79,8 @@ class E621ContentSourceTest {
                     respondJson("""{"posts": []}""")
                 }
             val source = E621ContentSource(config, client, noOpRateLimiter())
-            source.fetch(SourceQuery(tags = listOf("anything"), limit = 1)).toList()
+            val results = mutableListOf<RawImage>()
+            source.fetch(SourceQuery(tags = listOf("anything"), limit = 1)) { results += it }
 
             val req = checkNotNull(captured)
             assertEquals(config.userAgent, req.headers[HttpHeaders.UserAgent])
@@ -118,7 +120,8 @@ class E621ContentSourceTest {
                     }
                 }
             val source = E621ContentSource(config, client, noOpRateLimiter())
-            val results = source.fetch(SourceQuery(tags = listOf("foo"), limit = 1)).toList()
+            val results = mutableListOf<RawImage>()
+            source.fetch(SourceQuery(tags = listOf("foo"), limit = 1)) { results += it }
             assertEquals(listOf("9002"), results.map { it.sourceId })
         }
     }

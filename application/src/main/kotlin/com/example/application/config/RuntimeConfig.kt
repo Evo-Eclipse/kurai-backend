@@ -13,7 +13,7 @@ class RuntimeConfig(
     private val repo: RuntimeConfigPort,
     private val clock: () -> Long = { System.currentTimeMillis() },
 ) {
-    fun <T> get(key: ConfigKey<T>): T {
+    suspend fun <T> get(key: ConfigKey<T>): T {
         val row =
             repo.load(key.key)
                 ?: error("Missing runtime config: ${key.key}. Seed it at startup before resolving dependents.")
@@ -25,7 +25,7 @@ class RuntimeConfig(
         }
     }
 
-    fun seedIfMissing(
+    suspend fun seedIfMissing(
         key: ConfigKey<*>,
         value: String,
     ): Boolean {
@@ -34,7 +34,7 @@ class RuntimeConfig(
         return true
     }
 
-    fun <T> set(
+    suspend fun <T> set(
         key: ConfigKey<T>,
         value: T,
     ) {

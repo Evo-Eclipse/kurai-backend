@@ -17,11 +17,11 @@ import java.time.Duration
  * Process-local: each instance counts only its own node.
  */
 class FixedWindowRateLimiter(
-    private val maxPerWindow: () -> Int,
-    private val windowMs: () -> Long,
+    private val maxPerWindow: suspend () -> Int,
+    private val windowMs: suspend () -> Long,
     private val clock: () -> Long = { System.currentTimeMillis() },
-    idleEviction: Duration = Duration.ofHours(1),
-    maxKeys: Long = 100_000,
+    idleEviction: Duration = DEFAULT_IDLE_EVICTION,
+    maxKeys: Long = DEFAULT_MAX_KEYS,
 ) {
     private class Window(
         val start: Long,
@@ -36,10 +36,10 @@ class FixedWindowRateLimiter(
             .build<String, Window>()
 
     /** Hint for a `Retry-After` header — the full window has to elapse. */
-    fun retryAfterSeconds(): Long = (windowMs() / 1000).coerceAtLeast(1)
+    suspend fun retryAfterSeconds(): Long = (windowMs() / 1000).coerceAtLeast(1)
 
     /** True while the key is within budget; false once the window is spent. */
-    fun tryAcquire(key: String): Boolean {
+    suspend fun tryAcquire(key: String): Boolean {
         val now = clock()
         val window = windowMs()
         val updated =
@@ -54,13 +54,21 @@ class FixedWindowRateLimiter(
             )
         return updated.count <= maxPerWindow()
     }
+
+    companion object {
+        /** Evict a key after this long idle so memory stays bounded. */
+        val DEFAULT_IDLE_EVICTION: Duration = Duration.ofHours(1)
+
+        /** Max distinct keys (IPs) tracked before Caffeine evicts by size. */
+        const val DEFAULT_MAX_KEYS: Long = 100_000
+    }
 }
 
 /** Wrapper so Ktor DI can bind a separate limiter for `/auth/challenge`. */
 class ChallengeIpRateLimiter(
     private val delegate: FixedWindowRateLimiter,
 ) {
-    fun tryAcquire(key: String): Boolean = delegate.tryAcquire(key)
+    suspend fun tryAcquire(key: String): Boolean = delegate.tryAcquire(key)
 
-    fun retryAfterSeconds(): Long = delegate.retryAfterSeconds()
+    suspend fun retryAfterSeconds(): Long = delegate.retryAfterSeconds()
 }

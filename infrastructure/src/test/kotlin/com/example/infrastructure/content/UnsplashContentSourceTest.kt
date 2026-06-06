@@ -1,5 +1,6 @@
 package com.example.infrastructure.content
 import com.example.domain.content.Platform
+import com.example.domain.content.RawImage
 import com.example.domain.content.SourceQuery
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
@@ -13,7 +14,6 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.utils.io.ByteReadChannel
-import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
@@ -47,7 +47,8 @@ class UnsplashContentSourceTest {
                 }
             val source = UnsplashContentSource(config, client, noOpRateLimiter())
 
-            val results = source.fetch(SourceQuery(tags = listOf("apple"), limit = 3)).toList()
+            val results = mutableListOf<RawImage>()
+            source.fetch(SourceQuery(tags = listOf("apple"), limit = 3)) { results += it }
 
             assertEquals(3, results.size)
             results.forEach { raw ->
@@ -69,7 +70,8 @@ class UnsplashContentSourceTest {
                     respondJson("""{"total": 0, "total_pages": 0, "results": []}""")
                 }
             val source = UnsplashContentSource(config, client, noOpRateLimiter())
-            source.fetch(SourceQuery(tags = listOf("anything"), limit = 1)).toList()
+            val results = mutableListOf<RawImage>()
+            source.fetch(SourceQuery(tags = listOf("anything"), limit = 1)) { results += it }
 
             val req = checkNotNull(captured)
             assertEquals(config.userAgent, req.headers[HttpHeaders.UserAgent])
@@ -97,7 +99,8 @@ class UnsplashContentSourceTest {
                 }
             val source = UnsplashContentSource(config, client, noOpRateLimiter())
 
-            val results = source.fetch(SourceQuery(tags = listOf("x"), limit = 3)).toList()
+            val results = mutableListOf<RawImage>()
+            source.fetch(SourceQuery(tags = listOf("x"), limit = 3)) { results += it }
 
             // The 404'd result is silently dropped; flatMapMerge still
             // delivers the requested limit from the remaining hits.
@@ -117,7 +120,8 @@ class UnsplashContentSourceTest {
 
             val error =
                 assertFailsWith<IllegalStateException> {
-                    source.fetch(SourceQuery(tags = listOf("x"), limit = 1)).toList()
+                    val results = mutableListOf<RawImage>()
+                    source.fetch(SourceQuery(tags = listOf("x"), limit = 1)) { results += it }
                 }
             assertTrue(error.message!!.contains("demo-tier"))
         }

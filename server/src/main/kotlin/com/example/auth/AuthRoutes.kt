@@ -21,6 +21,9 @@ fun Application.configureAuthRoutes(handler: AuthHandler) {
             // the real client (otherwise all clients share the proxy IP).
             post("/key/issue") { handler.handleKeyIssue(call) }
             post("/key/verify") { handler.handleKeyVerify(call) }
+            // Operator action: retire a key. Gated by the X-Admin-Token
+            // shared secret (KURAI_ADMIN_TOKEN); inert (404) when unset.
+            post("/key/disable") { handler.handleDisableKey(call) }
 
             // Authenticated: revokes the caller's own session.
             authenticate("kurai") {

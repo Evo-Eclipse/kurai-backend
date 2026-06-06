@@ -10,20 +10,19 @@ import org.jetbrains.exposed.v1.core.plus
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 
 class LoginChallengeRepository(
     private val db: Database,
 ) : LoginChallengePort {
-    override fun insert(
+    override suspend fun insert(
         id: String,
         email: String,
         codeHash: String,
         expiresAt: Long,
         now: Long,
     ) {
-        transaction(db) {
+        sqliteTransaction(db) {
             LoginChallenges.insert {
                 it[LoginChallenges.id] = id
                 it[LoginChallenges.email] = email
@@ -34,8 +33,8 @@ class LoginChallengeRepository(
         }
     }
 
-    override fun findById(id: String): LoginChallenge? =
-        transaction(db) {
+    override suspend fun findById(id: String): LoginChallenge? =
+        sqliteTransaction(db) {
             LoginChallenges
                 .selectAll()
                 .where { LoginChallenges.id eq id }
@@ -53,18 +52,18 @@ class LoginChallengeRepository(
                 }
         }
 
-    override fun incrementAttempts(id: String): Int =
-        transaction(db) {
+    override suspend fun incrementAttempts(id: String): Int =
+        sqliteTransaction(db) {
             LoginChallenges.update({ LoginChallenges.id eq id }) {
                 it[LoginChallenges.attempts] = LoginChallenges.attempts + 1
             }
         }
 
-    override fun markConsumedIfPending(
+    override suspend fun markConsumedIfPending(
         id: String,
         now: Long,
     ): Int =
-        transaction(db) {
+        sqliteTransaction(db) {
             LoginChallenges.update({
                 (LoginChallenges.id eq id) and LoginChallenges.consumedAt.isNull()
             }) {
@@ -72,11 +71,11 @@ class LoginChallengeRepository(
             }
         }
 
-    override fun countCreatedSince(
+    override suspend fun countCreatedSince(
         email: String,
         sinceMillis: Long,
     ): Long =
-        transaction(db) {
+        sqliteTransaction(db) {
             LoginChallenges
                 .selectAll()
                 .where {

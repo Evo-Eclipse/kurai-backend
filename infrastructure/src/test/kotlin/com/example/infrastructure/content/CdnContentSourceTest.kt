@@ -1,5 +1,6 @@
 package com.example.infrastructure.content
 import com.example.domain.content.Platform
+import com.example.domain.content.RawImage
 import com.example.domain.content.SourceQuery
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
@@ -7,7 +8,6 @@ import io.ktor.client.engine.mock.respond
 import io.ktor.client.engine.mock.respondError
 import io.ktor.http.HttpStatusCode
 import io.ktor.utils.io.ByteReadChannel
-import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import java.security.MessageDigest
 import kotlin.test.Test
@@ -43,7 +43,8 @@ class CdnContentSourceTest {
             val source = CdnContentSource(client, noOpRateLimiter())
 
             val urls = listOf("https://cdn.example/a.jpg", "https://cdn.example/b.jpg")
-            val results = source.fetch(SourceQuery(tags = urls, limit = 2)).toList()
+            val results = mutableListOf<RawImage>()
+            source.fetch(SourceQuery(tags = urls, limit = 2)) { results += it }
 
             assertEquals(2, results.size)
             results.forEach { assertEquals(Platform("cdn"), it.platform) }
@@ -61,7 +62,8 @@ class CdnContentSourceTest {
             val source = CdnContentSource(client, noOpRateLimiter())
             val urls = listOf("https://cdn.example/1.jpg", "https://cdn.example/2.jpg", "https://cdn.example/3.jpg")
 
-            val results = source.fetch(SourceQuery(tags = urls, limit = 2)).toList()
+            val results = mutableListOf<RawImage>()
+            source.fetch(SourceQuery(tags = urls, limit = 2)) { results += it }
 
             assertEquals(2, results.size)
         }
@@ -74,7 +76,8 @@ class CdnContentSourceTest {
             val source = CdnContentSource(client, noOpRateLimiter())
 
             assertFailsWith<IllegalStateException> {
-                source.fetch(SourceQuery(tags = listOf("https://cdn.example/gone.jpg"), limit = 1)).toList()
+                val results = mutableListOf<RawImage>()
+                source.fetch(SourceQuery(tags = listOf("https://cdn.example/gone.jpg"), limit = 1)) { results += it }
             }
         }
     }
@@ -99,7 +102,8 @@ class CdnContentSourceTest {
             val source = CdnContentSource(client, rateLimiter)
             val urls = (1..n).map { "https://cdn.example/$it.jpg" }
 
-            source.fetch(SourceQuery(tags = urls, limit = n)).toList()
+            val results = mutableListOf<RawImage>()
+            source.fetch(SourceQuery(tags = urls, limit = n)) { results += it }
 
             // n requests at 10 req/s: (n-1) intervals of 100ms each
             val expectedIntervalMs = (1000.0 / CdnContentSource.CDN_REQUESTS_PER_SECOND).toLong()

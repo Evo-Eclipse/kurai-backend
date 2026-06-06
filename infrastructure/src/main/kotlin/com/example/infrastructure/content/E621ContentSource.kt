@@ -15,7 +15,6 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.appendPathSegments
 import io.ktor.http.takeFrom
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.flatMapMerge
 import kotlinx.coroutines.flow.flow
@@ -46,7 +45,10 @@ class E621ContentSource(
     override val platform: Platform = Platform("e621")
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    override fun fetch(query: SourceQuery): Flow<RawImage> =
+    override suspend fun fetch(
+        query: SourceQuery,
+        onImage: suspend (RawImage) -> Unit,
+    ) {
         flow {
             val pageSize = minOf(query.limit, PER_PAGE)
             var page = 1
@@ -68,7 +70,8 @@ class E621ContentSource(
                 if (emitted >= query.limit) return@flow
                 page += 1
             }
-        }
+        }.collect(onImage)
+    }
 
     private suspend fun fetchPage(
         tags: List<String>,

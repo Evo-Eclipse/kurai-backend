@@ -35,15 +35,17 @@ class IndexGenerationManagerTest {
 
     @BeforeTest
     fun setUp() {
-        rootDir = createTempDirectory("kurai-genmgr-test-")
-        db =
-            Database.connect(
-                "jdbc:h2:mem:${System.nanoTime()};MODE=MySQL;DB_CLOSE_DELAY=-1",
-                "org.h2.Driver",
-            )
-        initSchema(db)
-        systemState = SystemStateRepository(db).also { it.seedIfMissing(0L) }
-        gcScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        runBlocking {
+            rootDir = createTempDirectory("kurai-genmgr-test-")
+            db =
+                Database.connect(
+                    "jdbc:h2:mem:${System.nanoTime()};MODE=MySQL;DB_CLOSE_DELAY=-1",
+                    "org.h2.Driver",
+                )
+            initSchema(db)
+            systemState = SystemStateRepository(db).also { it.seedIfMissing(0L) }
+            gcScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        }
     }
 
     @AfterTest
@@ -56,33 +58,35 @@ class IndexGenerationManagerTest {
     }
 
     @Test
-    fun `openActive returns null when no generation is active`() {
-        val mgr = newManager(graceSeconds = 60)
-        assertNull(mgr.openActive())
-        mgr.close()
-    }
+    fun `openActive returns null when no generation is active`() =
+        runBlocking {
+            val mgr = newManager(graceSeconds = 60)
+            assertNull(mgr.openActive())
+            mgr.close()
+        }
 
     @Test
-    fun `activate flips statuses and exposes new adapter via current`() {
-        val mgr = newManager(graceSeconds = 60)
-        val first = mgr.createBuilding("v1")
-        first.adapter.write(1L, randomNormalized(1))
-        mgr.activate(first)
+    fun `activate flips statuses and exposes new adapter via current`() =
+        runBlocking {
+            val mgr = newManager(graceSeconds = 60)
+            val first = mgr.createBuilding("v1")
+            first.adapter.write(1L, randomNormalized(1))
+            mgr.activate(first)
 
-        val second = mgr.createBuilding("v2")
-        second.adapter.write(2L, randomNormalized(2))
-        mgr.activate(second)
+            val second = mgr.createBuilding("v2")
+            second.adapter.write(2L, randomNormalized(2))
+            mgr.activate(second)
 
-        val byId = transaction(db) { IndexGenerations.selectAll().toList() }.associateBy { it[IndexGenerations.id] }
-        assertEquals("deprecated", byId[first.id]!![IndexGenerations.status])
-        assertEquals("active", byId[second.id]!![IndexGenerations.status])
+            val byId = transaction(db) { IndexGenerations.selectAll().toList() }.associateBy { it[IndexGenerations.id] }
+            assertEquals("deprecated", byId[first.id]!![IndexGenerations.status])
+            assertEquals("active", byId[second.id]!![IndexGenerations.status])
 
-        val current = mgr.current()
-        assertNotNull(current)
-        assertEquals(listOf(2L), current.search(randomNormalized(2), k = 1))
+            val current = mgr.current()
+            assertNotNull(current)
+            assertEquals(listOf(2L), current.search(randomNormalized(2), k = 1))
 
-        mgr.close()
-    }
+            mgr.close()
+        }
 
     @Test
     fun `concurrent searches during activate see consistent view, no crash`() =
@@ -140,22 +144,23 @@ class IndexGenerationManagerTest {
         }
 
     @Test
-    fun `openActive picks up the active generation written to DB`() {
-        val mgr1 = newManager(graceSeconds = 60)
-        val v1 = mgr1.createBuilding("v1")
-        v1.adapter.write(1L, randomNormalized(1))
-        mgr1.activate(v1)
-        mgr1.close()
-        gcScope.cancel()
-        gcScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    fun `openActive picks up the active generation written to DB`() =
+        runBlocking {
+            val mgr1 = newManager(graceSeconds = 60)
+            val v1 = mgr1.createBuilding("v1")
+            v1.adapter.write(1L, randomNormalized(1))
+            mgr1.activate(v1)
+            mgr1.close()
+            gcScope.cancel()
+            gcScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-        val mgr2 = newManager(graceSeconds = 60)
-        val reopened = mgr2.openActive()
-        assertNotNull(reopened)
-        assertEquals(listOf(1L), reopened.search(randomNormalized(1), k = 1))
+            val mgr2 = newManager(graceSeconds = 60)
+            val reopened = mgr2.openActive()
+            assertNotNull(reopened)
+            assertEquals(listOf(1L), reopened.search(randomNormalized(1), k = 1))
 
-        mgr2.close()
-    }
+            mgr2.close()
+        }
 
     private fun newManager(graceSeconds: Long): IndexGenerationManager =
         IndexGenerationManager(

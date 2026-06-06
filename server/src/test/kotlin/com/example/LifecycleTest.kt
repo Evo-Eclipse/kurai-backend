@@ -15,6 +15,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.yield
 import org.jetbrains.exposed.v1.jdbc.Database
@@ -40,7 +41,7 @@ class LifecycleTest {
         initSchema(db)
         profileRepo = ProfileRepository(db)
         eventRepo = EventRepository(db)
-        EventWeightRepository(db).upsert("like", 1.0, now = 0L)
+        runBlocking { EventWeightRepository(db).upsert("like", 1.0, now = 0L) }
     }
 
     private fun normalizedVec(seed: Int): FloatArray {

@@ -9,14 +9,13 @@ import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.batchInsert
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import java.time.Instant
 
 class PrototypeRepository(
     private val db: Database,
 ) : PrototypePort {
-    override fun load(userId: Long): List<StoredPrototype> =
-        transaction(db) {
+    override suspend fun load(userId: Long): List<StoredPrototype> =
+        sqliteTransaction(db) {
             UserPrototypes
                 .selectAll()
                 .where { UserPrototypes.userId eq userId }
@@ -30,11 +29,11 @@ class PrototypeRepository(
                 }
         }
 
-    override fun replaceAll(
+    override suspend fun replaceAll(
         userId: Long,
         rows: List<StoredPrototype>,
     ) {
-        transaction(db) {
+        sqliteTransaction(db) {
             UserPrototypes.deleteWhere { UserPrototypes.userId eq userId }
             if (rows.isNotEmpty()) {
                 val now = Instant.now().toEpochMilli()

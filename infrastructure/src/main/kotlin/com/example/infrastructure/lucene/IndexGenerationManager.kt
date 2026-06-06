@@ -2,6 +2,7 @@ package com.example.infrastructure.lucene
 
 import com.example.infrastructure.sqlite.IndexGenerations
 import com.example.infrastructure.sqlite.SystemStateRepository
+import com.example.infrastructure.sqlite.sqliteTransaction
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -13,7 +14,6 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.nio.file.Files
@@ -62,14 +62,14 @@ class IndexGenerationManager(
      * opening its directory. Returns `null` if no index is active yet
      * (cold-start before the first acquisition).
      */
-    fun openActive(): LuceneAdapter? {
+    suspend fun openActive(): LuceneAdapter? {
         val activeId = systemState.read().activeIndexId
         if (activeId == null) {
             activeRef.set(null)
             return null
         }
         val row =
-            transaction(db) {
+            sqliteTransaction(db) {
                 IndexGenerations
                     .selectAll()
                     .where { IndexGenerations.id eq activeId }
@@ -96,12 +96,12 @@ class IndexGenerationManager(
      * Returns a fresh adapter pointed at the new directory; vectors written
      * through it are not visible to the active reader until [activate].
      */
-    fun createBuilding(embeddingVersion: String): BuildingGeneration {
+    suspend fun createBuilding(embeddingVersion: String): BuildingGeneration {
         val dirName = "index_${embeddingVersion}_${System.nanoTime()}"
         val path = rootDir.resolve(dirName)
         Files.createDirectories(path)
         val id =
-            transaction(db) {
+            sqliteTransaction(db) {
                 IndexGenerations.insert {
                     it[IndexGenerations.embeddingVersion] = embeddingVersion
                     it[IndexGenerations.status] = "building"
@@ -118,7 +118,7 @@ class IndexGenerationManager(
      * swap commit before this call returns; the deprecated directory is
      * scheduled for deletion after [deprecatedGracePeriodSeconds].
      */
-    fun activate(building: BuildingGeneration) {
+    suspend fun activate(building: BuildingGeneration) {
         building.adapter.refresh()
         val previous = activeRef.get()
         // One transaction flips index_generations statuses and repoints

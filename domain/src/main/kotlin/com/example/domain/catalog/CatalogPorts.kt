@@ -12,7 +12,7 @@ data class AcquisitionJob(
 )
 
 interface AcquisitionJobPort {
-    fun insert(
+    suspend fun insert(
         id: String,
         status: String,
         origin: String,
@@ -20,18 +20,18 @@ interface AcquisitionJobPort {
         userId: Long? = null,
     )
 
-    fun updateStatus(
+    suspend fun updateStatus(
         id: String,
         status: String,
         completedAt: Long? = null,
         errorMessage: String? = null,
     )
 
-    fun findById(id: String): AcquisitionJob?
+    suspend fun findById(id: String): AcquisitionJob?
 }
 
 interface CatalogItemPort {
-    fun insertIdempotent(
+    suspend fun insertIdempotent(
         md5: String,
         url: String,
         origin: String,
@@ -40,9 +40,9 @@ interface CatalogItemPort {
         indexedAt: Long,
     ): Pair<Long, Boolean>
 
-    fun countAll(): Long
+    suspend fun countAll(): Long
 
-    fun loadSample(limit: Int): List<Long>
+    suspend fun loadSample(limit: Int): List<Long>
 }
 
 interface ItemVectorIndexPort {
@@ -68,26 +68,26 @@ data class GlobalSystemState(
 )
 
 interface SystemStatePort {
-    fun seedIfMissing(now: Long)
+    suspend fun seedIfMissing(now: Long)
 
-    fun read(): GlobalSystemState
+    suspend fun read(): GlobalSystemState
 
-    fun setDefaultEmbeddingVersion(
+    suspend fun setDefaultEmbeddingVersion(
         version: String,
         now: Long,
     )
 
-    fun activateCluster(
+    suspend fun activateCluster(
         clusterId: Long,
         now: Long,
     )
 
-    fun activateIndex(
+    suspend fun activateIndex(
         indexId: Long,
         now: Long,
     )
 
-    fun setCounts(
+    suspend fun setCounts(
         totalItems: Long,
         embeddedItems: Long,
         now: Long,
@@ -105,12 +105,12 @@ data class ClusterGeneration(
 )
 
 interface ClusterGenerationPort {
-    fun createBuilding(
+    suspend fun createBuilding(
         embeddingVersion: String,
         clusterCount: Int,
         catalogSizeAtBuild: Long,
         centroidsPath: String,
     ): Long
 
-    fun findById(id: Long): ClusterGeneration?
+    suspend fun findById(id: Long): ClusterGeneration?
 }

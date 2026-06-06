@@ -1,5 +1,6 @@
 package com.example.infrastructure.sqlite
 
+import com.example.domain.events.EventWeightPort
 import com.example.domain.profile.PendingUserEvent
 import com.example.domain.profile.ResolvedUserEvent
 import com.example.domain.profile.UserEventPort
@@ -12,7 +13,6 @@ import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.batchInsert
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
 /** Current event-schema version stamped on every appended row. */
 private const val EVENT_SCHEMA_VER = 1
@@ -20,13 +20,13 @@ private const val EVENT_SCHEMA_VER = 1
 class EventRepository(
     private val db: Database,
 ) : UserEventPort {
-    override fun append(
+    override suspend fun append(
         userId: Long,
         itemId: Long,
         sourceTag: String,
         embeddingVersion: String,
     ): Long =
-        transaction(db) {
+        sqliteTransaction(db) {
             UserEvents.insert {
                 it[UserEvents.userId] = userId
                 it[UserEvents.itemId] = itemId
@@ -36,26 +36,26 @@ class EventRepository(
             }[UserEvents.id]
         }
 
-    override fun loadSince(
+    override suspend fun loadSince(
         userId: Long,
         sinceEventId: Long,
     ): List<ResolvedUserEvent> =
-        transaction(db) {
+        sqliteTransaction(db) {
             joinedRows(userId, sinceEventId).map(::toResolvedEvent)
         }
 
-    override fun loadPositiveSince(
+    override suspend fun loadPositiveSince(
         userId: Long,
         sinceEventId: Long,
     ): List<ResolvedUserEvent> =
-        transaction(db) {
+        sqliteTransaction(db) {
             joinedRows(userId, sinceEventId)
                 .map(::toResolvedEvent)
                 .filter { it.weight > 0f }
         }
 
-    override fun maxEventId(userId: Long): Long =
-        transaction(db) {
+    override suspend fun maxEventId(userId: Long): Long =
+        sqliteTransaction(db) {
             UserEvents
                 .selectAll()
                 .where { UserEvents.userId eq userId }
@@ -63,8 +63,8 @@ class EventRepository(
                 ?.get(UserEvents.id) ?: 0L
         }
 
-    override fun appendBatch(events: List<PendingUserEvent>): List<Long> =
-        transaction(db) {
+    override suspend fun appendBatch(events: List<PendingUserEvent>): List<Long> =
+        sqliteTransaction(db) {
             UserEvents
                 .batchInsert(events) { e ->
                     this[UserEvents.userId] = e.userId
@@ -89,7 +89,7 @@ class EventRepository(
         .orderBy(UserEvents.id to SortOrder.ASC)
 
     private fun toResolvedEvent(row: org.jetbrains.exposed.v1.core.ResultRow): ResolvedUserEvent {
-        val resolved = row.getOrNull(EventWeights.weight) ?: EventWeightRepository.DEFAULT_EVENT_WEIGHT
+        val resolved = row.getOrNull(EventWeights.weight) ?: EventWeightPort.DEFAULT_EVENT_WEIGHT
         return ResolvedUserEvent(
             userId = row[UserEvents.userId],
             itemId = row[UserEvents.itemId],

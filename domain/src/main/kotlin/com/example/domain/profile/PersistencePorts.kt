@@ -1,46 +1,46 @@
 package com.example.domain.profile
 
 interface ProfilePort {
-    fun upsert(
+    suspend fun upsert(
         userId: Long,
         embeddingVersion: String,
         lastAppliedEventId: Long,
     )
 
-    fun load(userId: Long): ProfileState?
+    suspend fun load(userId: Long): ProfileState?
 
-    fun findStaleVersions(activeVersion: String): List<Long>
+    suspend fun findStaleVersions(activeVersion: String): List<Long>
 
-    fun loadAllUserIds(): List<Long>
+    suspend fun loadAllUserIds(): List<Long>
 }
 
 interface UserEventPort {
-    fun append(
+    suspend fun append(
         userId: Long,
         itemId: Long,
         sourceTag: String,
         embeddingVersion: String,
     ): Long
 
-    fun loadSince(
+    suspend fun loadSince(
         userId: Long,
         sinceEventId: Long,
     ): List<ResolvedUserEvent>
 
-    fun loadPositiveSince(
+    suspend fun loadPositiveSince(
         userId: Long,
         sinceEventId: Long,
     ): List<ResolvedUserEvent>
 
-    fun maxEventId(userId: Long): Long
+    suspend fun maxEventId(userId: Long): Long
 
-    fun appendBatch(events: List<PendingUserEvent>): List<Long>
+    suspend fun appendBatch(events: List<PendingUserEvent>): List<Long>
 }
 
 interface PrototypePort {
-    fun load(userId: Long): List<StoredPrototype>
+    suspend fun load(userId: Long): List<StoredPrototype>
 
-    fun replaceAll(
+    suspend fun replaceAll(
         userId: Long,
         rows: List<StoredPrototype>,
     )

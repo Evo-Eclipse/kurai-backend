@@ -4,6 +4,7 @@ import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 import com.example.application.embedding.CachingEmbeddingAdapter
 import com.example.application.profile.CachingProfileAdapter
+import com.example.application.profile.RankingService
 import com.example.domain.model.EmbeddingVersion
 import com.example.domain.model.Prototype
 import com.example.domain.model.UserProfile
@@ -20,6 +21,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
+import kotlinx.coroutines.runBlocking
 import org.jetbrains.exposed.v1.jdbc.Database
 import java.util.Date
 import kotlin.test.BeforeTest
@@ -41,14 +43,16 @@ class RankingSmokeTest {
 
     @BeforeTest
     fun setUp() {
-        db =
-            Database.connect(
-                "jdbc:h2:mem:${System.nanoTime()};MODE=MySQL;DB_CLOSE_DELAY=-1",
-                "org.h2.Driver",
-            )
-        initSchema(db)
-        // Pre-insert a profile so embeddingVersion matches the active version in the handler.
-        ProfileRepository(db).upsert(userId = USER_ID, embeddingVersion = "v1", lastAppliedEventId = 0L)
+        runBlocking {
+            db =
+                Database.connect(
+                    "jdbc:h2:mem:${System.nanoTime()};MODE=MySQL;DB_CLOSE_DELAY=-1",
+                    "org.h2.Driver",
+                )
+            initSchema(db)
+            // Pre-insert a profile so embeddingVersion matches the active version in the handler.
+            ProfileRepository(db).upsert(userId = USER_ID, embeddingVersion = "v1", lastAppliedEventId = 0L)
+        }
     }
 
     private fun buildHandler(): RankingHandler {
@@ -72,10 +76,12 @@ class RankingSmokeTest {
             )
         val cachingEmbedding = CachingEmbeddingAdapter(lookupFromStore = { _ -> emptyMap() })
         return RankingHandler(
-            cachingProfile = cachingProfile,
-            cachingEmbedding = cachingEmbedding,
-            getClusterService = { null },
-            activeEmbeddingVersion = { EmbeddingVersion("v1") },
+            RankingService(
+                cachingProfile = cachingProfile,
+                cachingEmbedding = cachingEmbedding,
+                getClusterService = { null },
+                activeEmbeddingVersion = { EmbeddingVersion("v1") },
+            ),
         )
     }
 

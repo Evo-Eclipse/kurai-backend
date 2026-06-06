@@ -5,7 +5,6 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 
 data class UserRow(
@@ -21,8 +20,8 @@ data class UserRow(
 class UserRepository(
     private val db: Database,
 ) : UserPort {
-    fun findById(id: Long): UserRow? =
-        transaction(db) {
+    suspend fun findById(id: Long): UserRow? =
+        sqliteTransaction(db) {
             Users
                 .selectAll()
                 .where { Users.id eq id }
@@ -30,12 +29,12 @@ class UserRepository(
                 ?.let(::rowToUser)
         }
 
-    override fun insertVerifiedEmail(
+    override suspend fun insertVerifiedEmail(
         email: String,
         emailKind: String,
         now: Long,
     ): Long =
-        transaction(db) {
+        sqliteTransaction(db) {
             Users.insert {
                 it[Users.email] = email
                 it[Users.emailVerifiedAt] = now
@@ -45,19 +44,19 @@ class UserRepository(
             } get Users.id
         }
 
-    override fun insertAnonymous(now: Long): Long =
-        transaction(db) {
+    override suspend fun insertAnonymous(now: Long): Long =
+        sqliteTransaction(db) {
             Users.insert {
                 it[Users.createdAt] = now
                 it[Users.lastSeenAt] = now
             } get Users.id
         }
 
-    override fun touchLastSeen(
+    override suspend fun touchLastSeen(
         userId: Long,
         now: Long,
     ) {
-        transaction(db) {
+        sqliteTransaction(db) {
             Users.update({ Users.id eq userId }) {
                 it[Users.lastSeenAt] = now
             }
