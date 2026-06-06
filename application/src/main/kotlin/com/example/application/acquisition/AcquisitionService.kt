@@ -4,6 +4,7 @@ import com.example.domain.catalog.AcquisitionJobPort
 import com.example.domain.catalog.CatalogItemPort
 import com.example.domain.catalog.ItemVectorIndexPort
 import com.example.domain.content.ContentSource
+import com.example.domain.content.RawImage
 import com.example.domain.content.SourceQuery
 import com.example.domain.inference.InferenceService
 import com.example.domain.storage.ObjectStorePort
@@ -58,6 +59,7 @@ class AcquisitionService(
             return
         }
         try {
+            val embeddingVersion = activeEmbeddingVersion()
             coroutineScope {
                 val semaphore = Semaphore(PIPELINE_CONCURRENCY)
                 contentSource.fetch(SourceQuery(tags, limit)) { image ->
@@ -67,24 +69,7 @@ class AcquisitionService(
                     semaphore.acquire()
                     launch {
                         try {
-                            val (itemId, isNew) =
-                                withContext(Dispatchers.IO) {
-                                    itemRepository.insertIdempotent(
-                                        md5 = image.md5,
-                                        url = image.cdnUrl,
-                                        origin = image.originPostUrl,
-                                        rating = image.rating,
-                                        embeddingVersion = activeEmbeddingVersion(),
-                                        indexedAt = Instant.now().toEpochMilli(),
-                                    )
-                                }
-                            if (isNew) {
-                                val vec = inferenceService.embed(image.bytes)
-                                withContext(Dispatchers.IO) {
-                                    vectorIndex.write(itemId, vec)
-                                }
-                                objectStore.put("images/${image.md5}", image.bytes)
-                            }
+                            persist(image, embeddingVersion)
                         } finally {
                             semaphore.release()
                         }
@@ -98,6 +83,76 @@ class AcquisitionService(
             jobRepository.updateStatus(jobId, "failed", Instant.now().toEpochMilli(), e.message)
             throw e
         }
+    }
+
+    /**
+     * Idempotently persists one fetched [image]: upsert the catalog row, then
+     * — only when the row is newly inserted — embed, write the vector, and store
+     * the bytes. [precomputedVector] lets a caller that already embedded the
+     * image (the proxy feed path) skip a redundant inference pass.
+     *
+     * Does not refresh the vector index; batch callers refresh once at the end.
+     */
+    suspend fun persist(
+        image: RawImage,
+        embeddingVersion: String,
+        precomputedVector: FloatArray? = null,
+    ) {
+        val (itemId, isNew) =
+            withContext(Dispatchers.IO) {
+                itemRepository.insertIdempotent(
+                    md5 = image.md5,
+                    url = image.cdnUrl,
+                    origin = image.originPostUrl,
+                    rating = image.rating,
+                    embeddingVersion = embeddingVersion,
+                    indexedAt = Instant.now().toEpochMilli(),
+                )
+            }
+        if (isNew) {
+            val vec = precomputedVector ?: inferenceService.embed(image.bytes)
+            withContext(Dispatchers.IO) {
+                vectorIndex.write(itemId, vec)
+            }
+            objectStore.put(imageObjectKey(image.md5, image.bytes), image.bytes)
+        }
+    }
+
+    /**
+     * Archives raw image bytes to the object store (Space) under the readable
+     * [imageObjectKey], without touching the catalog or vector index. Backs the
+     * shuttle feed path, where the client already holds the images and only
+     * wants metadata back; we keep a copy of the bytes but do not enrol them in
+     * the recommendation corpus. Same content -> same key, so puts are idempotent.
+     */
+    suspend fun archiveToStore(images: List<ByteArray>) {
+        images.forEach { bytes -> objectStore.put(imageObjectKey(md5Hex(bytes), bytes), bytes) }
+    }
+
+    /**
+     * Write-behind for the proxy feed path: persists a batch of already-fetched,
+     * already-embedded images (reusing their vectors) under the same in-flight
+     * cap as [run], then refreshes the vector index once.
+     */
+    suspend fun persistBatch(
+        images: List<Pair<RawImage, FloatArray>>,
+        embeddingVersion: String,
+    ) {
+        if (images.isEmpty()) return
+        coroutineScope {
+            val semaphore = Semaphore(PIPELINE_CONCURRENCY)
+            images.forEach { (image, vector) ->
+                semaphore.acquire()
+                launch {
+                    try {
+                        persist(image, embeddingVersion, vector)
+                    } finally {
+                        semaphore.release()
+                    }
+                }
+            }
+        }
+        vectorIndex.refresh()
     }
 
     fun knownSources(): Set<String> = contentSources.keys
