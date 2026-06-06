@@ -54,6 +54,15 @@ data class AppConfig(
      * socket peer, so clients cannot spoof their per-IP rate-limit bucket.
      */
     val trustedProxy: Boolean,
+    /**
+     * Browser origins allowed to call the API (CORS). Empty leaves CORS
+     * uninstalled (same-origin / reverse-proxy only) — the default.
+     */
+    val corsAllowedOrigins: List<String>,
+    /** Max images per content request (proxy fetch limit and shuttle batch size). */
+    val contentMaxImages: Int,
+    /** Max bytes per downloaded/uploaded content image. */
+    val contentMaxImageBytes: Long,
 ) {
     init {
         require(onnxIntraOpThreads > 0) { "KURAI_ONNX_INTRA_OP_THREADS should be positive" }
@@ -71,6 +80,8 @@ data class AppConfig(
         require(keyIssueRateLimitWindowMs > 0) { "KURAI_KEY_ISSUE_RATE_LIMIT_WINDOW_MS should be positive" }
         require(sessionGcIntervalMs > 0) { "KURAI_SESSION_GC_INTERVAL_MS should be positive" }
         require(sessionGcRetentionMs > 0) { "KURAI_SESSION_GC_RETENTION_MS should be positive" }
+        require(contentMaxImages > 0) { "KURAI_CONTENT_MAX_IMAGES should be positive" }
+        require(contentMaxImageBytes > 0) { "KURAI_CONTENT_MAX_IMAGE_BYTES should be positive" }
     }
 
     companion object {
@@ -87,6 +98,8 @@ data class AppConfig(
         const val DEFAULT_KEY_ISSUE_RATE_LIMIT_WINDOW_MS: Long = 60L * 1000L // 1 minute
         const val DEFAULT_SESSION_GC_INTERVAL_MS: Long = 60L * 60L * 1000L // 1 hour
         const val DEFAULT_SESSION_GC_RETENTION_MS: Long = 24L * 60L * 60L * 1000L // 1 day past expiry
+        const val DEFAULT_CONTENT_MAX_IMAGES: Int = 30
+        const val DEFAULT_CONTENT_MAX_IMAGE_BYTES: Long = 10L * 1024 * 1024 // 10 MiB
 
         fun load(env: Map<String, String> = System.getenv()): AppConfig =
             AppConfig(
@@ -168,6 +181,18 @@ data class AppConfig(
                 adminToken = env["KURAI_ADMIN_TOKEN"],
                 authStrictReuse = env.parseBooleanFlag("KURAI_AUTH_STRICT_REUSE"),
                 trustedProxy = env.parseBooleanFlag("KURAI_TRUSTED_PROXY"),
+                corsAllowedOrigins =
+                    env["KURAI_CORS_ALLOWED_ORIGINS"]
+                        ?.split(",")
+                        ?.map { it.trim() }
+                        ?.filter { it.isNotEmpty() }
+                        ?: emptyList(),
+                contentMaxImages =
+                    env["KURAI_CONTENT_MAX_IMAGES"]?.toInt()
+                        ?: DEFAULT_CONTENT_MAX_IMAGES,
+                contentMaxImageBytes =
+                    env["KURAI_CONTENT_MAX_IMAGE_BYTES"]?.toLong()
+                        ?: DEFAULT_CONTENT_MAX_IMAGE_BYTES,
             )
 
         private fun Map<String, String>.parseBooleanFlag(name: String): Boolean =

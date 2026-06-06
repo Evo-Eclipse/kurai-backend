@@ -43,6 +43,7 @@ class ArchUnitTest {
                 "com.example.profile..",
                 "com.example.acquisition..",
                 "com.example.ingestion..",
+                "com.example.content..",
                 "com.example.health..",
             ).check(productionClasses)
     }
@@ -71,6 +72,7 @@ class ArchUnitTest {
                 "com.example.profile..",
                 "com.example.acquisition..",
                 "com.example.ingestion..",
+                "com.example.content..",
                 "com.example.health..",
             ).check(productionClasses)
     }
@@ -106,6 +108,7 @@ class ArchUnitTest {
                 "com.example.profile..",
                 "com.example.acquisition..",
                 "com.example.ingestion..",
+                "com.example.content..",
             ).should()
             .dependOnClassesThat()
             .resideInAPackage("com.example.infrastructure..")
@@ -115,7 +118,7 @@ class ArchUnitTest {
     @Test
     fun `bounded contexts do not cross-depend at the server layer`() {
         slices()
-            .matching("com.example.(auth|profile|acquisition|ingestion|health)..")
+            .matching("com.example.(auth|profile|acquisition|ingestion|content|health)..")
             .should()
             .notDependOnEachOther()
             .check(productionClasses)

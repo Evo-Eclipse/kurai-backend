@@ -89,7 +89,7 @@ class AcquisitionService(
      * Idempotently persists one fetched [image]: upsert the catalog row, then
      * — only when the row is newly inserted — embed, write the vector, and store
      * the bytes. [precomputedVector] lets a caller that already embedded the
-     * image (the proxy feed path) skip a redundant inference pass.
+     * image (the proxy content path) skip a redundant inference pass.
      *
      * Does not refresh the vector index; batch callers refresh once at the end.
      */
@@ -121,7 +121,7 @@ class AcquisitionService(
     /**
      * Archives raw image bytes to the object store (Space) under the readable
      * [imageObjectKey], without touching the catalog or vector index. Backs the
-     * shuttle feed path, where the client already holds the images and only
+     * shuttle content path, where the client already holds the images and only
      * wants metadata back; we keep a copy of the bytes but do not enrol them in
      * the recommendation corpus. Same content -> same key, so puts are idempotent.
      */
@@ -130,7 +130,7 @@ class AcquisitionService(
     }
 
     /**
-     * Write-behind for the proxy feed path: persists a batch of already-fetched,
+     * Write-behind for the proxy content path: persists a batch of already-fetched,
      * already-embedded images (reusing their vectors) under the same in-flight
      * cap as [run], then refreshes the vector index once.
      */
