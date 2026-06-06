@@ -63,6 +63,16 @@ data class AppConfig(
     val contentMaxImages: Int,
     /** Max bytes per downloaded/uploaded content image. */
     val contentMaxImageBytes: Long,
+    /** OTel resource service.name reported with every span/metric. */
+    val otelServiceName: String,
+    /** Telemetry exporter: `none` (inert), `logging` (stdout), or `otlp` (Grafana). */
+    val otelExporter: String,
+    /** OTLP/HTTP base endpoint (e.g. https://otlp.example:4318); required when otlp. */
+    val otelOtlpEndpoint: String?,
+    /** Extra OTLP headers (e.g. auth), parsed from `k1=v1,k2=v2`. */
+    val otelOtlpHeaders: Map<String, String>,
+    /** Metric export/collection interval. */
+    val otelMetricIntervalMs: Long,
 ) {
     init {
         require(onnxIntraOpThreads > 0) { "KURAI_ONNX_INTRA_OP_THREADS should be positive" }
@@ -82,6 +92,13 @@ data class AppConfig(
         require(sessionGcRetentionMs > 0) { "KURAI_SESSION_GC_RETENTION_MS should be positive" }
         require(contentMaxImages > 0) { "KURAI_CONTENT_MAX_IMAGES should be positive" }
         require(contentMaxImageBytes > 0) { "KURAI_CONTENT_MAX_IMAGE_BYTES should be positive" }
+        require(otelExporter in setOf("none", "logging", "otlp")) {
+            "KURAI_OTEL_EXPORTER must be one of none|logging|otlp, got $otelExporter"
+        }
+        require(otelExporter != "otlp" || otelOtlpEndpoint != null) {
+            "KURAI_OTEL_OTLP_ENDPOINT is required when KURAI_OTEL_EXPORTER=otlp"
+        }
+        require(otelMetricIntervalMs > 0) { "KURAI_OTEL_METRIC_INTERVAL_MS should be positive" }
     }
 
     companion object {
@@ -100,6 +117,9 @@ data class AppConfig(
         const val DEFAULT_SESSION_GC_RETENTION_MS: Long = 24L * 60L * 60L * 1000L // 1 day past expiry
         const val DEFAULT_CONTENT_MAX_IMAGES: Int = 30
         const val DEFAULT_CONTENT_MAX_IMAGE_BYTES: Long = 10L * 1024 * 1024 // 10 MiB
+        const val DEFAULT_OTEL_SERVICE_NAME: String = "kurai-backend"
+        const val DEFAULT_OTEL_EXPORTER: String = "none"
+        const val DEFAULT_OTEL_METRIC_INTERVAL_MS: Long = 60_000
 
         fun load(env: Map<String, String> = System.getenv()): AppConfig =
             AppConfig(
@@ -193,7 +213,23 @@ data class AppConfig(
                 contentMaxImageBytes =
                     env["KURAI_CONTENT_MAX_IMAGE_BYTES"]?.toLong()
                         ?: DEFAULT_CONTENT_MAX_IMAGE_BYTES,
+                otelServiceName = env["KURAI_OTEL_SERVICE_NAME"] ?: DEFAULT_OTEL_SERVICE_NAME,
+                otelExporter = (env["KURAI_OTEL_EXPORTER"] ?: DEFAULT_OTEL_EXPORTER).lowercase(),
+                otelOtlpEndpoint = env["KURAI_OTEL_OTLP_ENDPOINT"],
+                otelOtlpHeaders = parseHeaders(env["KURAI_OTEL_OTLP_HEADERS"]),
+                otelMetricIntervalMs =
+                    env["KURAI_OTEL_METRIC_INTERVAL_MS"]?.toLong()
+                        ?: DEFAULT_OTEL_METRIC_INTERVAL_MS,
             )
+
+        private fun parseHeaders(raw: String?): Map<String, String> =
+            raw
+                ?.split(",")
+                ?.mapNotNull { entry ->
+                    val parts = entry.split("=", limit = 2)
+                    if (parts.size == 2 && parts[0].isNotBlank()) parts[0].trim() to parts[1].trim() else null
+                }?.toMap()
+                ?: emptyMap()
 
         private fun Map<String, String>.parseBooleanFlag(name: String): Boolean =
             this[name]?.lowercase() in setOf("1", "true", "yes", "on")
