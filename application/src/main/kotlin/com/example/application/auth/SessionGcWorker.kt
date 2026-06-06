@@ -20,12 +20,13 @@ class SessionGcWorker(
     private val intervalMs: suspend () -> Long,
     private val retentionMs: suspend () -> Long,
     private val clock: () -> Long = { System.currentTimeMillis() },
+    private val onPurge: (removed: Int) -> Unit = {},
 ) {
     suspend fun run() {
         try {
             while (true) {
                 delay(intervalMs())
-                purgeOnce()
+                onPurge(purgeOnce())
             }
         } catch (e: CancellationException) {
             throw e

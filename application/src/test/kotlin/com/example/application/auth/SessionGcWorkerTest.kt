@@ -4,8 +4,12 @@ import com.example.domain.auth.AuthSessionPort
 import com.example.infrastructure.sqlite.AuthSessionRepository
 import com.example.infrastructure.sqlite.UserRepository
 import com.example.infrastructure.sqlite.initSchema
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.exposed.v1.jdbc.Database
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -61,6 +65,27 @@ class SessionGcWorkerTest {
             assertNull(sessions.findById("old"), "expired-beyond-grace session should be purged")
             assertNotNull(sessions.findById("recent"), "session within grace must survive")
             assertNotNull(sessions.findById("active"), "active session must survive")
+        }
+    }
+
+    @Test
+    fun `run reports the purged count to onPurge`() {
+        runBlocking {
+            session("old", expiresAt = now - retentionMs - 1)
+            val reported = AtomicInteger(-1)
+            val job =
+                launch {
+                    SessionGcWorker(
+                        sessions,
+                        intervalMs = { 5 },
+                        retentionMs = { retentionMs },
+                        clock = { now },
+                        onPurge = { reported.set(it) },
+                    ).run()
+                }
+            while (reported.get() < 0) delay(5)
+            job.cancelAndJoin()
+            assertEquals(1, reported.get())
         }
     }
 

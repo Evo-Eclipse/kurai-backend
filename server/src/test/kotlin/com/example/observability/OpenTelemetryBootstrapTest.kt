@@ -51,4 +51,11 @@ class OpenTelemetryBootstrapTest {
         val handle = registerJvmWarmupMetrics(createOpenTelemetry(config(OtelExporter.NONE)))
         handle.close()
     }
+
+    @Test
+    fun `business metrics record on the inert sdk without error`() {
+        val metrics = KuraiMetrics(createOpenTelemetry(config(OtelExporter.NONE)))
+        metrics.recordRefreshChainRevoked()
+        metrics.recordSessionGcPurged(3)
+    }
 }

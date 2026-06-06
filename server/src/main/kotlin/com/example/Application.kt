@@ -81,6 +81,7 @@ import com.example.infrastructure.sqlite.initSchema
 import com.example.infrastructure.storage.LocalObjectStore
 import com.example.ingestion.IngestionHandler
 import com.example.ingestion.configureIngestionRoutes
+import com.example.observability.KuraiMetrics
 import com.example.observability.OpTimer
 import com.example.observability.OtelConfig
 import com.example.observability.OtelExporter
@@ -162,6 +163,7 @@ suspend fun Application.installCore() {
         )
     }
     dependencies.provide<OpTimer> { OpTimer(dependencies.resolve<OpenTelemetrySdk>()) }
+    dependencies.provide<KuraiMetrics> { KuraiMetrics(dependencies.resolve<OpenTelemetrySdk>()) }
     dependencies.provide<AcquisitionScope> {
         AcquisitionScope(
             CoroutineScope(
@@ -253,6 +255,7 @@ suspend fun Application.installCore() {
             challengeTtlMs = { runtime.get(ConfigKey.AuthChallengeTtlMs) },
             sessionTtlMs = { runtime.get(ConfigKey.AuthSessionTtlMs) },
             strictReuseDetection = config.authStrictReuse,
+            onRefreshChainRevoked = dependencies.resolve<KuraiMetrics>()::recordRefreshChainRevoked,
         )
     }
     dependencies.provide<SessionAuthenticator> {
@@ -463,6 +466,7 @@ suspend fun Application.installCore() {
         )
     }
     dependencies.provide<ContentHandler> {
+        val metrics = dependencies.resolve<KuraiMetrics>()
         ContentHandler(
             metadataService = dependencies.resolve(),
             acquisitionService = dependencies.resolve(),
@@ -471,6 +475,10 @@ suspend fun Application.installCore() {
             activeEmbeddingVersion = dependencies.resolve<EmbeddingVersionLookup>().asStringLookup(),
             maxImages = config.contentMaxImages,
             maxImageBytes = config.contentMaxImageBytes,
+            onPersistFailure = { e ->
+                log.error("Content write-behind persist failed", e)
+                metrics.recordContentPersistFailed()
+            },
         )
     }
 }
@@ -532,6 +540,7 @@ suspend fun Application.installLifecycle() {
     val authSessions = dependencies.resolve<AuthSessionPort>()
     val runtime = dependencies.resolve<RuntimeConfig>()
     val openTelemetry = dependencies.resolve<OpenTelemetrySdk>()
+    val metrics = dependencies.resolve<KuraiMetrics>()
     val jvmMetrics = registerJvmWarmupMetrics(openTelemetry)
 
     acquisitionScope.launch { EventBatcherWorker(eventBatcher).run() }
@@ -540,6 +549,7 @@ suspend fun Application.installLifecycle() {
             sessions = authSessions,
             intervalMs = { runtime.get(ConfigKey.SessionGcIntervalMs) },
             retentionMs = { runtime.get(ConfigKey.SessionGcRetentionMs) },
+            onPurge = { removed -> if (removed > 0) metrics.recordSessionGcPurged(removed.toLong()) },
         ).run()
     }
     acquisitionScope.launch {
