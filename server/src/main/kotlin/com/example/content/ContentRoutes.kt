@@ -9,7 +9,7 @@ fun Application.configureContentRoutes(handler: ContentHandler) {
     routing {
         authenticate("kurai") {
             post("/content/proxy") { handler.handleProxy(call) }
-            post("/content/shuttle") { handler.handleShuttle(call) }
+            post("/content/scores") { handler.handleScores(call) }
         }
     }
 }

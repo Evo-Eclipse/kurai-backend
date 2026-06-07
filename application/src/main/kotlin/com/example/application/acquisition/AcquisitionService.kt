@@ -6,6 +6,7 @@ import com.example.domain.catalog.ItemVectorIndexPort
 import com.example.domain.content.ContentSource
 import com.example.domain.content.RawImage
 import com.example.domain.content.SourceQuery
+import com.example.domain.content.md5Hex
 import com.example.domain.inference.InferenceService
 import com.example.domain.storage.ObjectStorePort
 import kotlinx.coroutines.Dispatchers

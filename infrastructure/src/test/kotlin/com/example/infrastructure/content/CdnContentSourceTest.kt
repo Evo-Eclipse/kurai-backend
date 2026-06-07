@@ -2,6 +2,7 @@ package com.example.infrastructure.content
 import com.example.domain.content.Platform
 import com.example.domain.content.RawImage
 import com.example.domain.content.SourceQuery
+import com.example.domain.content.md5Hex
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
@@ -9,7 +10,6 @@ import io.ktor.client.engine.mock.respondError
 import io.ktor.http.HttpStatusCode
 import io.ktor.utils.io.ByteReadChannel
 import kotlinx.coroutines.runBlocking
-import java.security.MessageDigest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -31,9 +31,6 @@ class CdnContentSourceTest {
 
     private fun noOpRateLimiter() = RateLimiter(requestsPerSecond = 1000.0, now = { 0L }, sleep = {})
 
-    private fun md5Hex(bytes: ByteArray): String =
-        MessageDigest.getInstance("MD5").digest(bytes).joinToString("") { "%02x".format(it) }
-
     @Test
     fun `fetch emits one RawImage per URL with correct MD5`() {
         runBlocking {
@@ -52,6 +49,22 @@ class CdnContentSourceTest {
             assertEquals(md5Hex(bytes2), results[1].md5)
             assertEquals(urls[0], results[0].sourceId)
             assertEquals(urls[1], results[1].sourceId)
+        }
+    }
+
+    @Test
+    fun `search maps URLs to ContentItems without downloading`() {
+        runBlocking {
+            // Any HTTP call would fail — search must stay download-free.
+            val client = HttpClient(MockEngine { respondError(HttpStatusCode.InternalServerError) })
+            val source = CdnContentSource(client, noOpRateLimiter())
+            val urls = listOf("https://cdn.example/a.jpg", "https://cdn.example/b.jpg", "https://cdn.example/c.jpg")
+
+            val items = source.search(SourceQuery(tags = urls, limit = 2))
+
+            assertEquals(2, items.size)
+            assertEquals(urls[0], items[0].cdnUrl)
+            assertEquals(Platform("cdn"), items[0].platform)
         }
     }
 

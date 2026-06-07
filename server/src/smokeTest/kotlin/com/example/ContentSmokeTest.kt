@@ -7,10 +7,12 @@ import com.example.application.content.MetadataService
 import com.example.application.profile.CachingProfileAdapter
 import com.example.content.ContentHandler
 import com.example.content.configureContentRoutes
+import com.example.domain.content.ContentItem
 import com.example.domain.content.ContentSource
 import com.example.domain.content.Platform
 import com.example.domain.content.RawImage
 import com.example.domain.content.SourceQuery
+import com.example.domain.content.md5Hex
 import com.example.domain.inference.InferenceService
 import com.example.domain.model.EmbeddingVersion
 import com.example.domain.model.Prototype
@@ -43,10 +45,11 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.jetbrains.exposed.v1.jdbc.Database
-import java.security.MessageDigest
 import java.util.Date
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.io.path.createTempDirectory
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -89,23 +92,29 @@ class ContentSmokeTest {
                 storedBlobs[key]?.let { GetResult.Found(it) } ?: GetResult.NotFound
         }
 
-    /** Emits a fixed number of synthetic images; tags/limit are ignored. */
+    /** Lists a fixed number of synthetic refs (search only, no bytes). */
     private fun fakeSearchSource(count: Int): ContentSource =
         object : ContentSource {
             override val platform = Platform("test")
 
+            override suspend fun search(query: SourceQuery): List<ContentItem> =
+                (0 until minOf(count, query.limit)).map { i ->
+                    ContentItem(platform, "img-$i", "https://post/$i", "https://cdn/img-$i", null)
+                }
+
             override suspend fun fetch(
                 query: SourceQuery,
                 onImage: suspend (RawImage) -> Unit,
-            ) {
-                repeat(count) { i -> onImage(rawImage("img-$i", byteArrayOf(i.toByte()))) }
-            }
+            ) = error("test source is search-only")
         }
 
     /** Treats each tag as a URL and "downloads" deterministic bytes for it. */
     private val fakeCdnSource =
         object : ContentSource {
             override val platform = Platform("cdn")
+
+            override suspend fun search(query: SourceQuery): List<ContentItem> =
+                query.tags.take(query.limit).map { url -> ContentItem(platform, url, url, url, null) }
 
             override suspend fun fetch(
                 query: SourceQuery,
@@ -128,9 +137,6 @@ class ContentSmokeTest {
             md5 = md5Hex(bytes),
             bytes = bytes,
         )
-
-    private fun md5Hex(bytes: ByteArray): String =
-        MessageDigest.getInstance("MD5").digest(bytes).joinToString("") { "%02x".format(it) }
 
     private fun fakeInference(): InferenceService =
         InferenceService(
@@ -158,6 +164,9 @@ class ContentSmokeTest {
         profileVersion: String = "v1",
         activeVersion: String = "v1",
         proxyImageCount: Int = 2,
+        objectStore: ObjectStorePort = recordingObjectStore,
+        cdnSource: ContentSource = fakeCdnSource,
+        onPersistFailure: (Throwable) -> Unit = {},
     ): ContentHandler {
         val acquisitionService =
             AcquisitionService(
@@ -165,7 +174,7 @@ class ContentSmokeTest {
                 inferenceService = fakeInference(),
                 itemRepository = ItemRepository(db),
                 vectorIndex = vectorIndex,
-                objectStore = recordingObjectStore,
+                objectStore = objectStore,
                 activeEmbeddingVersion = { activeVersion },
                 contentSources = emptyMap(),
             )
@@ -178,9 +187,10 @@ class ContentSmokeTest {
         return ContentHandler(
             metadataService = metadataService,
             acquisitionService = acquisitionService,
-            contentSources = mapOf("test" to fakeSearchSource(proxyImageCount), "cdn" to fakeCdnSource),
+            contentSources = mapOf("test" to fakeSearchSource(proxyImageCount), "cdn" to cdnSource),
             persistScope = persistScope,
             activeEmbeddingVersion = { activeVersion },
+            onPersistFailure = onPersistFailure,
         )
     }
 
@@ -239,6 +249,21 @@ class ContentSmokeTest {
             .jsonObject["items"]!!
             .jsonArray.size
 
+    private fun errorCode(json: String): String =
+        Json
+            .parseToJsonElement(json)
+            .jsonObject["error"]!!
+            .jsonObject["code"]!!
+            .jsonPrimitive.content
+
+    private suspend fun awaitFailure(ref: AtomicReference<Throwable?>): Throwable {
+        repeat(MAX_POLLS) {
+            ref.get()?.let { return it }
+            delay(POLL_INTERVAL_MS)
+        }
+        fail("onPersistFailure was never invoked")
+    }
+
     @Test
     fun `proxy without JWT returns 401`() =
         setup {
@@ -251,10 +276,10 @@ class ContentSmokeTest {
         }
 
     @Test
-    fun `shuttle without JWT returns 401`() =
+    fun `scores without JWT returns 401`() =
         setup {
             val response =
-                client.post("/content/shuttle") {
+                client.post("/content/scores") {
                     contentType(ContentType.Application.Json)
                     setBody("""{"urls":["http://x/1"]}""")
                 }
@@ -262,7 +287,7 @@ class ContentSmokeTest {
         }
 
     @Test
-    fun `proxy returns 200 with metadata and persists images write-behind`() =
+    fun `proxy returns 200 with a ref list and persists nothing`() =
         setup {
             val response =
                 client.post("/content/proxy") {
@@ -271,31 +296,51 @@ class ContentSmokeTest {
                     setBody("""{"source":"test","tags":["cat"],"limit":2}""")
                 }
             assertEquals(HttpStatusCode.OK, response.status)
-            assertEquals(2, itemCount(response.bodyAsText()))
-            awaitCatalogCount(2)
+            val items =
+                Json
+                    .parseToJsonElement(response.bodyAsText())
+                    .jsonObject["items"]!!
+                    .jsonArray
+            assertEquals(2, items.size)
+            // Listing carries refs, no embeddings.
+            assertTrue(items.all { it.jsonObject.containsKey("ref") && !it.jsonObject.containsKey("vector") })
+            assertEquals(0L, ItemRepository(db).countAll(), "proxy listing must not grow the catalog")
         }
 
     @Test
-    fun `shuttle with JSON urls returns 200 with metadata`() =
+    fun `scores with JSON urls archives to Space by default`() =
         setup {
             val response =
-                client.post("/content/shuttle") {
+                client.post("/content/scores") {
                     header(HttpHeaders.Authorization, "Bearer ${token("1")}")
                     contentType(ContentType.Application.Json)
                     setBody("""{"urls":["http://cdn/a","http://cdn/b","http://cdn/c"]}""")
                 }
             assertEquals(HttpStatusCode.OK, response.status)
             assertEquals(3, itemCount(response.bodyAsText()))
-            // Write-behind archive to Space, keyed by the readable uuid name.
             awaitStoredCount(3)
             assertTrue(storedBlobs.keys.all { OBJECT_KEY_REGEX.matches(it) }, storedBlobs.keys.toString())
         }
 
     @Test
-    fun `shuttle with multipart upload returns 200 with metadata`() =
+    fun `scores with persist catalog grows the catalog`() =
         setup {
             val response =
-                client.post("/content/shuttle") {
+                client.post("/content/scores") {
+                    header(HttpHeaders.Authorization, "Bearer ${token("1")}")
+                    contentType(ContentType.Application.Json)
+                    setBody("""{"urls":["http://cdn/a","http://cdn/b"],"persist":"catalog"}""")
+                }
+            assertEquals(HttpStatusCode.OK, response.status)
+            assertEquals(2, itemCount(response.bodyAsText()))
+            awaitCatalogCount(2)
+        }
+
+    @Test
+    fun `scores with multipart upload returns 200 and archives`() =
+        setup {
+            val response =
+                client.post("/content/scores") {
                     header(HttpHeaders.Authorization, "Bearer ${token("1")}")
                     setBody(
                         MultiPartFormDataContent(
@@ -317,16 +362,105 @@ class ContentSmokeTest {
         }
 
     @Test
-    fun `shuttle returns 503 when the caller profile is on a stale version`() =
+    fun `scores returns 503 when the caller profile is on a stale version`() =
         setup(makeHandler(profileVersion = "v1", activeVersion = "v2")) {
             val response =
-                client.post("/content/shuttle") {
+                client.post("/content/scores") {
                     header(HttpHeaders.Authorization, "Bearer ${token("1")}")
                     contentType(ContentType.Application.Json)
                     setBody("""{"urls":["http://cdn/a"]}""")
                 }
             assertEquals(HttpStatusCode.ServiceUnavailable, response.status)
             assertTrue(response.headers[HttpHeaders.RetryAfter] != null)
+        }
+
+    @Test
+    fun `scores reports a failed write-behind via onPersistFailure`() {
+        val failure = AtomicReference<Throwable?>(null)
+        val failingStore =
+            object : ObjectStorePort {
+                override suspend fun put(
+                    key: String,
+                    bytes: ByteArray,
+                ): Unit = error("space is down")
+
+                override suspend fun get(key: String): GetResult = GetResult.NotFound
+            }
+        setup(makeHandler(objectStore = failingStore, onPersistFailure = { failure.set(it) })) {
+            val response =
+                client.post("/content/scores") {
+                    header(HttpHeaders.Authorization, "Bearer ${token("1")}")
+                    contentType(ContentType.Application.Json)
+                    setBody("""{"urls":["http://cdn/a"]}""")
+                }
+            // The client still gets its metadata; the persist failure is async.
+            assertEquals(HttpStatusCode.OK, response.status)
+            assertTrue(awaitFailure(failure) is IllegalStateException)
+        }
+    }
+
+    @Test
+    fun `scores returns 400 INVALID_URL when the guard blocks a url`() {
+        val blockingCdn =
+            object : ContentSource {
+                override val platform = Platform("cdn")
+
+                override suspend fun search(query: SourceQuery): List<ContentItem> = emptyList()
+
+                override suspend fun fetch(
+                    query: SourceQuery,
+                    onImage: suspend (RawImage) -> Unit,
+                ): Unit = throw IllegalArgumentException("URL resolves to a non-public address")
+            }
+        setup(makeHandler(cdnSource = blockingCdn)) {
+            val response =
+                client.post("/content/scores") {
+                    header(HttpHeaders.Authorization, "Bearer ${token("1")}")
+                    contentType(ContentType.Application.Json)
+                    setBody("""{"urls":["http://cdn/internal"]}""")
+                }
+            assertEquals(HttpStatusCode.BadRequest, response.status)
+            assertEquals("INVALID_URL", errorCode(response.bodyAsText()))
+        }
+    }
+
+    @Test
+    fun `proxy rejects an out-of-range limit with INVALID_LIMIT`() =
+        setup {
+            val response =
+                client.post("/content/proxy") {
+                    header(HttpHeaders.Authorization, "Bearer ${token("1")}")
+                    contentType(ContentType.Application.Json)
+                    setBody("""{"source":"test","tags":["cat"],"limit":0}""")
+                }
+            assertEquals(HttpStatusCode.UnprocessableEntity, response.status)
+            assertEquals("INVALID_LIMIT", errorCode(response.bodyAsText()))
+        }
+
+    @Test
+    fun `scores rejects an empty url list with INVALID_IMAGE_COUNT`() =
+        setup {
+            val response =
+                client.post("/content/scores") {
+                    header(HttpHeaders.Authorization, "Bearer ${token("1")}")
+                    contentType(ContentType.Application.Json)
+                    setBody("""{"urls":[]}""")
+                }
+            assertEquals(HttpStatusCode.UnprocessableEntity, response.status)
+            assertEquals("INVALID_IMAGE_COUNT", errorCode(response.bodyAsText()))
+        }
+
+    @Test
+    fun `scores rejects an unknown persist mode with INVALID_PERSIST`() =
+        setup {
+            val response =
+                client.post("/content/scores") {
+                    header(HttpHeaders.Authorization, "Bearer ${token("1")}")
+                    contentType(ContentType.Application.Json)
+                    setBody("""{"urls":["http://cdn/a"],"persist":"bogus"}""")
+                }
+            assertEquals(HttpStatusCode.UnprocessableEntity, response.status)
+            assertEquals("INVALID_PERSIST", errorCode(response.bodyAsText()))
         }
 
     companion object {

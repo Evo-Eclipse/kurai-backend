@@ -1,13 +1,14 @@
 package com.example.infrastructure.content
+import com.example.domain.content.ContentItem
 import com.example.domain.content.ContentSource
 import com.example.domain.content.Platform
 import com.example.domain.content.RawImage
 import com.example.domain.content.SourceQuery
+import com.example.domain.content.md5Hex
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsBytes
 import io.ktor.http.HttpStatusCode
-import java.security.MessageDigest
 
 /**
  * `ContentSource` adapter for arbitrary CDN/Spaces URLs.
@@ -28,6 +29,17 @@ class CdnContentSource(
     private val rateLimiter: RateLimiter = RateLimiter(CDN_REQUESTS_PER_SECOND),
 ) : ContentSource {
     override val platform: Platform = Platform("cdn")
+
+    override suspend fun search(query: SourceQuery): List<ContentItem> =
+        query.tags.take(query.limit).map { url ->
+            ContentItem(
+                platform = platform,
+                sourceId = url,
+                originPostUrl = url,
+                cdnUrl = url,
+                rating = null,
+            )
+        }
 
     override suspend fun fetch(
         query: SourceQuery,
@@ -60,9 +72,6 @@ class CdnContentSource(
             )
         }
     }
-
-    private fun md5Hex(bytes: ByteArray): String =
-        MessageDigest.getInstance("MD5").digest(bytes).joinToString("") { "%02x".format(it) }
 
     companion object {
         const val CDN_REQUESTS_PER_SECOND: Double = 10.0

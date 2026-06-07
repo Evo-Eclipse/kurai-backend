@@ -1,5 +1,6 @@
 package com.example.application.acquisition
 
+import com.example.domain.content.md5Hex
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

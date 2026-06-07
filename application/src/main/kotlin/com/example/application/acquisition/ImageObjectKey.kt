@@ -1,7 +1,5 @@
 package com.example.application.acquisition
 
-import java.security.MessageDigest
-
 /**
  * Object-store key for an image's bytes: `images/<uuid>.<ext>`.
  *
@@ -14,13 +12,6 @@ fun imageObjectKey(
     md5: String,
     bytes: ByteArray,
 ): String = "images/${md5AsUuid(md5)}.${imageExtension(bytes)}"
-
-/** Computes the lowercase-hex MD5 of [bytes] (matches the content-source dedup hash). */
-fun md5Hex(bytes: ByteArray): String =
-    MessageDigest
-        .getInstance("MD5")
-        .digest(bytes)
-        .joinToString("") { "%02x".format(it) }
 
 /**
  * Renders a 32-hex-char MD5 in UUID 8-4-4-4-12 form. Falls back to the raw

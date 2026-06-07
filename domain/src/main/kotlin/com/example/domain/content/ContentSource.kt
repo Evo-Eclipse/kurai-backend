@@ -49,8 +49,31 @@ data class RawImage(
     }
 }
 
+/**
+ * A content reference from a source's search phase: the image's location and
+ * metadata, but not its bytes. Lets the proxy mode list results cheaply (one
+ * search/API call) and defer the expensive binary download + embedding to the
+ * scoring phase, so only the images the caller actually scores get fetched.
+ *
+ * [RawImage] is the post-download counterpart (adds `md5` and `bytes`).
+ */
+data class ContentItem(
+    val platform: Platform,
+    val sourceId: String,
+    val originPostUrl: String,
+    val cdnUrl: String,
+    val rating: String?,
+)
+
 interface ContentSource {
     val platform: Platform
+
+    /**
+     * Lists up to [SourceQuery.limit] content references for the [query] using
+     * only the source's search/API phase — no binaries are downloaded. Backs the
+     * proxy listing endpoint; the caller then scores a chosen subset separately.
+     */
+    suspend fun search(query: SourceQuery): List<ContentItem>
 
     /**
      * Delivers images matching the [query] by invoking [onImage] for each one.
