@@ -5,7 +5,7 @@ plugins {
 }
 
 kotlin {
-    jvmToolchain(21)
+    jvmToolchain(25)
 }
 
 configure<org.jlleitschuh.gradle.ktlint.KtlintExtension> {
