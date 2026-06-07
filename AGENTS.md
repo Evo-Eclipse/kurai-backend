@@ -16,7 +16,7 @@ All business logic is covered by unit and integration tests; smoke tests validat
 
 | Tool        | Version / Notes                            |
 |-------------|--------------------------------------------|
-| JDK         | 21 (Oracle / Temurin / Corretto)           |
+| JDK         | 25 (Oracle / Temurin / Corretto)           |
 | Kotlin      | 2.x (see `gradle/libs.versions.toml`)      |
 | Gradle      | Wrapper — always use `./gradlew`           |
 | ktlint      | via `org.jlleitschuh.gradle.ktlint` plugin |
