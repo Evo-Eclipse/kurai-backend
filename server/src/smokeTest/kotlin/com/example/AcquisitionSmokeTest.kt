@@ -55,6 +55,8 @@ class AcquisitionSmokeTest {
         object : ContentSource {
             override val platform = Platform("test")
 
+            override suspend fun search(query: SourceQuery): List<com.example.domain.content.ContentItem> = emptyList()
+
             override suspend fun fetch(
                 query: SourceQuery,
                 onImage: suspend (RawImage) -> Unit,

@@ -61,6 +61,30 @@ class UnsplashContentSourceTest {
     }
 
     @Test
+    fun `search returns refs from the API phase without downloading binaries`() {
+        runBlocking {
+            val client =
+                mockClient { request ->
+                    when (request.url.encodedPath) {
+                        "/search/photos" -> respondJson(loadResource("/fixtures/unsplash_posts.json"))
+                        // Any CDN download would fail the test: search must stay API-only.
+                        else -> respondError(HttpStatusCode.InternalServerError)
+                    }
+                }
+            val source = UnsplashContentSource(config, client, noOpRateLimiter())
+
+            val items = source.search(SourceQuery(tags = listOf("apple"), limit = 3))
+
+            assertEquals(3, items.size)
+            items.forEach { item ->
+                assertEquals(Platform("unsplash"), item.platform)
+                assertTrue(item.cdnUrl.startsWith("https://images.unsplash.com/"))
+                assertTrue(item.originPostUrl.startsWith("https://unsplash.com/photos/"))
+            }
+        }
+    }
+
+    @Test
     fun `fetch sends configured User-Agent and Client-ID auth on API requests`() {
         runBlocking {
             var captured: HttpRequestData? = null

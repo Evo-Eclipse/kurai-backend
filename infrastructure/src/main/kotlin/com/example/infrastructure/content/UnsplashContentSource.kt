@@ -1,8 +1,10 @@
 package com.example.infrastructure.content
+import com.example.domain.content.ContentItem
 import com.example.domain.content.ContentSource
 import com.example.domain.content.Platform
 import com.example.domain.content.RawImage
 import com.example.domain.content.SourceQuery
+import com.example.domain.content.md5Hex
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
@@ -21,7 +23,6 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.take
 import kotlinx.serialization.Serializable
 import org.slf4j.LoggerFactory
-import java.security.MessageDigest
 
 /**
  * `ContentSource` adapter for Unsplash.
@@ -46,6 +47,30 @@ class UnsplashContentSource(
     private val log = LoggerFactory.getLogger(UnsplashContentSource::class.java)
 
     override val platform: Platform = Platform("unsplash")
+
+    override suspend fun search(query: SourceQuery): List<ContentItem> {
+        val q = query.tags.joinToString(" ")
+        val items = mutableListOf<ContentItem>()
+        var page = 1
+        while (items.size < query.limit) {
+            val hits = searchPage(q, page)
+            if (hits.isEmpty()) break
+            for (hit in hits) {
+                items.add(
+                    ContentItem(
+                        platform = platform,
+                        sourceId = hit.id,
+                        originPostUrl = hit.links.html,
+                        cdnUrl = hit.urls.regular,
+                        rating = null,
+                    ),
+                )
+                if (items.size >= query.limit) break
+            }
+            page += 1
+        }
+        return items
+    }
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     override suspend fun fetch(
@@ -119,9 +144,6 @@ class UnsplashContentSource(
             bytes = bytes,
         )
     }
-
-    private fun md5Hex(bytes: ByteArray): String =
-        MessageDigest.getInstance("MD5").digest(bytes).joinToString("") { "%02x".format(it) }
 
     @Serializable
     private data class SearchResponse(

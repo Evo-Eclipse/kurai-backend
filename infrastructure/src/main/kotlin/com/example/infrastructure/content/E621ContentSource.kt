@@ -1,4 +1,5 @@
 package com.example.infrastructure.content
+import com.example.domain.content.ContentItem
 import com.example.domain.content.ContentSource
 import com.example.domain.content.Platform
 import com.example.domain.content.RawImage
@@ -43,6 +44,32 @@ class E621ContentSource(
     private val log = LoggerFactory.getLogger(E621ContentSource::class.java)
 
     override val platform: Platform = Platform("e621")
+
+    override suspend fun search(query: SourceQuery): List<ContentItem> {
+        val pageSize = minOf(query.limit, PER_PAGE)
+        val items = mutableListOf<ContentItem>()
+        var page = 1
+        while (items.size < query.limit) {
+            val posts = fetchPage(query.tags, pageSize, page)
+            if (posts.isEmpty()) break
+            for (post in posts) {
+                if (post.file.ext !in IMAGE_EXTENSIONS) continue
+                val url = post.file.url ?: continue
+                items.add(
+                    ContentItem(
+                        platform = platform,
+                        sourceId = post.id.toString(),
+                        originPostUrl = "${config.baseUrl}/posts/${post.id}",
+                        cdnUrl = url,
+                        rating = post.rating,
+                    ),
+                )
+                if (items.size >= query.limit) break
+            }
+            page += 1
+        }
+        return items
+    }
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     override suspend fun fetch(

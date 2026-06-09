@@ -12,6 +12,7 @@ import com.example.application.auth.SessionGcWorker
 import com.example.application.catalog.KMeansScheduler
 import com.example.application.config.ConfigKey
 import com.example.application.config.RuntimeConfig
+import com.example.application.content.MetadataService
 import com.example.application.embedding.CachingEmbeddingAdapter
 import com.example.application.profile.CachingProfileAdapter
 import com.example.application.profile.EventBatcher
@@ -25,6 +26,8 @@ import com.example.auth.ChallengeIpRateLimiter
 import com.example.auth.FixedWindowRateLimiter
 import com.example.auth.SessionAuthenticator
 import com.example.auth.configureAuthRoutes
+import com.example.content.ContentHandler
+import com.example.content.configureContentRoutes
 import com.example.domain.auth.AuthIdentityPort
 import com.example.domain.auth.AuthSessionPort
 import com.example.domain.auth.LoginChallengePort
@@ -82,6 +85,8 @@ import com.example.profile.RankingHandler
 import com.example.profile.configureRankingRoutes
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpMethod
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationStopping
@@ -91,6 +96,7 @@ import io.ktor.server.auth.jwt.JWTPrincipal
 import io.ktor.server.auth.jwt.jwt
 import io.ktor.server.plugins.calllogging.CallLogging
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.server.plugins.cors.routing.CORS
 import io.ktor.server.plugins.di.dependencies
 import io.ktor.server.plugins.forwardedheaders.XForwardedHeaders
 import io.ktor.server.plugins.statuspages.StatusPages
@@ -418,6 +424,25 @@ suspend fun Application.installCore() {
     dependencies.provide<RankingHandler> {
         RankingHandler(dependencies.resolve())
     }
+
+    dependencies.provide<MetadataService> {
+        MetadataService(
+            inferenceService = dependencies.resolve(),
+            cachingProfile = dependencies.resolve(),
+            activeEmbeddingVersion = dependencies.resolve<EmbeddingVersionLookup>().asEmbeddingVersionLookup(),
+        )
+    }
+    dependencies.provide<ContentHandler> {
+        ContentHandler(
+            metadataService = dependencies.resolve(),
+            acquisitionService = dependencies.resolve(),
+            contentSources = dependencies.resolve<ContentSourceRegistry>().byName,
+            persistScope = dependencies.resolve<AcquisitionScope>().scope,
+            activeEmbeddingVersion = dependencies.resolve<EmbeddingVersionLookup>().asStringLookup(),
+            maxImages = config.contentMaxImages,
+            maxImageBytes = config.contentMaxImageBytes,
+        )
+    }
 }
 
 /**
@@ -428,7 +453,12 @@ suspend fun Application.installPlugins() {
     val config = dependencies.resolve<AppConfig>()
     val gate = dependencies.resolve<ReadinessGate>()
     val sessionAuth = dependencies.resolve<SessionAuthenticator>()
-    configure(gate, config.jwtSecret, trustForwardedHeaders = config.trustedProxy) { sessionId ->
+    configure(
+        gate,
+        config.jwtSecret,
+        trustForwardedHeaders = config.trustedProxy,
+        corsAllowedOrigins = config.corsAllowedOrigins,
+    ) { sessionId ->
         sessionAuth.isActive(sessionId)
     }
 }
@@ -442,6 +472,7 @@ suspend fun Application.installRouting() {
     configureIngestionRoutes(dependencies.resolve<IngestionHandler>())
     configureRankingRoutes(dependencies.resolve<RankingHandler>())
     configureAuthRoutes(dependencies.resolve<AuthHandler>())
+    configureContentRoutes(dependencies.resolve<ContentHandler>())
 }
 
 /**
@@ -552,9 +583,22 @@ fun Application.configure(
     readinessGate: ReadinessGate,
     jwtSecret: String = "",
     trustForwardedHeaders: Boolean = false,
+    corsAllowedOrigins: List<String> = emptyList(),
     isSessionActive: suspend (sessionId: String) -> Boolean = { true },
 ) {
     install(ContentNegotiation) { json() }
+    // CORS for the browser thin client. Installed only when origins are
+    // configured (KURAI_CORS_ALLOWED_ORIGINS); same-origin / reverse-proxy
+    // deployments leave it off so no cross-origin access is granted.
+    if (corsAllowedOrigins.isNotEmpty()) {
+        install(CORS) {
+            corsAllowedOrigins.forEach { allowHost(it, schemes = listOf("http", "https")) }
+            allowHeader(HttpHeaders.Authorization)
+            allowHeader(HttpHeaders.ContentType)
+            allowMethod(HttpMethod.Post)
+            allowMethod(HttpMethod.Get)
+        }
+    }
     // Trust X-Forwarded-* only behind a proxy (KURAI_TRUSTED_PROXY). Installing
     // it unconditionally would let any client spoof X-Forwarded-For and rotate
     // its per-IP rate-limit bucket; off by default, origin.remoteHost is then

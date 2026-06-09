@@ -55,6 +55,17 @@ class AcquisitionServiceTest {
         object : ContentSource {
             override val platform = Platform("test")
 
+            override suspend fun search(query: SourceQuery): List<com.example.domain.content.ContentItem> =
+                images.take(query.limit).map {
+                    com.example.domain.content.ContentItem(
+                        it.platform,
+                        it.sourceId,
+                        it.originPostUrl,
+                        it.cdnUrl,
+                        it.rating,
+                    )
+                }
+
             override suspend fun fetch(
                 query: SourceQuery,
                 onImage: suspend (RawImage) -> Unit,
