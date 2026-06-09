@@ -91,6 +91,7 @@ import com.example.profile.RankingHandler
 import com.example.profile.configureRankingRoutes
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
+import io.ktor.client.plugins.HttpTimeout
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.serialization.kotlinx.json.json
@@ -128,6 +129,11 @@ import java.util.concurrent.atomic.AtomicReference
 
 private val log = LoggerFactory.getLogger("com.example.Application")
 private const val SHUTDOWN_DEADLINE_MS = 25_000L
+
+/** Outbound HTTP timeouts for every server-side fetch (content + acquisition). */
+private const val HTTP_CONNECT_TIMEOUT_MS = 10_000L
+private const val HTTP_SOCKET_TIMEOUT_MS = 30_000L
+private const val HTTP_REQUEST_TIMEOUT_MS = 60_000L
 
 /** MDC key bridging the request [CallId] into the logback `%X{call-id}` pattern. */
 private const val MDC_CALL_ID = "call-id"
@@ -196,7 +202,18 @@ suspend fun Application.installCore() {
         withContext(Dispatchers.IO) { LuceneAdapter(config.luceneDir) }
     }
     dependencies.provide<LocalObjectStore> { LocalObjectStore(config.objectStoreDir) }
-    dependencies.provide<HttpClient> { HttpClient(CIO) }
+    dependencies.provide<HttpClient> {
+        // Redirects are disabled so a validated caller URL cannot be bounced to an
+        // internal target (SSRF), and timeouts bound any hung outbound fetch.
+        HttpClient(CIO) {
+            followRedirects = false
+            install(HttpTimeout) {
+                connectTimeoutMillis = HTTP_CONNECT_TIMEOUT_MS
+                socketTimeoutMillis = HTTP_SOCKET_TIMEOUT_MS
+                requestTimeoutMillis = HTTP_REQUEST_TIMEOUT_MS
+            }
+        }
+    }
     dependencies.provide<ImagePreprocessor> { ImagePreprocessor() }
 
     dependencies.provide<AcquisitionJobPort> { AcquisitionJobRepository(dependencies.resolve()) }
@@ -326,7 +343,7 @@ suspend fun Application.installCore() {
                         ),
                         httpClient,
                     ),
-                "cdn" to CdnContentSource(httpClient),
+                "cdn" to CdnContentSource(httpClient, maxImageBytes = config.contentMaxImageBytes),
             ),
         )
     }

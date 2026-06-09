@@ -37,9 +37,9 @@ class CdnContentSourceTest {
             val bytes1 = byteArrayOf(0x11, 0x22)
             val bytes2 = byteArrayOf(0x33, 0x44, 0x55)
             val client = mockClient(bytes1, bytes2)
-            val source = CdnContentSource(client, noOpRateLimiter())
+            val source = CdnContentSource(client, rateLimiter = noOpRateLimiter())
 
-            val urls = listOf("https://cdn.example/a.jpg", "https://cdn.example/b.jpg")
+            val urls = listOf("https://203.0.113.10/a.jpg", "https://203.0.113.10/b.jpg")
             val results = mutableListOf<RawImage>()
             source.fetch(SourceQuery(tags = urls, limit = 2)) { results += it }
 
@@ -57,8 +57,8 @@ class CdnContentSourceTest {
         runBlocking {
             // Any HTTP call would fail — search must stay download-free.
             val client = HttpClient(MockEngine { respondError(HttpStatusCode.InternalServerError) })
-            val source = CdnContentSource(client, noOpRateLimiter())
-            val urls = listOf("https://cdn.example/a.jpg", "https://cdn.example/b.jpg", "https://cdn.example/c.jpg")
+            val source = CdnContentSource(client, rateLimiter = noOpRateLimiter())
+            val urls = listOf("https://203.0.113.10/a.jpg", "https://203.0.113.10/b.jpg", "https://203.0.113.10/c.jpg")
 
             val items = source.search(SourceQuery(tags = urls, limit = 2))
 
@@ -72,8 +72,8 @@ class CdnContentSourceTest {
     fun `fetch respects limit even when tags list is larger`() {
         runBlocking {
             val client = mockClient(byteArrayOf(0x01), byteArrayOf(0x02), byteArrayOf(0x03))
-            val source = CdnContentSource(client, noOpRateLimiter())
-            val urls = listOf("https://cdn.example/1.jpg", "https://cdn.example/2.jpg", "https://cdn.example/3.jpg")
+            val source = CdnContentSource(client, rateLimiter = noOpRateLimiter())
+            val urls = listOf("https://203.0.113.10/1.jpg", "https://203.0.113.10/2.jpg", "https://203.0.113.10/3.jpg")
 
             val results = mutableListOf<RawImage>()
             source.fetch(SourceQuery(tags = urls, limit = 2)) { results += it }
@@ -86,11 +86,24 @@ class CdnContentSourceTest {
     fun `fetch throws on non-200 response`() {
         runBlocking {
             val client = HttpClient(MockEngine { respondError(HttpStatusCode.NotFound) })
-            val source = CdnContentSource(client, noOpRateLimiter())
+            val source = CdnContentSource(client, rateLimiter = noOpRateLimiter())
 
             assertFailsWith<IllegalStateException> {
                 val results = mutableListOf<RawImage>()
-                source.fetch(SourceQuery(tags = listOf("https://cdn.example/gone.jpg"), limit = 1)) { results += it }
+                source.fetch(SourceQuery(tags = listOf("https://203.0.113.10/gone.jpg"), limit = 1)) { results += it }
+            }
+        }
+    }
+
+    @Test
+    fun `fetch rejects a body larger than the size cap`() {
+        runBlocking {
+            val oversized = ByteArray(50) { 1 }
+            val client = HttpClient(MockEngine { respond(ByteReadChannel(oversized), HttpStatusCode.OK) })
+            val source = CdnContentSource(client, maxImageBytes = 10, rateLimiter = noOpRateLimiter())
+
+            assertFailsWith<IllegalStateException> {
+                source.fetch(SourceQuery(tags = listOf("https://203.0.113.10/big.jpg"), limit = 1)) { }
             }
         }
     }
@@ -112,8 +125,8 @@ class CdnContentSourceTest {
                 )
             val bytes = byteArrayOf(0xAB.toByte())
             val client = HttpClient(MockEngine { respond(ByteReadChannel(bytes), HttpStatusCode.OK) })
-            val source = CdnContentSource(client, rateLimiter)
-            val urls = (1..n).map { "https://cdn.example/$it.jpg" }
+            val source = CdnContentSource(client, rateLimiter = rateLimiter)
+            val urls = (1..n).map { "https://203.0.113.10/$it.jpg" }
 
             val results = mutableListOf<RawImage>()
             source.fetch(SourceQuery(tags = urls, limit = n)) { results += it }
