@@ -1,0 +1,13 @@
+.git
+.github
+.gradle
+**/.gradle
+**/build
+.idea
+*.iml
+.mcp.json
+docs/
+example.md
+insights.md
+*.md
+!server/src/main/resources/**

@@ -51,6 +51,13 @@ class AuthService(
      * not a live tuning knob.
      */
     private val strictReuseDetection: Boolean = false,
+    /**
+     * Fired when a superseded refresh token replay burns the session chain.
+     * A plain callback so `:application` records the security event without a
+     * dependency on the observability/metrics stack; the composition root
+     * wires it to a counter.
+     */
+    private val onRefreshChainRevoked: () -> Unit = {},
 ) {
     suspend fun issueChallenge(email: String): IssueChallengeResult {
         val normalized = email.trim().lowercase()
@@ -151,6 +158,7 @@ class AuthService(
                     }
                 if (revoke) {
                     sessions.revokeAllForUser(session.userId, now)
+                    onRefreshChainRevoked()
                 }
             }
             return RefreshResult.Invalid

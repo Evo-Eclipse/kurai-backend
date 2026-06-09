@@ -81,10 +81,17 @@ import com.example.infrastructure.sqlite.initSchema
 import com.example.infrastructure.storage.LocalObjectStore
 import com.example.ingestion.IngestionHandler
 import com.example.ingestion.configureIngestionRoutes
+import com.example.observability.KuraiMetrics
+import com.example.observability.OpTimer
+import com.example.observability.OtelConfig
+import com.example.observability.OtelExporter
+import com.example.observability.createOpenTelemetry
+import com.example.observability.registerJvmWarmupMetrics
 import com.example.profile.RankingHandler
 import com.example.profile.configureRankingRoutes
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
+import io.ktor.client.plugins.HttpTimeout
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.serialization.kotlinx.json.json
@@ -94,12 +101,17 @@ import io.ktor.server.application.install
 import io.ktor.server.auth.Authentication
 import io.ktor.server.auth.jwt.JWTPrincipal
 import io.ktor.server.auth.jwt.jwt
+import io.ktor.server.plugins.callid.CallId
+import io.ktor.server.plugins.callid.callIdMdc
 import io.ktor.server.plugins.calllogging.CallLogging
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.cors.routing.CORS
 import io.ktor.server.plugins.di.dependencies
 import io.ktor.server.plugins.forwardedheaders.XForwardedHeaders
 import io.ktor.server.plugins.statuspages.StatusPages
+import io.opentelemetry.api.OpenTelemetry
+import io.opentelemetry.instrumentation.ktor.v3_0.KtorServerTelemetry
+import io.opentelemetry.sdk.OpenTelemetrySdk
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -112,10 +124,19 @@ import kotlinx.coroutines.withTimeout
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.slf4j.LoggerFactory
 import java.nio.file.Files
+import java.util.UUID
 import java.util.concurrent.atomic.AtomicReference
 
 private val log = LoggerFactory.getLogger("com.example.Application")
 private const val SHUTDOWN_DEADLINE_MS = 25_000L
+
+/** Outbound HTTP timeouts for every server-side fetch (content + acquisition). */
+private const val HTTP_CONNECT_TIMEOUT_MS = 10_000L
+private const val HTTP_SOCKET_TIMEOUT_MS = 30_000L
+private const val HTTP_REQUEST_TIMEOUT_MS = 60_000L
+
+/** MDC key bridging the request [CallId] into the logback `%X{call-id}` pattern. */
+private const val MDC_CALL_ID = "call-id"
 
 /**
  * ViT DINOv3 / CLIP-style export shape and node names.
@@ -136,6 +157,19 @@ suspend fun Application.installCore() {
     val config = AppConfig.load()
     dependencies.provide<AppConfig> { config }
     dependencies.provide<ReadinessGate> { ReadinessGate() }
+    dependencies.provide<OpenTelemetrySdk> {
+        createOpenTelemetry(
+            OtelConfig(
+                serviceName = config.otelServiceName,
+                exporter = OtelExporter.valueOf(config.otelExporter.uppercase()),
+                otlpEndpoint = config.otelOtlpEndpoint,
+                otlpHeaders = config.otelOtlpHeaders,
+                metricIntervalMs = config.otelMetricIntervalMs,
+            ),
+        )
+    }
+    dependencies.provide<OpTimer> { OpTimer(dependencies.resolve<OpenTelemetrySdk>()) }
+    dependencies.provide<KuraiMetrics> { KuraiMetrics(dependencies.resolve<OpenTelemetrySdk>()) }
     dependencies.provide<AcquisitionScope> {
         AcquisitionScope(
             CoroutineScope(
@@ -168,7 +202,18 @@ suspend fun Application.installCore() {
         withContext(Dispatchers.IO) { LuceneAdapter(config.luceneDir) }
     }
     dependencies.provide<LocalObjectStore> { LocalObjectStore(config.objectStoreDir) }
-    dependencies.provide<HttpClient> { HttpClient(CIO) }
+    dependencies.provide<HttpClient> {
+        // Redirects are disabled so a validated caller URL cannot be bounced to an
+        // internal target (SSRF), and timeouts bound any hung outbound fetch.
+        HttpClient(CIO) {
+            followRedirects = false
+            install(HttpTimeout) {
+                connectTimeoutMillis = HTTP_CONNECT_TIMEOUT_MS
+                socketTimeoutMillis = HTTP_SOCKET_TIMEOUT_MS
+                requestTimeoutMillis = HTTP_REQUEST_TIMEOUT_MS
+            }
+        }
+    }
     dependencies.provide<ImagePreprocessor> { ImagePreprocessor() }
 
     dependencies.provide<AcquisitionJobPort> { AcquisitionJobRepository(dependencies.resolve()) }
@@ -227,6 +272,7 @@ suspend fun Application.installCore() {
             challengeTtlMs = { runtime.get(ConfigKey.AuthChallengeTtlMs) },
             sessionTtlMs = { runtime.get(ConfigKey.AuthSessionTtlMs) },
             strictReuseDetection = config.authStrictReuse,
+            onRefreshChainRevoked = dependencies.resolve<KuraiMetrics>()::recordRefreshChainRevoked,
         )
     }
     dependencies.provide<SessionAuthenticator> {
@@ -267,9 +313,10 @@ suspend fun Application.installCore() {
     dependencies.provide<InferenceService> {
         val preprocessor = dependencies.resolve<ImagePreprocessor>()
         val onnx = dependencies.resolve<OnnxInferenceAdapter>()
+        val timer = dependencies.resolve<OpTimer>()
         InferenceService(
-            preprocess = { bytes -> preprocessor.preprocess(bytes) },
-            infer = { tensor -> onnx.infer(tensor, ONNX_INPUT_SHAPE) },
+            preprocess = { bytes -> timer.measured("image.preprocess") { preprocessor.preprocess(bytes) } },
+            infer = { tensor -> timer.measured("onnx.infer") { onnx.infer(tensor, ONNX_INPUT_SHAPE) } },
         )
     }
 
@@ -296,7 +343,7 @@ suspend fun Application.installCore() {
                         ),
                         httpClient,
                     ),
-                "cdn" to CdnContentSource(httpClient),
+                "cdn" to CdnContentSource(httpClient, maxImageBytes = config.contentMaxImageBytes),
             ),
         )
     }
@@ -318,8 +365,11 @@ suspend fun Application.installCore() {
 
     dependencies.provide<CachingEmbeddingAdapter> {
         val lucene = dependencies.resolve<LuceneAdapter>()
+        val timer = dependencies.resolve<OpTimer>()
         val embedLookup: EmbedLookupPort = { ids ->
-            ids.mapNotNull { id -> lucene.getVector(id)?.let { id to it } }.toMap()
+            timer.measuredBlocking("embed.lookup") {
+                ids.mapNotNull { id -> lucene.getVector(id)?.let { id to it } }.toMap()
+            }
         }
         CachingEmbeddingAdapter(lookupFromStore = embedLookup)
     }
@@ -433,6 +483,7 @@ suspend fun Application.installCore() {
         )
     }
     dependencies.provide<ContentHandler> {
+        val metrics = dependencies.resolve<KuraiMetrics>()
         ContentHandler(
             metadataService = dependencies.resolve(),
             acquisitionService = dependencies.resolve(),
@@ -441,6 +492,10 @@ suspend fun Application.installCore() {
             activeEmbeddingVersion = dependencies.resolve<EmbeddingVersionLookup>().asStringLookup(),
             maxImages = config.contentMaxImages,
             maxImageBytes = config.contentMaxImageBytes,
+            onPersistFailure = { e ->
+                log.error("Content write-behind persist failed", e)
+                metrics.recordContentPersistFailed()
+            },
         )
     }
 }
@@ -458,6 +513,7 @@ suspend fun Application.installPlugins() {
         config.jwtSecret,
         trustForwardedHeaders = config.trustedProxy,
         corsAllowedOrigins = config.corsAllowedOrigins,
+        openTelemetry = dependencies.resolve<OpenTelemetrySdk>(),
     ) { sessionId ->
         sessionAuth.isActive(sessionId)
     }
@@ -500,6 +556,9 @@ suspend fun Application.installLifecycle() {
     val versionLookup = dependencies.resolve<EmbeddingVersionLookup>()
     val authSessions = dependencies.resolve<AuthSessionPort>()
     val runtime = dependencies.resolve<RuntimeConfig>()
+    val openTelemetry = dependencies.resolve<OpenTelemetrySdk>()
+    val metrics = dependencies.resolve<KuraiMetrics>()
+    val jvmMetrics = registerJvmWarmupMetrics(openTelemetry)
 
     acquisitionScope.launch { EventBatcherWorker(eventBatcher).run() }
     acquisitionScope.launch {
@@ -507,6 +566,7 @@ suspend fun Application.installLifecycle() {
             sessions = authSessions,
             intervalMs = { runtime.get(ConfigKey.SessionGcIntervalMs) },
             retentionMs = { runtime.get(ConfigKey.SessionGcRetentionMs) },
+            onPurge = { removed -> if (removed > 0) metrics.recordSessionGcPurged(removed.toLong()) },
         ).run()
     }
     acquisitionScope.launch {
@@ -556,6 +616,9 @@ suspend fun Application.installLifecycle() {
                 onnxAdapter.close()
                 httpClient.close()
                 sessionAuth.close()
+                jvmMetrics.close()
+                // Closed last so the final spans/metrics flush before exit.
+                openTelemetry.close()
             }
         }
     }
@@ -584,6 +647,7 @@ fun Application.configure(
     jwtSecret: String = "",
     trustForwardedHeaders: Boolean = false,
     corsAllowedOrigins: List<String> = emptyList(),
+    openTelemetry: OpenTelemetry? = null,
     isSessionActive: suspend (sessionId: String) -> Boolean = { true },
 ) {
     install(ContentNegotiation) { json() }
@@ -606,9 +670,22 @@ fun Application.configure(
     if (trustForwardedHeaders) {
         install(XForwardedHeaders)
     }
+    // Correlation id per request: reuse an inbound X-Request-Id or mint one,
+    // echo it back, and expose it to logs via MDC (%X{call-id} in logback).
+    install(CallId) {
+        header(HttpHeaders.XRequestId)
+        generate { UUID.randomUUID().toString() }
+        verify { it.isNotBlank() }
+    }
+    // OTel HTTP server spans. Installed only when telemetry is wired (production);
+    // tests pass null and run without it. Goes before CallLogging so the span
+    // context is active for the access log.
+    openTelemetry?.let { otel ->
+        install(KtorServerTelemetry) { setOpenTelemetry(otel) }
+    }
     // Default CallLogging format: logs method + URI + status, not headers.
     // Authorization header values never appear in log output.
-    install(CallLogging)
+    install(CallLogging) { callIdMdc(MDC_CALL_ID) }
     install(StatusPages) { errorMapping() }
     install(Authentication) {
         jwt("kurai") {

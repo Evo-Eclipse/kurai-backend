@@ -20,17 +20,20 @@ class SessionGcWorker(
     private val intervalMs: suspend () -> Long,
     private val retentionMs: suspend () -> Long,
     private val clock: () -> Long = { System.currentTimeMillis() },
+    private val onPurge: (removed: Int) -> Unit = {},
 ) {
     suspend fun run() {
-        try {
-            while (true) {
-                delay(intervalMs())
-                purgeOnce()
+        while (true) {
+            delay(intervalMs())
+            try {
+                onPurge(purgeOnce())
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // A single sweep failing (e.g. a transient SQLITE_BUSY) must not
+                // kill the worker; log and retry on the next tick.
+                log.error("SessionGcWorker sweep failed; retrying next interval", e)
             }
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            log.error("SessionGcWorker crashed; worker stopped permanently", e)
         }
     }
 
