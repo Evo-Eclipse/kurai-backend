@@ -15,6 +15,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class SessionGcWorkerTest {
     private lateinit var db: Database
@@ -86,6 +87,28 @@ class SessionGcWorkerTest {
             while (reported.get() < 0) delay(5)
             job.cancelAndJoin()
             assertEquals(1, reported.get())
+        }
+    }
+
+    @Test
+    fun `survives a failed sweep and keeps running`() {
+        runBlocking {
+            session("old", expiresAt = now - retentionMs - 1)
+            val calls = AtomicInteger(0)
+            val job =
+                launch {
+                    SessionGcWorker(
+                        sessions,
+                        intervalMs = { 5 },
+                        retentionMs = { retentionMs },
+                        clock = { now },
+                        // Throw on the first tick; the worker must log and keep looping.
+                        onPurge = { if (calls.incrementAndGet() == 1) error("boom on first sweep") },
+                    ).run()
+                }
+            while (calls.get() < 2) delay(5)
+            job.cancelAndJoin()
+            assertTrue(calls.get() >= 2, "worker should have run a second sweep after the first failed")
         }
     }
 
